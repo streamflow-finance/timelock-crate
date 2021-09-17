@@ -1,0 +1,29 @@
+name: Build and test
+
+on:
+    push:
+        branches:
+            - master
+    pull_request:
+
+jobs:
+    compile-and-test:
+        runs-on: ubuntu-20.04
+        steps:
+            - uses: actions/checkout@v2
+            - name: Install Rust
+              uses: actions-rs/toolchain@v1
+              with:
+                toolchain: stable
+                override: true
+                components: rustfmt, clippy
+
+            - name: Install Solana CLI
+              run: |
+                sh -c "$(curl -sSfL https://release.solana.com/beta/install)"
+
+            - name: Compile and test program
+              run: |
+                export PATH="/home/runner/.local/share/solana/install/active_release/bin:$PATH"
+                cargo build-bpf
+                cargo test-bpf
