@@ -51,6 +51,7 @@ pub fn initialize_token_stream(
     let recipient_tokens = next_account_info(account_info_iter)?;
     let metadata_account = next_account_info(account_info_iter)?;
     let escrow_account = next_account_info(account_info_iter)?;
+    let rent_account = next_account_info(account_info_iter)?;
     let mint_account = next_account_info(account_info_iter)?;
     let self_program = next_account_info(account_info_iter)?;
     let token_program_account = next_account_info(account_info_iter)?;
@@ -173,6 +174,7 @@ pub fn initialize_token_stream(
         )?,
         &[
             token_program_account.clone(),
+            rent_account.clone(),
             escrow_account.clone(),
             mint_account.clone(),
             self_program.clone(),
