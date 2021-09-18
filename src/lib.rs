@@ -18,6 +18,11 @@
 //! used by [streamflow.finance](https://streamflow.finance).
 //! Currently it supports streams of the native SOL token.
 
+/// Functions related to SPL tokens
+pub mod associated_token;
+/// Functions related to the native SOL token
 pub mod native_token;
+/// Structs and data
 pub mod state;
+/// Utility functions
 pub mod utils;

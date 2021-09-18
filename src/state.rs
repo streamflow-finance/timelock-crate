@@ -35,3 +35,29 @@ pub struct NativeStream {
     /// Pubkey of the escrow account holding the locked SOL.
     pub escrow: Pubkey,
 }
+
+/// TokenStream is the struct containing metadata for an SPL token stream.
+#[repr(C)]
+#[derive(Deserialize, Serialize)]
+pub struct TokenStream {
+    /// Timestamp when the funds start unlocking
+    pub start_time: u64,
+    /// Timestamp when all funds are unlocked
+    pub end_time: u64,
+    /// Amount of funds locked
+    pub amount: u64,
+    /// Amount of funds withdrawn
+    pub withdrawn: u64,
+    /// Pubkey of the stream initializer
+    pub sender_wallet: Pubkey,
+    /// Pubkey of the stream initializer's token account
+    pub sender_tokens: Pubkey,
+    /// Pubkey of the stream recipient
+    pub recipient_wallet: Pubkey,
+    /// Pubkey of the stream recipient's token account
+    pub recipient_tokens: Pubkey,
+    /// Pubkey of the token mint
+    pub mint: Pubkey,
+    /// Pubkey of the account holding the locked tokens
+    pub escrow: Pubkey,
+}

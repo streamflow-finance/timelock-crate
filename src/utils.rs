@@ -13,6 +13,7 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
+use solana_program::{account_info::AccountInfo, program_error::ProgramError, program_pack::Pack};
 
 /// Do a sanity check with given Unix timestamps.
 pub fn duration_sanity(now: u64, start: u64, end: u64) -> bool {
@@ -25,6 +26,24 @@ pub fn calculate_streamed(now: u64, start: u64, end: u64, amount: u64) -> u64 {
     // The loss however should not matter, as in the end we will simply
     // send everything that is remaining.
     (((now - start) as f64) / ((end - start) as f64) * amount as f64) as u64
+}
+
+/// Unpack token account from `account_info`
+pub fn unpack_token_account(
+    account_info: &AccountInfo,
+) -> Result<spl_token::state::Account, ProgramError> {
+    if account_info.owner != &spl_token::id() {
+        return Err(ProgramError::InvalidAccountData);
+    }
+
+    spl_token::state::Account::unpack(&account_info.data.borrow())
+}
+
+/// Unpack mint account from `accunt_info`
+pub fn unpack_mint_account(
+    account_info: &AccountInfo,
+) -> Result<spl_token::state::Mint, ProgramError> {
+    spl_token::state::Mint::unpack(&account_info.data.borrow())
 }
 
 /// Returns a hours/minutes/seconds string from given `t` seconds.
