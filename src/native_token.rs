@@ -26,7 +26,7 @@ use solana_program::{
     sysvar::{clock::Clock, rent::Rent, Sysvar},
 };
 
-use crate::state::NativeStream;
+use crate::state::{NativeStreamData, NativeStreamInstruction};
 use crate::utils::{calculate_streamed, duration_sanity, pretty_time};
 
 /// Initializes a native SOL stream
@@ -45,7 +45,7 @@ use crate::utils::{calculate_streamed, duration_sanity, pretty_time};
 pub fn initialize_native_stream(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
-    mut metadata: NativeStream,
+    ix: NativeStreamInstruction,
 ) -> ProgramResult {
     msg!("Initializing native SOL stream");
     let account_info_iter = &mut accounts.iter();
@@ -74,20 +74,27 @@ pub fn initialize_native_stream(
     // We also transfer enough to be rent-exempt to the new account.
     // After all funds are withdrawn and unlocked, the remains are
     // returned to the sender's account.
-    let struct_size = std::mem::size_of::<NativeStream>();
+    let struct_size = std::mem::size_of::<NativeStreamData>();
     let cluster_rent = Rent::get()?;
-    // This is the serialized metadata we will write into the escrow.
-    metadata.withdrawn = 0;
-    let bytes = bincode::serialize(&metadata).unwrap();
 
-    if sender_account.lamports() < metadata.amount + cluster_rent.minimum_balance(struct_size) {
+    if sender_account.lamports() < ix.amount + cluster_rent.minimum_balance(struct_size) {
         return Err(ProgramError::InsufficientFunds);
     }
 
     let now = Clock::get()?.unix_timestamp as u64;
-    if !duration_sanity(now, metadata.start_time, metadata.end_time) {
+    if !duration_sanity(now, ix.start_time, ix.end_time) {
         return Err(ProgramError::InvalidArgument);
     }
+
+    let metadata = NativeStreamData::new(
+        ix.start_time,
+        ix.end_time,
+        ix.amount,
+        *sender_account.key,
+        *recipient_account.key,
+        *escrow_account.key,
+    );
+    let bytes = bincode::serialize(&metadata).unwrap();
 
     // Create the escrow account holding locked funds and metadata.
     // The program_id passed in as the function's argument is the
@@ -164,8 +171,8 @@ pub fn withdraw_native_stream(
     }
 
     let mut data = escrow_account.try_borrow_mut_data()?;
-    let mut metadata: NativeStream;
-    match bincode::deserialize::<NativeStream>(&data) {
+    let mut metadata: NativeStreamData;
+    match bincode::deserialize::<NativeStreamData>(&data) {
         Ok(v) => metadata = v,
         Err(_) => return Err(ProgramError::Custom(143)),
     };
@@ -245,8 +252,8 @@ pub fn cancel_native_stream(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pr
     }
 
     let data = escrow_account.try_borrow_data()?;
-    let metadata: NativeStream;
-    match bincode::deserialize::<NativeStream>(&data) {
+    let metadata: NativeStreamData;
+    match bincode::deserialize::<NativeStreamData>(&data) {
         Ok(v) => metadata = v,
         Err(_) => return Err(ProgramError::Custom(143)),
     };

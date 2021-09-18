@@ -16,10 +16,23 @@
 use serde::{Deserialize, Serialize};
 use solana_program::pubkey::Pubkey;
 
-/// NativeStream is the struct containing metadata for a native SOL stream.
+/// NativeStreamInstruction is the struct containing instructions for
+/// initializing a native SOL stream.
 #[repr(C)]
 #[derive(Deserialize, Serialize)]
-pub struct NativeStream {
+pub struct NativeStreamInstruction {
+    /// Timestamp when the funds start unlocking
+    pub start_time: u64,
+    /// Timestamp when all funds are unlocked
+    pub end_time: u64,
+    /// Amount of funds locked
+    pub amount: u64,
+}
+
+/// NativeStreamData is the struct containing metadata for a native SOL stream.
+#[repr(C)]
+#[derive(Deserialize, Serialize)]
+pub struct NativeStreamData {
     /// Timestamp when the funds start unlocking
     pub start_time: u64,
     /// Timestamp when all funds are unlocked
@@ -34,6 +47,27 @@ pub struct NativeStream {
     pub recipient: Pubkey,
     /// Pubkey of the escrow account holding the locked SOL.
     pub escrow: Pubkey,
+}
+
+impl NativeStreamData {
+    pub fn new(
+        start_time: u64,
+        end_time: u64,
+        amount: u64,
+        sender: Pubkey,
+        recipient: Pubkey,
+        escrow: Pubkey,
+    ) -> Self {
+        Self {
+            start_time,
+            end_time,
+            amount,
+            withdrawn: 0,
+            sender,
+            recipient,
+            escrow,
+        }
+    }
 }
 
 /// TokenStream is the struct containing metadata for an SPL token stream.
