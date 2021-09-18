@@ -26,7 +26,7 @@ use solana_program::{
     sysvar::{clock::Clock, rent::Rent, Sysvar},
 };
 
-use crate::state::{NativeStreamData, NativeStreamInstruction};
+use crate::state::{NativeStreamData, TokenStreamInstruction};
 use crate::utils::{calculate_streamed, duration_sanity, pretty_time};
 
 /// Initializes a native SOL stream
@@ -45,7 +45,7 @@ use crate::utils::{calculate_streamed, duration_sanity, pretty_time};
 pub fn initialize_native_stream(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
-    ix: NativeStreamInstruction,
+    ix: TokenStreamInstruction,
 ) -> ProgramResult {
     msg!("Initializing native SOL stream");
     let account_info_iter = &mut accounts.iter();

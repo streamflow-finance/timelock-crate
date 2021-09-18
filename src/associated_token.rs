@@ -26,7 +26,7 @@ use solana_program::{
     sysvar::{clock::Clock, fees::Fees, rent::Rent, Sysvar},
 };
 
-use crate::state::TokenStream;
+use crate::state::{TokenStreamData, TokenStreamInstruction};
 use crate::utils::{duration_sanity, unpack_mint_account, unpack_token_account};
 
 /// Initializes an SPL token stream
@@ -41,13 +41,13 @@ use crate::utils::{duration_sanity, unpack_mint_account, unpack_token_account};
 pub fn initialize_token_stream(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
-    mut metadata: TokenStream,
+    ix: TokenStreamInstruction,
 ) -> ProgramResult {
     msg!("Initializing SPL token stream");
     let account_info_iter = &mut accounts.iter();
     let sender_wallet = next_account_info(account_info_iter)?;
     let sender_tokens = next_account_info(account_info_iter)?;
-    //let recipient_wallet = next_account_info(account_info_iter)?;
+    let recipient_wallet = next_account_info(account_info_iter)?;
     let recipient_tokens = next_account_info(account_info_iter)?;
     let metadata_account = next_account_info(account_info_iter)?;
     let escrow_account = next_account_info(account_info_iter)?;
@@ -87,14 +87,11 @@ pub fn initialize_token_stream(
     // We also transfer enough to be rent-exempt on the metadata account.
     // After all funds are unlocked and withdrawn, the remains are
     // returned to the sender's account.
-    let metadata_struct_size = std::mem::size_of::<TokenStream>();
+    let metadata_struct_size = std::mem::size_of::<TokenStreamData>();
     let tokens_struct_size = spl_token::state::Account::LEN;
     let cluster_rent = Rent::get()?;
     let metadata_rent = cluster_rent.minimum_balance(metadata_struct_size);
     let tokens_rent = cluster_rent.minimum_balance(tokens_struct_size);
-    // This is the serialized metadata we will write into the escrow.
-    metadata.withdrawn = 0;
-    let bytes = bincode::serialize(&metadata).unwrap();
 
     // Fee calculator
     let fees = Fees::get()?;
@@ -105,14 +102,27 @@ pub fn initialize_token_stream(
         return Err(ProgramError::InsufficientFunds);
     }
 
-    if sender_token_info.amount <= metadata.amount {
+    if sender_token_info.amount <= ix.amount {
         return Err(ProgramError::InsufficientFunds);
     }
 
     let now = Clock::get()?.unix_timestamp as u64;
-    if !duration_sanity(now, metadata.start_time, metadata.end_time) {
+    if !duration_sanity(now, ix.start_time, ix.end_time) {
         return Err(ProgramError::InvalidArgument);
     }
+
+    let metadata = TokenStreamData::new(
+        ix.start_time,
+        ix.end_time,
+        ix.amount,
+        *sender_wallet.key,
+        *sender_tokens.key,
+        *recipient_wallet.key,
+        *recipient_tokens.key,
+        *mint_account.key,
+        *escrow_account.key,
+    );
+    let bytes = bincode::serialize(&metadata).unwrap();
 
     msg!("Creating metadata holding account");
     invoke(
@@ -192,13 +202,13 @@ pub fn initialize_token_stream(
 }
 
 pub fn withdraw_token_stream(
-    program_id: &Pubkey,
-    accounts: &[AccountInfo],
-    amount: u64,
+    _program_id: &Pubkey,
+    _accounts: &[AccountInfo],
+    _amount: u64,
 ) -> ProgramResult {
     Ok(())
 }
 
-pub fn cancel_token_stream(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+pub fn cancel_token_stream(_program_id: &Pubkey, _accounts: &[AccountInfo]) -> ProgramResult {
     Ok(())
 }

@@ -16,11 +16,11 @@
 use serde::{Deserialize, Serialize};
 use solana_program::pubkey::Pubkey;
 
-/// NativeStreamInstruction is the struct containing instructions for
-/// initializing a native SOL stream.
+/// TokenStreamInstruction is the struct containing instructions for
+/// initializing a SOL/SPL stream.
 #[repr(C)]
 #[derive(Deserialize, Serialize)]
-pub struct NativeStreamInstruction {
+pub struct TokenStreamInstruction {
     /// Timestamp when the funds start unlocking
     pub start_time: u64,
     /// Timestamp when all funds are unlocked
@@ -70,10 +70,10 @@ impl NativeStreamData {
     }
 }
 
-/// TokenStream is the struct containing metadata for an SPL token stream.
+/// TokenStreamData is the struct containing metadata for an SPL token stream.
 #[repr(C)]
 #[derive(Deserialize, Serialize)]
-pub struct TokenStream {
+pub struct TokenStreamData {
     /// Timestamp when the funds start unlocking
     pub start_time: u64,
     /// Timestamp when all funds are unlocked
@@ -94,4 +94,32 @@ pub struct TokenStream {
     pub mint: Pubkey,
     /// Pubkey of the account holding the locked tokens
     pub escrow: Pubkey,
+}
+
+#[allow(clippy::too_many_arguments)]
+impl TokenStreamData {
+    pub fn new(
+        start_time: u64,
+        end_time: u64,
+        amount: u64,
+        sender_wallet: Pubkey,
+        sender_tokens: Pubkey,
+        recipient_wallet: Pubkey,
+        recipient_tokens: Pubkey,
+        mint: Pubkey,
+        escrow: Pubkey,
+    ) -> Self {
+        Self {
+            start_time,
+            end_time,
+            amount,
+            withdrawn: 0,
+            sender_wallet,
+            sender_tokens,
+            recipient_wallet,
+            recipient_tokens,
+            mint,
+            escrow,
+        }
+    }
 }
