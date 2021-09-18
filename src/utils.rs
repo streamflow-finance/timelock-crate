@@ -26,3 +26,12 @@ pub fn calculate_streamed(now: u64, start: u64, end: u64, amount: u64) -> u64 {
     // send everything that is remaining.
     (((now - start) as f64) / ((end - start) as f64) * amount as f64) as u64
 }
+
+/// Returns a hours/minutes/seconds string from given `t` seconds.
+pub fn pretty_time(t: u64) -> String {
+    let seconds = t % 60;
+    let minutes = (t / 60) % 60;
+    let hours = (t / 60) / 60;
+
+    format!("{} hours, {} minutes, {} seconds", hours, minutes, seconds)
+}

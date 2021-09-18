@@ -27,7 +27,7 @@ use solana_program::{
 };
 
 use crate::state::NativeStream;
-use crate::utils::{calculate_streamed, duration_sanity};
+use crate::utils::{calculate_streamed, duration_sanity, pretty_time};
 
 /// Initializes a native SOL stream
 ///
@@ -49,24 +49,25 @@ pub fn initialize_native_stream(
 ) -> ProgramResult {
     msg!("Initializing native SOL stream");
     let account_info_iter = &mut accounts.iter();
-    let sender = next_account_info(account_info_iter)?;
-    let recipient = next_account_info(account_info_iter)?;
-    let escrow = next_account_info(account_info_iter)?;
-    let system_program = next_account_info(account_info_iter)?;
+    let sender_account = next_account_info(account_info_iter)?;
+    let recipient_account = next_account_info(account_info_iter)?;
+    let escrow_account = next_account_info(account_info_iter)?;
+    let system_program_account = next_account_info(account_info_iter)?;
 
-    if !escrow.data_is_empty() {
+    if !escrow_account.data_is_empty() {
         return Err(ProgramError::AccountAlreadyInitialized);
     }
 
-    if !sender.is_writable || !recipient.is_writable || !escrow.is_writable {
+    if !sender_account.is_writable || !recipient_account.is_writable || !escrow_account.is_writable
+    {
         return Err(ProgramError::InvalidAccountData);
     }
 
-    if system_program.key != &solana_program::system_program::id() {
+    if system_program_account.key != &solana_program::system_program::id() {
         return Err(ProgramError::InvalidAccountData);
     }
 
-    if !sender.is_signer || !escrow.is_signer {
+    if !sender_account.is_signer || !escrow_account.is_signer {
         return Err(ProgramError::MissingRequiredSignature);
     }
 
@@ -79,7 +80,7 @@ pub fn initialize_native_stream(
     metadata.withdrawn = 0;
     let bytes = bincode::serialize(&metadata).unwrap();
 
-    if sender.lamports() < metadata.amount + cluster_rent.minimum_balance(struct_size) {
+    if sender_account.lamports() < metadata.amount + cluster_rent.minimum_balance(struct_size) {
         return Err(ProgramError::InsufficientFunds);
     }
 
@@ -92,31 +93,36 @@ pub fn initialize_native_stream(
     // The program_id passed in as the function's argument is the
     // account owner. This gives it control over the withdrawal
     // process.
+    msg!("Creating escrow account for holding funds and metadata");
     invoke(
         &system_instruction::create_account(
-            sender.key,
-            escrow.key,
+            sender_account.key,
+            escrow_account.key,
             metadata.amount + cluster_rent.minimum_balance(struct_size),
             struct_size as u64,
             program_id,
         ),
-        &[sender.clone(), escrow.clone(), system_program.clone()],
+        &[
+            sender_account.clone(),
+            escrow_account.clone(),
+            system_program_account.clone(),
+        ],
     )?;
 
     // Write the metadata to the escrow account
-    let mut data = escrow.try_borrow_mut_data()?;
+    let mut data = escrow_account.try_borrow_mut_data()?;
     data[0..bytes.len()].clone_from_slice(&bytes);
 
     msg!(
         "Successfully initialized {} SOL stream for {}",
         lamports_to_sol(metadata.amount),
-        recipient.key
+        recipient_account.key
     );
-    msg!("Called by {}", sender.key);
-    msg!("Funds locked in {}", escrow.key);
+    msg!("Called by {}", sender_account.key);
+    msg!("Funds locked in {}", escrow_account.key);
     msg!(
-        "Stream duration is {} seconds",
-        metadata.end_time - metadata.start_time
+        "Stream duration is {}",
+        pretty_time(metadata.end_time - metadata.start_time)
     );
 
     Ok(())
@@ -140,30 +146,31 @@ pub fn withdraw_native_stream(
 ) -> ProgramResult {
     msg!("Withdrawing from SOL stream");
     let account_info_iter = &mut accounts.iter();
-    let sender = next_account_info(account_info_iter)?;
-    let recipient = next_account_info(account_info_iter)?;
-    let escrow = next_account_info(account_info_iter)?;
+    let sender_account = next_account_info(account_info_iter)?;
+    let recipient_account = next_account_info(account_info_iter)?;
+    let escrow_account = next_account_info(account_info_iter)?;
 
-    if escrow.data_is_empty() || escrow.owner != program_id {
+    if escrow_account.data_is_empty() || escrow_account.owner != program_id {
         return Err(ProgramError::UninitializedAccount);
     }
 
-    if !sender.is_writable || !recipient.is_writable || !escrow.is_writable {
+    if !sender_account.is_writable || !recipient_account.is_writable || !escrow_account.is_writable
+    {
         return Err(ProgramError::InvalidAccountData);
     }
 
-    if !sender.is_signer {
+    if !sender_account.is_signer {
         return Err(ProgramError::MissingRequiredSignature);
     }
 
-    let mut data = escrow.try_borrow_mut_data()?;
+    let mut data = escrow_account.try_borrow_mut_data()?;
     let mut metadata: NativeStream;
     match bincode::deserialize::<NativeStream>(&data) {
         Ok(v) => metadata = v,
         Err(_) => return Err(ProgramError::Custom(143)),
     };
 
-    if sender.key != &metadata.sender || recipient.key != &metadata.recipient {
+    if sender_account.key != &metadata.sender || recipient_account.key != &metadata.recipient {
         return Err(ProgramError::InvalidAccountData);
     }
 
@@ -183,8 +190,8 @@ pub fn withdraw_native_stream(
         return Err(ProgramError::InvalidArgument);
     }
 
-    **escrow.try_borrow_mut_lamports()? -= amount;
-    **recipient.try_borrow_mut_lamports()? += amount;
+    **escrow_account.try_borrow_mut_lamports()? -= amount;
+    **recipient_account.try_borrow_mut_lamports()? += amount;
     metadata.withdrawn += available;
 
     let bytes = bincode::serialize(&metadata).unwrap();
@@ -192,10 +199,10 @@ pub fn withdraw_native_stream(
 
     // Return rent when everything is withdrawn
     if metadata.withdrawn == metadata.amount {
-        msg!("Returning rent to {}", sender.key);
-        let rent = escrow.lamports();
-        **escrow.try_borrow_mut_lamports()? -= rent;
-        **sender.try_borrow_mut_lamports()? += rent;
+        msg!("Returning rent to {}", sender_account.key);
+        let rent = escrow_account.lamports();
+        **escrow_account.try_borrow_mut_lamports()? -= rent;
+        **sender_account.try_borrow_mut_lamports()? += rent;
     }
 
     msg!("Withdrawn: {} SOL", lamports_to_sol(available));
@@ -220,34 +227,35 @@ pub fn withdraw_native_stream(
 pub fn cancel_native_stream(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
     msg!("Cancelling native SOL stream");
     let account_info_iter = &mut accounts.iter();
-    let sender = next_account_info(account_info_iter)?;
-    let recipient = next_account_info(account_info_iter)?;
-    let escrow = next_account_info(account_info_iter)?;
+    let sender_account = next_account_info(account_info_iter)?;
+    let recipient_account = next_account_info(account_info_iter)?;
+    let escrow_account = next_account_info(account_info_iter)?;
 
-    if escrow.data_is_empty() || escrow.owner != program_id {
+    if escrow_account.data_is_empty() || escrow_account.owner != program_id {
         return Err(ProgramError::UninitializedAccount);
     }
 
-    if !sender.is_writable || !recipient.is_writable || !escrow.is_writable {
+    if !sender_account.is_writable || !recipient_account.is_writable || !escrow_account.is_writable
+    {
         return Err(ProgramError::InvalidAccountData);
     }
 
-    if !sender.is_signer {
+    if !sender_account.is_signer {
         return Err(ProgramError::MissingRequiredSignature);
     }
 
-    let data = escrow.try_borrow_data()?;
+    let data = escrow_account.try_borrow_data()?;
     let metadata: NativeStream;
     match bincode::deserialize::<NativeStream>(&data) {
         Ok(v) => metadata = v,
         Err(_) => return Err(ProgramError::Custom(143)),
     };
 
-    if sender.key != &metadata.sender {
+    if sender_account.key != &metadata.sender {
         return Err(ProgramError::Custom(144));
     }
 
-    if recipient.key != &metadata.recipient {
+    if recipient_account.key != &metadata.recipient {
         return Err(ProgramError::Custom(144));
     }
 
@@ -258,13 +266,13 @@ pub fn cancel_native_stream(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pr
     let available = amount_unlocked - metadata.withdrawn;
 
     // Transfer what was unlocked but not withdrawn to the recipient.
-    **escrow.try_borrow_mut_lamports()? -= available;
-    **recipient.try_borrow_mut_lamports()? += available;
+    **escrow_account.try_borrow_mut_lamports()? -= available;
+    **recipient_account.try_borrow_mut_lamports()? += available;
 
     // And return the rest to the stream initializer.
-    let remains = escrow.lamports();
-    **escrow.try_borrow_mut_lamports()? -= remains;
-    **sender.try_borrow_mut_lamports()? += remains;
+    let remains = escrow_account.lamports();
+    **escrow_account.try_borrow_mut_lamports()? -= remains;
+    **sender_account.try_borrow_mut_lamports()? += remains;
 
     msg!("Transferred: {} SOL", lamports_to_sol(available));
     msg!("Returned: {} SOL", lamports_to_sol(remains));
