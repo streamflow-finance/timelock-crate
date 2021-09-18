@@ -56,8 +56,8 @@ pub fn initialize_token_stream(
     let token_program_account = next_account_info(account_info_iter)?;
     let system_program_account = next_account_info(account_info_iter)?;
 
-    spl_token::check_program_account(&token_program_account.key)?;
-    if self_program.key != program_id || !system_program::check_id(&system_program_account.key) {
+    spl_token::check_program_account(token_program_account.key)?;
+    if self_program.key != program_id || !system_program::check_id(system_program_account.key) {
         return Err(ProgramError::InvalidAccountData);
     }
 
@@ -188,5 +188,17 @@ pub fn initialize_token_stream(
         &[&[]],
     )?;
 
+    Ok(())
+}
+
+pub fn withdraw_token_stream(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    amount: u64,
+) -> ProgramResult {
+    Ok(())
+}
+
+pub fn cancel_token_stream(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
     Ok(())
 }
