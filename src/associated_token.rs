@@ -22,7 +22,7 @@ use solana_program::{
     program_error::ProgramError,
     program_pack::Pack,
     pubkey::Pubkey,
-    system_instruction, system_program,
+    system_instruction, system_program, sysvar,
     sysvar::{clock::Clock, fees::Fees, rent::Rent, Sysvar},
 };
 use spl_associated_token_account::create_associated_token_account;
@@ -33,7 +33,17 @@ use crate::utils::{duration_sanity, unpack_mint_account, unpack_token_account};
 /// Initializes an SPL token stream
 ///
 /// The account order:
-///
+/// * `sender_wallet` - The main wallet address of the initializer
+/// * `sender_tokens` - The associated token account address of `sender_wallet`
+/// * `recipient_wallet` - The main wallet address of the recipient
+/// * `recipient_tokens` - The associated token account address of `recipient_wallet`
+/// * `metadata` - The account holding the stream metadata
+/// * `escrow` - The escrow account holding the stream funds
+/// * `rent` - The Rent sysvar account
+/// * `mint` - The SPL token mint account
+/// * `timelock_program` - The program using this crate
+/// * `token_program` - The SPL token program
+/// * `system_program` - The Solana system program
 ///
 /// The function shall initialize new accounts to hold the tokens,
 /// and the stream's metadata. Both accounts will be funded to be
@@ -54,24 +64,28 @@ pub fn initialize_token_stream(
     let escrow_account = next_account_info(account_info_iter)?;
     let rent_account = next_account_info(account_info_iter)?;
     let mint_account = next_account_info(account_info_iter)?;
-    let self_program = next_account_info(account_info_iter)?;
+    let timelock_program_account = next_account_info(account_info_iter)?;
     let token_program_account = next_account_info(account_info_iter)?;
     let system_program_account = next_account_info(account_info_iter)?;
 
-    spl_token::check_program_account(token_program_account.key)?;
-    if self_program.key != program_id || !system_program::check_id(system_program_account.key) {
-        return Err(ProgramError::InvalidAccountData);
-    }
-
-    if !metadata_account.data_is_empty() || !escrow_account.data_is_empty() {
+    if !escrow_account.data_is_empty() || !metadata_account.data_is_empty() {
         return Err(ProgramError::AccountAlreadyInitialized);
     }
 
     if !sender_wallet.is_writable
         || !sender_tokens.is_writable
+        || !recipient_wallet.is_writable
+        || !recipient_tokens.is_writable
         || !metadata_account.is_writable
         || !escrow_account.is_writable
-        || !recipient_tokens.is_writable
+    {
+        return Err(ProgramError::InvalidAccountData);
+    }
+
+    if system_program_account.key != &system_program::id()
+        || token_program_account.key != &spl_token::id()
+        || timelock_program_account.key != program_id
+        || rent_account.key != &sysvar::rent::id()
     {
         return Err(ProgramError::InvalidAccountData);
     }
@@ -82,8 +96,15 @@ pub fn initialize_token_stream(
 
     let sender_token_info = unpack_token_account(sender_tokens)?;
     let mint_info = unpack_mint_account(mint_account)?;
-    if !mint_info.is_initialized {
+
+    if &sender_token_info.mint != mint_account.key {
         return Err(ProgramError::InvalidAccountData);
+    }
+
+    let now = Clock::get()?.unix_timestamp as u64;
+    if !duration_sanity(now, ix.start_time, ix.end_time, ix.cliff) {
+        msg!("Error: Given timestamps are invalid.");
+        return Err(ProgramError::InvalidArgument);
     }
 
     // We also transfer enough to be rent-exempt on the metadata account.
@@ -94,23 +115,16 @@ pub fn initialize_token_stream(
     let cluster_rent = Rent::get()?;
     let metadata_rent = cluster_rent.minimum_balance(metadata_struct_size);
     let tokens_rent = cluster_rent.minimum_balance(tokens_struct_size);
-
-    // Fee calculator
     let fees = Fees::get()?;
     let lps = fees.fee_calculator.lamports_per_signature;
 
     // tokens_rent*2 is so we're sure we can fund recipient_tokens account.
-    if sender_wallet.lamports() < metadata_rent + tokens_rent * 2 + (4 * lps) {
+    if sender_wallet.lamports() < metadata_rent + tokens_rent * 2 + (5 * lps) {
         return Err(ProgramError::InsufficientFunds);
     }
 
     if sender_token_info.amount <= ix.amount {
         return Err(ProgramError::InsufficientFunds);
-    }
-
-    let now = Clock::get()?.unix_timestamp as u64;
-    if !duration_sanity(now, ix.start_time, ix.end_time) {
-        return Err(ProgramError::InvalidArgument);
     }
 
     let metadata = TokenStreamData::new(
@@ -165,10 +179,7 @@ pub fn initialize_token_stream(
         ],
     )?;
 
-    msg!(
-        "Initializing escrow account for {:?} token",
-        mint_account.key
-    );
+    msg!("Initializing escrow account for {} token", mint_account.key);
     invoke(
         &spl_token::instruction::initialize_account(
             token_program_account.key,
@@ -181,7 +192,7 @@ pub fn initialize_token_stream(
             rent_account.clone(),
             escrow_account.clone(),
             mint_account.clone(),
-            self_program.clone(),
+            timelock_program_account.clone(),
         ],
     )?;
 
@@ -203,6 +214,26 @@ pub fn initialize_token_stream(
         ],
         &[&[]],
     )?;
+
+    if recipient_tokens.data_is_empty() {
+        msg!("Initializing recipient's associated token account");
+        invoke(
+            &create_associated_token_account(
+                sender_wallet.key,
+                recipient_wallet.key,
+                mint_account.key,
+            ),
+            &[
+                sender_wallet.clone(),
+                recipient_tokens.clone(),
+                recipient_wallet.clone(),
+                mint_account.clone(),
+                system_program_account.clone(),
+                token_program_account.clone(),
+                rent_account.clone(),
+            ],
+        )?;
+    }
 
     Ok(())
 }
@@ -264,6 +295,8 @@ pub fn withdraw_token_stream(
         return Err(ProgramError::InvalidAccountData);
     }
 
+    let mint_info = unpack_mint_account(mint_account)?;
+
     let now = Clock::get()?.unix_timestamp as u64;
     let available = metadata.available(now);
 
@@ -293,7 +326,29 @@ pub fn withdraw_token_stream(
     }
 
     // Transfer here
+    invoke_signed(
+        &spl_token::instruction::transfer(
+            token_program_account.key,
+            escrow_account.key,
+            recipient_tokens.key,
+            program_id,
+            &[],
+            amount,
+        )?,
+        &[
+            escrow_account.clone(),
+            recipient_tokens.clone(),
+            token_program_account.clone(),
+        ],
+        &[&[]],
+    )?;
 
+    metadata.withdrawn += amount;
+
+    let bytes = bincode::serialize(&metadata).unwrap();
+    data[0..bytes.len()].clone_from_slice(&bytes);
+
+    // Return rent when everything is withdrawn
     if metadata.withdrawn == metadata.amount {
         msg!("Returning rent to {}", sender_wallet.key);
         let rent = metadata_account.lamports();
