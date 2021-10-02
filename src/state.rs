@@ -63,6 +63,7 @@ pub struct NativeStreamData {
 
 #[allow(clippy::too_many_arguments)]
 impl NativeStreamData {
+    /// Initialize a new `NativeStreamData` struct.
     pub fn new(
         start_time: u64,
         end_time: u64,
@@ -88,6 +89,7 @@ impl NativeStreamData {
         }
     }
 
+    /// Calculate amount available for withdrawal with given timestamp.
     pub fn available(&self, now: u64) -> u64 {
         if self.start_time > now || self.cliff > now {
             return 0;
@@ -140,10 +142,17 @@ pub struct TokenStreamData {
     pub mint: Pubkey,
     /// Pubkey of the account holding the locked tokens
     pub escrow: Pubkey,
+    /// Time step (period) per which vesting occurs
+    pub period: u64,
+    /// Vesting contract "cliff" timestamp
+    pub cliff: u64,
+    /// Amount unlocked at the "cliff" timestamp
+    pub cliff_amount: u64,
 }
 
 #[allow(clippy::too_many_arguments)]
 impl TokenStreamData {
+    /// Initialize a new `TokenStreamData` struct.
     pub fn new(
         start_time: u64,
         end_time: u64,
@@ -154,6 +163,9 @@ impl TokenStreamData {
         recipient_tokens: Pubkey,
         mint: Pubkey,
         escrow: Pubkey,
+        period: u64,
+        cliff: u64,
+        cliff_amount: u64,
     ) -> Self {
         Self {
             start_time,
@@ -166,6 +178,36 @@ impl TokenStreamData {
             recipient_tokens,
             mint,
             escrow,
+            period,
+            cliff,
+            cliff_amount,
         }
+    }
+
+    pub fn available(&self, now: u64) -> u64 {
+        if self.start_time > now || self.cliff > now {
+            return 0;
+        }
+
+        if now >= self.end_time {
+            return self.amount - self.withdrawn;
+        }
+
+        let cliff = if self.cliff > 0 {
+            self.cliff
+        } else {
+            self.start_time
+        };
+
+        let cliff_amount = if self.cliff_amount > 0 {
+            self.cliff_amount
+        } else {
+            0
+        };
+
+        let num_periods = (self.end_time - cliff) as f64 / self.period as f64;
+        let period_amount = (self.amount - cliff_amount) as f64 / num_periods;
+        let periods_passed = (now - cliff) / self.period;
+        (periods_passed as f64 * period_amount) as u64 + cliff_amount - self.withdrawn
     }
 }

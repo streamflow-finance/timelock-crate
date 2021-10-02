@@ -122,6 +122,9 @@ pub fn initialize_token_stream(
         *recipient_tokens.key,
         *mint_account.key,
         *escrow_account.key,
+        ix.period,
+        ix.cliff,
+        ix.cliff_amount,
     );
     let bytes = bincode::serialize(&metadata).unwrap();
 
