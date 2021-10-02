@@ -1,6 +1,6 @@
 [package]
 name = "streamflow-timelock"
-version = "0.0.1"
+version = "0.2.0"
 homepage = "https://streamflow.finance"
 description = "Timelock crate for Solana programs"
 authors = ["Ivan Jelincic <parazyd@dyne.org>"]
@@ -15,6 +15,11 @@ serde = "1.0.130"
 solana-program = "1.7.12"
 spl-associated-token-account = "1.0.3"
 spl-token = { version = "3.2.0", features = ["no-entrypoint"] }
+
+#[dev-dependencies]
+#solana-program-test = "1.7.12"
+#solana-client = "1.7.12"
+#solana-sdk = "1.7.12"
 
 [lib]
 crate-type = ["cdylib", "lib"]

@@ -184,6 +184,7 @@ impl TokenStreamData {
         }
     }
 
+    /// Calculate amount available for withdrawal with given timestamp.
     pub fn available(&self, now: u64) -> u64 {
         if self.start_time > now || self.cliff > now {
             return 0;

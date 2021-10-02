@@ -13,11 +13,18 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 use solana_program::{account_info::AccountInfo, program_error::ProgramError, program_pack::Pack};
 
 /// Do a sanity check with given Unix timestamps.
-pub fn duration_sanity(now: u64, start: u64, end: u64) -> bool {
-    !(start < now || start >= end)
+pub fn duration_sanity(now: u64, start: u64, end: u64, cliff: u64) -> bool {
+    let cliff_cond = if cliff == 0 {
+        true
+    } else {
+        start <= cliff && cliff <= end
+    };
+
+    now < start && start < end && cliff_cond
 }
 
 /// Unpack token account from `account_info`
@@ -31,7 +38,7 @@ pub fn unpack_token_account(
     spl_token::state::Account::unpack(&account_info.data.borrow())
 }
 
-/// Unpack mint account from `accunt_info`
+/// Unpack mint account from `account_info`
 pub fn unpack_mint_account(
     account_info: &AccountInfo,
 ) -> Result<spl_token::state::Mint, ProgramError> {
@@ -45,4 +52,20 @@ pub fn pretty_time(t: u64) -> String {
     let hours = (t / 60) / 60;
 
     format!("{} hours, {} minutes, {} seconds", hours, minutes, seconds)
+}
+
+#[allow(unused_imports)]
+mod tests {
+    use crate::utils::duration_sanity;
+
+    #[test]
+    fn test_duration_sanity() {
+        // now, start, end, cliff
+        assert_eq!(true, duration_sanity(100, 110, 130, 120));
+        assert_eq!(true, duration_sanity(100, 110, 130, 0));
+        assert_eq!(false, duration_sanity(100, 140, 130, 130));
+        assert_eq!(false, duration_sanity(100, 130, 130, 130));
+        assert_eq!(false, duration_sanity(130, 130, 130, 130));
+        assert_eq!(false, duration_sanity(100, 110, 130, 140));
+    }
 }
