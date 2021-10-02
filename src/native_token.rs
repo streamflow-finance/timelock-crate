@@ -27,7 +27,7 @@ use solana_program::{
 };
 
 use crate::state::{NativeStreamData, TokenStreamInstruction};
-use crate::utils::{calculate_streamed, duration_sanity, pretty_time};
+use crate::utils::{duration_sanity, pretty_time};
 
 /// Initializes a native SOL stream
 ///
@@ -93,6 +93,9 @@ pub fn initialize_native_stream(
         *sender_account.key,
         *recipient_account.key,
         *escrow_account.key,
+        ix.period,
+        ix.cliff,
+        ix.cliff_amount,
     );
     let bytes = bincode::serialize(&metadata).unwrap();
 
@@ -181,16 +184,8 @@ pub fn withdraw_native_stream(
         return Err(ProgramError::InvalidAccountData);
     }
 
-    // Current cluster time used to calculate the unlocked amount.
     let now = Clock::get()?.unix_timestamp as u64;
-    let amount_unlocked =
-        calculate_streamed(now, metadata.start_time, metadata.end_time, metadata.amount);
-    let mut available = amount_unlocked - metadata.withdrawn;
-
-    // In case we're past the set time, everything is available.
-    if now >= metadata.end_time {
-        available = metadata.amount - metadata.withdrawn;
-    }
+    let available = metadata.available(now);
 
     if amount > available {
         msg!("Amount requested for withdraw is more than available");
@@ -266,11 +261,8 @@ pub fn cancel_native_stream(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pr
         return Err(ProgramError::Custom(144));
     }
 
-    // Current cluster time used to calculate the unlocked amount.
     let now = Clock::get()?.unix_timestamp as u64;
-    let amount_unlocked =
-        calculate_streamed(now, metadata.start_time, metadata.end_time, metadata.amount);
-    let available = amount_unlocked - metadata.withdrawn;
+    let available = metadata.available(now);
 
     // Transfer what was unlocked but not withdrawn to the recipient.
     **escrow_account.try_borrow_mut_lamports()? -= available;

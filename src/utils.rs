@@ -20,14 +20,6 @@ pub fn duration_sanity(now: u64, start: u64, end: u64) -> bool {
     !(start < now || start >= end)
 }
 
-/// Calculate unlocked funds from start to end.
-pub fn calculate_streamed(now: u64, start: u64, end: u64, amount: u64) -> u64 {
-    // This is valif float division, but we lose precision when going u64.
-    // The loss however should not matter, as in the end we will simply
-    // send everything that is remaining.
-    (((now - start) as f64) / ((end - start) as f64) * amount as f64) as u64
-}
-
 /// Unpack token account from `account_info`
 pub fn unpack_token_account(
     account_info: &AccountInfo,
