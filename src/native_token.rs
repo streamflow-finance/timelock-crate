@@ -169,14 +169,13 @@ pub fn withdraw_native_stream(
         return Err(ProgramError::InvalidAccountData);
     }
 
-    if !sender_account.is_signer {
+    if !recipient_account.is_signer {
         return Err(ProgramError::MissingRequiredSignature);
     }
 
     let mut data = escrow_account.try_borrow_mut_data()?;
-    let mut metadata: NativeStreamData;
-    match bincode::deserialize::<NativeStreamData>(&data) {
-        Ok(v) => metadata = v,
+    let mut metadata = match bincode::deserialize::<NativeStreamData>(&data) {
+        Ok(v) => v,
         Err(_) => return Err(ProgramError::Custom(143)),
     };
 
@@ -188,7 +187,7 @@ pub fn withdraw_native_stream(
     let available = metadata.available(now);
 
     if amount > available {
-        msg!("Amount requested for withdraw is more than available");
+        msg!("Amount requested for withdraw is more than what is available");
         return Err(ProgramError::InvalidArgument);
     }
 

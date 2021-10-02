@@ -25,6 +25,7 @@ use solana_program::{
     system_instruction, system_program,
     sysvar::{clock::Clock, fees::Fees, rent::Rent, Sysvar},
 };
+use spl_associated_token_account::create_associated_token_account;
 
 use crate::state::{TokenStreamData, TokenStreamInstruction};
 use crate::utils::{duration_sanity, unpack_mint_account, unpack_token_account};
@@ -207,10 +208,102 @@ pub fn initialize_token_stream(
 }
 
 pub fn withdraw_token_stream(
-    _program_id: &Pubkey,
-    _accounts: &[AccountInfo],
-    _amount: u64,
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    amount: u64,
 ) -> ProgramResult {
+    msg!("Withdrawing from SPL token stream");
+    let account_info_iter = &mut accounts.iter();
+    let sender_wallet = next_account_info(account_info_iter)?;
+    let sender_tokens = next_account_info(account_info_iter)?;
+    let recipient_wallet = next_account_info(account_info_iter)?;
+    let recipient_tokens = next_account_info(account_info_iter)?;
+    let metadata_account = next_account_info(account_info_iter)?;
+    let escrow_account = next_account_info(account_info_iter)?;
+    let mint_account = next_account_info(account_info_iter)?;
+    let rent_sysvar_account = next_account_info(account_info_iter)?;
+    let token_program_account = next_account_info(account_info_iter)?;
+    let system_program_account = next_account_info(account_info_iter)?;
+
+    spl_token::check_program_account(token_program_account.key)?;
+    if metadata_account.data_is_empty()
+        || metadata_account.owner != program_id
+        || escrow_account.data_is_empty()
+        || escrow_account.owner != &spl_token::id()
+    {
+        return Err(ProgramError::UninitializedAccount);
+    }
+
+    if !sender_wallet.is_writable
+        || !sender_tokens.is_writable
+        || !recipient_wallet.is_writable
+        || !recipient_tokens.is_writable
+        || !metadata_account.is_writable
+        || !escrow_account.is_writable
+    {
+        return Err(ProgramError::InvalidAccountData);
+    }
+
+    if !recipient_wallet.is_signer {
+        return Err(ProgramError::MissingRequiredSignature);
+    }
+
+    let mut data = metadata_account.try_borrow_mut_data()?;
+    let mut metadata = match bincode::deserialize::<TokenStreamData>(&data) {
+        Ok(v) => v,
+        Err(_) => return Err(ProgramError::Custom(143)),
+    };
+
+    if sender_wallet.key != &metadata.sender_wallet
+        || sender_tokens.key != &metadata.sender_tokens
+        || recipient_wallet.key != &metadata.recipient_wallet
+        || recipient_tokens.key != &metadata.recipient_tokens
+        || mint_account.key != &metadata.mint
+        || escrow_account.key != &metadata.escrow
+    {
+        return Err(ProgramError::InvalidAccountData);
+    }
+
+    let now = Clock::get()?.unix_timestamp as u64;
+    let available = metadata.available(now);
+
+    if amount > available {
+        msg!("Amount requested for withdraw is more than what is available");
+        return Err(ProgramError::InvalidArgument);
+    }
+
+    if recipient_tokens.data_is_empty() {
+        // Needs initialization
+        invoke(
+            &create_associated_token_account(
+                &metadata.recipient_wallet,
+                &metadata.recipient_wallet,
+                &metadata.mint,
+            ),
+            &[
+                recipient_wallet.clone(),
+                recipient_tokens.clone(),
+                recipient_tokens.clone(),
+                mint_account.clone(),
+                system_program_account.clone(),
+                token_program_account.clone(),
+                rent_sysvar_account.clone(),
+            ],
+        )?;
+    }
+
+    // Transfer here
+
+    if metadata.withdrawn == metadata.amount {
+        msg!("Returning rent to {}", sender_wallet.key);
+        let rent = metadata_account.lamports();
+        **metadata_account.try_borrow_mut_lamports()? -= rent;
+        **sender_wallet.try_borrow_mut_lamports()? += rent;
+    }
+
+    msg!("Withdrawn: {} {} tokens", 0, 0);
+    msg!("Remaining: {} {} tokens", 0, 0);
+
     Ok(())
 }
 
