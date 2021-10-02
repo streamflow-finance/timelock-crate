@@ -238,6 +238,14 @@ pub fn initialize_token_stream(
     Ok(())
 }
 
+/// Withdraws from an SPL Token stream
+///
+/// The account order:
+///
+/// The function will read the instructions from the metadata account and see
+/// if there are any unlocked funds. If so, they will be transferred from the
+/// escrow account to the stream recipient. If the entire amount has been
+/// withdrawn, the remaining rents shall be returned to the stream initializer.
 pub fn withdraw_token_stream(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
@@ -362,6 +370,14 @@ pub fn withdraw_token_stream(
     Ok(())
 }
 
+/// Cancels an SPL Token stream
+///
+/// The account order:
+///
+/// The function will read the instructions from the metadata account and see
+/// if there are any unlocked funds. If so, they will be transferred to the
+/// stream recipient, and any remains (including rents) shall be returned to
+/// the stream initializer.
 pub fn cancel_token_stream(_program_id: &Pubkey, _accounts: &[AccountInfo]) -> ProgramResult {
     Ok(())
 }
