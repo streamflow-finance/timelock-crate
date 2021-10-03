@@ -16,7 +16,6 @@
 
 //! streamflow-timelock is the code providing timelock primitives
 //! used by [streamflow.finance](https://streamflow.finance).
-//! Currently it supports streams of the native SOL token.
 
 /// Functions related to SPL tokens
 pub mod associated_token;
