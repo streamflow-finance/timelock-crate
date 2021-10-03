@@ -192,15 +192,22 @@ pub fn withdraw_native_stream(
 
     let now = Clock::get()?.unix_timestamp as u64;
     let available = metadata.available(now);
+    let req: u64;
 
     if amount > available {
         msg!("Amount requested for withdraw is more than what is available");
         return Err(ProgramError::InvalidArgument);
     }
 
-    **escrow_account.try_borrow_mut_lamports()? -= amount;
-    **recipient_wallet.try_borrow_mut_lamports()? += amount;
-    metadata.withdrawn += amount;
+    if amount == 0 {
+        req = available;
+    } else {
+        req = amount;
+    }
+
+    **escrow_account.try_borrow_mut_lamports()? -= req;
+    **recipient_wallet.try_borrow_mut_lamports()? += req;
+    metadata.withdrawn += req;
 
     let bytes = bincode::serialize(&metadata).unwrap();
     data[0..bytes.len()].clone_from_slice(&bytes);
@@ -213,7 +220,7 @@ pub fn withdraw_native_stream(
         **sender_wallet.try_borrow_mut_lamports()? += rent;
     }
 
-    msg!("Withdrawn: {} SOL", lamports_to_sol(amount));
+    msg!("Withdrawn: {} SOL", lamports_to_sol(req));
     msg!(
         "Remaining: {} SOL",
         lamports_to_sol(metadata.amount - metadata.withdrawn)
