@@ -13,6 +13,7 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
+use std::iter::FromIterator;
 
 use solana_program::{account_info::AccountInfo, program_error::ProgramError, program_pack::Pack};
 
@@ -52,6 +53,18 @@ pub fn pretty_time(t: u64) -> String {
     let hours = (t / 60) / 60;
 
     format!("{} hours, {} minutes, {} seconds", hours, minutes, seconds)
+}
+
+pub fn encode_base10(amount: u64, decimal_places: usize) -> String {
+    let mut s: Vec<char> = format!("{:0width$}", amount, width = 1 + decimal_places)
+        .chars()
+        .collect();
+    s.insert(s.len() - decimal_places, '.');
+
+    String::from_iter(&s)
+        .trim_end_matches('0')
+        .trim_end_matches('.')
+        .to_string()
 }
 
 #[allow(unused_imports)]

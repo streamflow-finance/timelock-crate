@@ -13,7 +13,6 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
-
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
@@ -72,7 +71,7 @@ pub fn initialize_native_stream(
 
     let now = Clock::get()?.unix_timestamp as u64;
     if !duration_sanity(now, ix.start_time, ix.end_time, ix.cliff) {
-        msg!("Error: Given timestamps are invalid.");
+        msg!("Error: Given timestamps are invalid");
         return Err(ProgramError::InvalidArgument);
     }
 
@@ -86,7 +85,7 @@ pub fn initialize_native_stream(
 
     if sender_wallet.lamports() < ix.amount + cluster_rent.minimum_balance(struct_size) + (2 * lps)
     {
-        msg!("Error: Insufficient funds in {}.", sender_wallet.key);
+        msg!("Error: Insufficient funds in {}", sender_wallet.key);
         return Err(ProgramError::InsufficientFunds);
     }
 
@@ -107,7 +106,7 @@ pub fn initialize_native_stream(
     // The program_id passed in as the function's argument is the
     // account owner. This gives it control over the withdrawal
     // process.
-    msg!("Creating escrow account for holding funds and metadata");
+    msg!("Creating account for holding funds and metadata");
     invoke(
         &system_instruction::create_account(
             sender_wallet.key,
