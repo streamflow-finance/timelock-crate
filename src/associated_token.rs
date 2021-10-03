@@ -18,6 +18,7 @@ use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
     msg,
+    native_token::lamports_to_sol,
     program::{invoke, invoke_signed},
     program_error::ProgramError,
     program_pack::Pack,
@@ -261,14 +262,14 @@ pub fn withdraw_token_stream(
     let escrow_account = next_account_info(account_info_iter)?;
     let mint_account = next_account_info(account_info_iter)?;
     let rent_sysvar_account = next_account_info(account_info_iter)?;
+    let timelock_program_account = next_account_info(account_info_iter)?;
     let token_program_account = next_account_info(account_info_iter)?;
     let system_program_account = next_account_info(account_info_iter)?;
 
-    spl_token::check_program_account(token_program_account.key)?;
-    if metadata_account.data_is_empty()
-        || metadata_account.owner != program_id
-        || escrow_account.data_is_empty()
+    if escrow_account.data_is_empty()
         || escrow_account.owner != &spl_token::id()
+        || metadata_account.data_is_empty()
+        || metadata_account.owner != program_id
     {
         return Err(ProgramError::UninitializedAccount);
     }
@@ -283,6 +284,12 @@ pub fn withdraw_token_stream(
         return Err(ProgramError::InvalidAccountData);
     }
 
+    if system_program_account.key != &system_program::id()
+        || token_program_account.key != &spl_token::id()
+    {
+        return Err(ProgramError::InvalidAccountData);
+    }
+
     if !recipient_wallet.is_signer {
         return Err(ProgramError::MissingRequiredSignature);
     }
@@ -292,6 +299,8 @@ pub fn withdraw_token_stream(
         Ok(v) => v,
         Err(_) => return Err(ProgramError::Custom(143)),
     };
+
+    let mint_info = unpack_mint_account(mint_account)?;
 
     if sender_wallet.key != &metadata.sender_wallet
         || sender_tokens.key != &metadata.sender_tokens
@@ -303,8 +312,6 @@ pub fn withdraw_token_stream(
         return Err(ProgramError::InvalidAccountData);
     }
 
-    let mint_info = unpack_mint_account(mint_account)?;
-
     let now = Clock::get()?.unix_timestamp as u64;
     let available = metadata.available(now);
 
@@ -313,39 +320,22 @@ pub fn withdraw_token_stream(
         return Err(ProgramError::InvalidArgument);
     }
 
-    if recipient_tokens.data_is_empty() {
-        // Needs initialization
-        invoke(
-            &create_associated_token_account(
-                &metadata.recipient_wallet,
-                &metadata.recipient_wallet,
-                &metadata.mint,
-            ),
-            &[
-                recipient_wallet.clone(),
-                recipient_tokens.clone(),
-                recipient_tokens.clone(),
-                mint_account.clone(),
-                system_program_account.clone(),
-                token_program_account.clone(),
-                rent_sysvar_account.clone(),
-            ],
-        )?;
-    }
-
-    // Transfer here
     invoke_signed(
-        &spl_token::instruction::transfer(
-            token_program_account.key,
-            escrow_account.key,
-            recipient_tokens.key,
+        &spl_token::instruction::transfer_checked(
+            &spl_token::id(),
+            &metadata.escrow,
+            &metadata.mint,
+            &metadata.recipient_tokens,
             program_id,
             &[],
             amount,
+            mint_info.decimals,
         )?,
         &[
             escrow_account.clone(),
             recipient_tokens.clone(),
+            mint_account.clone(),
+            timelock_program_account.clone(),
             token_program_account.clone(),
         ],
         &[&[]],
@@ -378,6 +368,130 @@ pub fn withdraw_token_stream(
 /// if there are any unlocked funds. If so, they will be transferred to the
 /// stream recipient, and any remains (including rents) shall be returned to
 /// the stream initializer.
-pub fn cancel_token_stream(_program_id: &Pubkey, _accounts: &[AccountInfo]) -> ProgramResult {
+pub fn cancel_token_stream(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+    msg!("Cancelling SPL token stream");
+    let account_info_iter = &mut accounts.iter();
+    let sender_wallet = next_account_info(account_info_iter)?;
+    let sender_tokens = next_account_info(account_info_iter)?;
+    let recipient_wallet = next_account_info(account_info_iter)?;
+    let recipient_tokens = next_account_info(account_info_iter)?;
+    let metadata_account = next_account_info(account_info_iter)?;
+    let escrow_account = next_account_info(account_info_iter)?;
+    let mint_account = next_account_info(account_info_iter)?;
+    let timelock_program_account = next_account_info(account_info_iter)?;
+    let token_program_account = next_account_info(account_info_iter)?;
+    let system_program_account = next_account_info(account_info_iter)?;
+
+    if escrow_account.data_is_empty()
+        || escrow_account.owner != &spl_token::id()
+        || metadata_account.data_is_empty()
+        || metadata_account.owner != program_id
+    {
+        return Err(ProgramError::UninitializedAccount);
+    }
+
+    if !sender_wallet.is_writable
+        || !sender_tokens.is_writable
+        || !recipient_wallet.is_writable
+        || !recipient_tokens.is_writable
+        || !metadata_account.is_writable
+        || !escrow_account.is_writable
+    {
+        return Err(ProgramError::InvalidAccountData);
+    }
+
+    if system_program_account.key != &system_program::id()
+        || token_program_account.key != &spl_token::id()
+    {
+        return Err(ProgramError::InvalidAccountData);
+    }
+
+    if !sender_wallet.is_signer {
+        return Err(ProgramError::MissingRequiredSignature);
+    }
+
+    let data = metadata_account.try_borrow_mut_data()?;
+    let mut metadata = match bincode::deserialize::<TokenStreamData>(&data) {
+        Ok(v) => v,
+        Err(_) => return Err(ProgramError::Custom(143)),
+    };
+
+    let mint_info = unpack_mint_account(mint_account)?;
+
+    if sender_wallet.key != &metadata.sender_wallet
+        || sender_tokens.key != &metadata.sender_tokens
+        || recipient_wallet.key != &metadata.recipient_wallet
+        || recipient_tokens.key != &metadata.recipient_tokens
+        || mint_account.key != &metadata.mint
+        || escrow_account.key != &metadata.escrow
+    {
+        return Err(ProgramError::InvalidAccountData);
+    }
+
+    let now = Clock::get()?.unix_timestamp as u64;
+    let available = metadata.available(now);
+
+    invoke_signed(
+        &spl_token::instruction::transfer_checked(
+            &spl_token::id(),
+            &metadata.escrow,
+            &metadata.mint,
+            &metadata.recipient_tokens,
+            program_id,
+            &[],
+            available,
+            mint_info.decimals,
+        )?,
+        &[
+            escrow_account.clone(),
+            recipient_tokens.clone(),
+            mint_account.clone(),
+            timelock_program_account.clone(),
+            token_program_account.clone(),
+        ],
+        &[&[]],
+    )?;
+
+    metadata.withdrawn += available;
+    let remains = metadata.amount - metadata.withdrawn;
+
+    if remains > 0 {
+        invoke_signed(
+            &spl_token::instruction::transfer_checked(
+                &spl_token::id(),
+                &metadata.escrow,
+                &metadata.mint,
+                &metadata.sender_tokens,
+                program_id,
+                &[],
+                remains,
+                mint_info.decimals,
+            )?,
+            &[
+                escrow_account.clone(),
+                sender_tokens.clone(),
+                mint_account.clone(),
+                timelock_program_account.clone(),
+                token_program_account.clone(),
+            ],
+            &[&[]],
+        )?;
+    }
+
+    let remains_escr = escrow_account.lamports();
+    let remains_meta = metadata_account.lamports();
+
+    **escrow_account.try_borrow_mut_lamports()? -= remains_escr;
+    **sender_wallet.try_borrow_mut_lamports()? += remains_escr;
+    **metadata_account.try_borrow_mut_lamports()? -= remains_meta;
+    **sender_wallet.try_borrow_mut_lamports()? += remains_meta;
+
+    msg!("Transferred: {} tokens", 0);
+    msg!("Returned: {} tokens, 0");
+    msg!(
+        "Returned rent: {} SOL",
+        lamports_to_sol(remains_escr + remains_meta)
+    );
+
     Ok(())
 }
