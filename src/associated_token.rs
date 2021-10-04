@@ -122,12 +122,17 @@ pub fn initialize_token_stream(
     let tokens_struct_size = spl_token::state::Account::LEN;
     let cluster_rent = Rent::get()?;
     let metadata_rent = cluster_rent.minimum_balance(metadata_struct_size);
-    let tokens_rent = cluster_rent.minimum_balance(tokens_struct_size);
+    let mut tokens_rent = cluster_rent.minimum_balance(tokens_struct_size);
     let fees = Fees::get()?;
     let lps = fees.fee_calculator.lamports_per_signature;
 
-    // tokens_rent*2 is so we're sure we can fund recipient_tokens account.
-    if sender_wallet.lamports() < metadata_rent + tokens_rent * 2 + (6 * lps) {
+    // Check if we have to initialize recipient's associated token account.
+    if recipient_tokens.data_is_empty() {
+        tokens_rent += cluster_rent.minimum_balance(tokens_struct_size);
+        tokens_rent += lps;
+    }
+
+    if sender_wallet.lamports() < metadata_rent + tokens_rent + (4 * lps) {
         msg!("Error: Insufficient funds in {}", sender_wallet.key);
         return Err(ProgramError::InsufficientFunds);
     }
@@ -152,6 +157,26 @@ pub fn initialize_token_stream(
         ix.cliff_amount,
     );
     let bytes = bincode::serialize(&metadata).unwrap();
+
+    if recipient_tokens.data_is_empty() {
+        msg!("Initializing recipient's associated token account");
+        invoke(
+            &create_associated_token_account(
+                sender_wallet.key,
+                recipient_wallet.key,
+                mint_account.key,
+            ),
+            &[
+                sender_wallet.clone(),
+                recipient_tokens.clone(),
+                recipient_wallet.clone(),
+                mint_account.clone(),
+                system_program_account.clone(),
+                token_program_account.clone(),
+                rent_account.clone(),
+            ],
+        )?;
+    }
 
     msg!("Creating account for holding metadata");
     invoke(
@@ -225,26 +250,6 @@ pub fn initialize_token_stream(
             token_program_account.clone(),
         ],
     )?;
-
-    if recipient_tokens.data_is_empty() {
-        msg!("Initializing recipient's associated token account");
-        invoke(
-            &create_associated_token_account(
-                sender_wallet.key,
-                recipient_wallet.key,
-                mint_account.key,
-            ),
-            &[
-                sender_wallet.clone(),
-                recipient_tokens.clone(),
-                recipient_wallet.clone(),
-                mint_account.clone(),
-                system_program_account.clone(),
-                token_program_account.clone(),
-                rent_account.clone(),
-            ],
-        )?;
-    }
 
     msg!(
         "Successfully initialized {} {} token stream for {}",
