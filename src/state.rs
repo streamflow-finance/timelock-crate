@@ -14,13 +14,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use serde::{Deserialize, Serialize};
-use solana_program::pubkey::Pubkey;
+use solana_program::{account_info::AccountInfo, pubkey::Pubkey};
 
-/// TokenStreamInstruction is the struct containing instructions for
-/// initializing a SOL/SPL stream.
+/// The struct containing instructions for initializing a stream
 #[repr(C)]
-#[derive(Deserialize, Serialize)]
-pub struct TokenStreamInstruction {
+#[derive(Deserialize, Serialize, Debug)]
+pub struct StreamInstruction {
     /// Timestamp when the funds start unlocking
     pub start_time: u64,
     /// Timestamp when all funds are unlocked
@@ -35,99 +34,89 @@ pub struct TokenStreamInstruction {
     pub cliff_amount: u64,
 }
 
-/// NativeStreamData is the struct containing metadata for a native SOL stream.
-#[repr(C)]
-#[derive(Deserialize, Serialize)]
-pub struct NativeStreamData {
-    /// Timestamp when the funds start unlocking
-    pub start_time: u64,
-    /// Timestamp when all funds are unlocked
-    pub end_time: u64,
-    /// Amount of funds locked
-    pub amount: u64,
-    /// Amount of funds withdrawn
-    pub withdrawn: u64,
-    /// Pubkey of the stream initializer
-    pub sender: Pubkey,
-    /// Pubkey of the stream recipient
-    pub recipient: Pubkey,
-    /// Pubkey of the escrow account holding the locked SOL.
-    pub escrow: Pubkey,
-    /// Time step (period) per which vesting occurs
-    pub period: u64,
-    /// Vesting contract "cliff" timestamp
-    pub cliff: u64,
-    /// Amount unlocked at the "cliff" timestamp
-    pub cliff_amount: u64,
+/// The account-holding struct for the stream initialization instruction
+#[derive(Debug)]
+pub struct InitializeAccounts<'a> {
+    /// The main wallet address of the initializer
+    pub sender_wallet: AccountInfo<'a>,
+    /// The associated token account address of `sender_wallet`
+    pub sender_tokens: AccountInfo<'a>,
+    /// The main wallet address of the recipient
+    pub recipient_wallet: AccountInfo<'a>,
+    /// The associated token account address of `recipient_wallet`
+    pub recipient_tokens: AccountInfo<'a>,
+    /// The account holding the stream metadata
+    pub metadata_account: AccountInfo<'a>,
+    /// The escrow account holding the stream funds
+    pub escrow_account: AccountInfo<'a>,
+    /// The SPL token mint account
+    pub mint_account: AccountInfo<'a>,
+    /// The Rent Sysvar account
+    pub rent_account: AccountInfo<'a>,
+    /// The program using this crate
+    pub timelock_program_account: AccountInfo<'a>,
+    /// The SPL token program
+    pub token_program_account: AccountInfo<'a>,
+    /// The Associated Token program
+    pub associated_token_program_account: AccountInfo<'a>,
+    /// The Solana system program
+    pub system_program_account: AccountInfo<'a>,
 }
 
-#[allow(clippy::too_many_arguments)]
-impl NativeStreamData {
-    /// Initialize a new `NativeStreamData` struct.
-    pub fn new(
-        start_time: u64,
-        end_time: u64,
-        amount: u64,
-        sender: Pubkey,
-        recipient: Pubkey,
-        escrow: Pubkey,
-        period: u64,
-        cliff: u64,
-        cliff_amount: u64,
-    ) -> Self {
-        Self {
-            start_time,
-            end_time,
-            amount,
-            withdrawn: 0,
-            sender,
-            recipient,
-            escrow,
-            period,
-            cliff,
-            cliff_amount,
-        }
-    }
+/// The account-holding struct for the stream withdraw instruction
+pub struct WithdrawAccounts<'a> {
+    /// The main wallet address of the initializer
+    pub sender_wallet: AccountInfo<'a>,
+    /// The associated token account address of `sender_wallet`
+    pub sender_tokens: AccountInfo<'a>,
+    /// The main wallet address of the recipient
+    pub recipient_wallet: AccountInfo<'a>,
+    /// The associated token account address of `recipient_wallet`
+    pub recipient_tokens: AccountInfo<'a>,
+    /// The account holding the stream metadata
+    pub metadata_account: AccountInfo<'a>,
+    /// The escrow account holding the stream funds
+    pub escrow_account: AccountInfo<'a>,
+    /// The SPL token mint account
+    pub mint_account: AccountInfo<'a>,
+    /// The program using this crate
+    pub timelock_program_account: AccountInfo<'a>,
+    /// The SPL token program
+    pub token_program_account: AccountInfo<'a>,
+    /// The Solana system program
+    pub system_program_account: AccountInfo<'a>,
+}
 
-    /// Calculate amount available for withdrawal with given timestamp.
-    pub fn available(&self, now: u64) -> u64 {
-        if self.start_time > now || self.cliff > now {
-            return 0;
-        }
-
-        if now >= self.end_time {
-            return self.amount - self.withdrawn;
-        }
-
-        let cliff = if self.cliff > 0 {
-            self.cliff
-        } else {
-            self.start_time
-        };
-
-        let cliff_amount = if self.cliff_amount > 0 {
-            self.cliff_amount
-        } else {
-            0
-        };
-
-        let num_periods = (self.end_time - cliff) as f64 / self.period as f64;
-        let period_amount = (self.amount - cliff_amount) as f64 / num_periods;
-        let periods_passed = (now - cliff) / self.period;
-        (periods_passed as f64 * period_amount) as u64 + cliff_amount - self.withdrawn
-    }
+/// The account-holding struct for the stream cancel instruction
+pub struct CancelAccounts<'a> {
+    /// The main wallet address of the initializer
+    pub sender_wallet: AccountInfo<'a>,
+    /// The associated token account address of `sender_wallet`
+    pub sender_tokens: AccountInfo<'a>,
+    /// The main wallet address of the recipient
+    pub recipient_wallet: AccountInfo<'a>,
+    /// The associated token account address of `recipient_wallet`
+    pub recipient_tokens: AccountInfo<'a>,
+    /// The account holding the stream metadata
+    pub metadata_account: AccountInfo<'a>,
+    /// The escrow account holding the stream funds
+    pub escrow_account: AccountInfo<'a>,
+    /// The SPL token mint account
+    pub mint_account: AccountInfo<'a>,
+    /// The program using this crate
+    pub timelock_program_account: AccountInfo<'a>,
+    /// The SPL token program
+    pub token_program_account: AccountInfo<'a>,
+    /// The Solana system program
+    pub system_program_account: AccountInfo<'a>,
 }
 
 /// TokenStreamData is the struct containing metadata for an SPL token stream.
 #[repr(C)]
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct TokenStreamData {
-    /// Timestamp when the funds start unlocking
-    pub start_time: u64,
-    /// Timestamp when all funds are unlocked
-    pub end_time: u64,
-    /// Amount of funds locked
-    pub amount: u64,
+    /// The stream instruction
+    pub ix: StreamInstruction,
     /// Amount of funds withdrawn
     pub withdrawn: u64,
     /// Pubkey of the stream initializer
@@ -142,12 +131,6 @@ pub struct TokenStreamData {
     pub mint: Pubkey,
     /// Pubkey of the account holding the locked tokens
     pub escrow: Pubkey,
-    /// Time step (period) per which vesting occurs
-    pub period: u64,
-    /// Vesting contract "cliff" timestamp
-    pub cliff: u64,
-    /// Amount unlocked at the "cliff" timestamp
-    pub cliff_amount: u64,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -157,20 +140,27 @@ impl TokenStreamData {
         start_time: u64,
         end_time: u64,
         amount: u64,
+        period: u64,
+        cliff: u64,
+        cliff_amount: u64,
         sender_wallet: Pubkey,
         sender_tokens: Pubkey,
         recipient_wallet: Pubkey,
         recipient_tokens: Pubkey,
         mint: Pubkey,
         escrow: Pubkey,
-        period: u64,
-        cliff: u64,
-        cliff_amount: u64,
     ) -> Self {
-        Self {
+        let ix = StreamInstruction {
             start_time,
             end_time,
             amount,
+            period,
+            cliff,
+            cliff_amount,
+        };
+
+        Self {
+            ix,
             withdrawn: 0,
             sender_wallet,
             sender_tokens,
@@ -178,37 +168,34 @@ impl TokenStreamData {
             recipient_tokens,
             mint,
             escrow,
-            period,
-            cliff,
-            cliff_amount,
         }
     }
 
     /// Calculate amount available for withdrawal with given timestamp.
     pub fn available(&self, now: u64) -> u64 {
-        if self.start_time > now || self.cliff > now {
+        if self.ix.start_time > now || self.ix.cliff > now {
             return 0;
         }
 
-        if now >= self.end_time {
-            return self.amount - self.withdrawn;
+        if now >= self.ix.end_time {
+            return self.ix.amount - self.withdrawn;
         }
 
-        let cliff = if self.cliff > 0 {
-            self.cliff
+        let cliff = if self.ix.cliff > 0 {
+            self.ix.cliff
         } else {
-            self.start_time
+            self.ix.start_time
         };
 
-        let cliff_amount = if self.cliff_amount > 0 {
-            self.cliff_amount
+        let cliff_amount = if self.ix.cliff_amount > 0 {
+            self.ix.cliff_amount
         } else {
             0
         };
 
-        let num_periods = (self.end_time - cliff) as f64 / self.period as f64;
-        let period_amount = (self.amount - cliff_amount) as f64 / num_periods;
-        let periods_passed = (now - cliff) / self.period;
+        let num_periods = (self.ix.end_time - cliff) as f64 / self.ix.period as f64;
+        let period_amount = (self.ix.amount - cliff_amount) as f64 / num_periods;
+        let periods_passed = (now - cliff) / self.ix.period;
         (periods_passed as f64 * period_amount) as u64 + cliff_amount - self.withdrawn
     }
 }
