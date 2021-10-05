@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use serde::{Deserialize, Serialize};
-use solana_program::pubkey::Pubkey;
+use solana_program::{account_info::AccountInfo, pubkey::Pubkey};
 
 /// TokenStreamInstruction is the struct containing instructions for
 /// initializing a SOL/SPL stream.
@@ -49,6 +49,38 @@ pub struct NativeStreamData {
     pub recipient: Pubkey,
     /// Pubkey of the escrow account holding the locked SOL.
     pub escrow: Pubkey,
+}
+
+/// The account-holding struct for a native stream initialization
+pub struct NativeStreamInitAccounts<'a> {
+    /// The initializer of the stream
+    pub sender_wallet: AccountInfo<'a>,
+    /// The recipient of the stream
+    pub recipient_wallet: AccountInfo<'a>,
+    /// The escrow and metadata account of the stream
+    pub escrow_account: AccountInfo<'a>,
+    /// The Solana system program
+    pub system_program_account: AccountInfo<'a>,
+}
+
+/// The account-holding struct for a native stream withdrawal
+pub struct NativeStreamWithdrawAccounts<'a> {
+    /// The initializer of the stream
+    pub sender_wallet: AccountInfo<'a>,
+    /// The recipient of the stream
+    pub recipient_wallet: AccountInfo<'a>,
+    /// The escrow and metadata account of the stream
+    pub escrow_account: AccountInfo<'a>,
+}
+
+/// The account-holding struct for a native stream canellation
+pub struct NativeStreamCancelAccounts<'a> {
+    /// The initializer of the stream
+    pub sender_wallet: AccountInfo<'a>,
+    /// The recipient of the stream
+    pub recipient_wallet: AccountInfo<'a>,
+    /// The escrow and metadata account of the stream
+    pub escrow_account: AccountInfo<'a>,
 }
 
 #[allow(clippy::too_many_arguments)]
