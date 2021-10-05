@@ -52,7 +52,7 @@ pub fn initialize_token_stream(
 
     if !acc.sender_wallet.is_writable
         || !acc.sender_tokens.is_writable
-        || !acc.recipient_wallet.is_writable
+        || !acc.recipient_wallet.is_writable//todo: could it be read-only?
         || !acc.recipient_tokens.is_writable
         || !acc.metadata_account.is_writable
         || !acc.escrow_account.is_writable
@@ -90,8 +90,6 @@ pub fn initialize_token_stream(
     }
 
     // We also transfer enough to be rent-exempt on the metadata account.
-    // After all funds are unlocked and withdrawn, the remains are
-    // returned to the sender's account.
     let metadata_struct_size = std::mem::size_of::<TokenStreamData>();
     let tokens_struct_size = spl_token::state::Account::LEN;
     let cluster_rent = Rent::get()?;
@@ -243,7 +241,7 @@ pub fn initialize_token_stream(
     );
 
     if metadata.ix.cliff > 0 && metadata.ix.cliff_amount > 0 {
-        msg!("Cliff happens in {}", pretty_time(metadata.ix.cliff));
+        msg!("Cliff happens at {}", pretty_time(metadata.ix.cliff));
     }
 
     Ok(())
@@ -353,15 +351,15 @@ pub fn withdraw_token_stream(
     let bytes = bincode::serialize(&metadata).unwrap();
     data[0..bytes.len()].clone_from_slice(&bytes);
 
-    // Return rent when everything is withdrawn
-    if metadata.withdrawn == metadata.ix.amount {
-        msg!("Returning rent to {}", acc.sender_wallet.key);
-        let rent = acc.metadata_account.lamports();
-        **acc.metadata_account.try_borrow_mut_lamports()? -= rent;
-        **acc.sender_wallet.try_borrow_mut_lamports()? += rent;
-
-        // TODO: Close token account, has to have close authority
-    }
+    // // Return rent when everything is withdrawn
+    // if metadata.withdrawn == metadata.ix.amount {
+    //     msg!("Returning rent to {}", acc.sender_wallet.key);
+    //     let rent = acc.metadata_account.lamports();
+    //     **acc.metadata_account.try_borrow_mut_lamports()? -= rent;
+    //     **acc.sender_wallet.try_borrow_mut_lamports()? += rent;
+    //
+    //     // TODO: Close token account, has to have close authority
+    // }
 
     msg!(
         "Withdrawn: {} {} tokens",
