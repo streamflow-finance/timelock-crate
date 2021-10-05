@@ -103,11 +103,10 @@ pub fn initialize_token_stream(
     // Check if we have to initialize recipient's associated token account.
     if acc.recipient_tokens.data_is_empty() {
         tokens_rent += cluster_rent.minimum_balance(tokens_struct_size);
-        tokens_rent += lps;
     }
 
     // TODO: Check if wrapped SOL
-    if acc.sender_wallet.lamports() < metadata_rent + tokens_rent + (4 * lps) {
+    if acc.sender_wallet.lamports() < metadata_rent + tokens_rent + (2 * lps) { //two signatures
         msg!("Error: Insufficient funds in {}", acc.sender_wallet.key);
         return Err(ProgramError::InsufficientFunds);
     }
