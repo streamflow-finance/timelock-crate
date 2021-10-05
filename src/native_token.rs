@@ -25,7 +25,7 @@ use solana_program::{
     sysvar::{clock::Clock, fees::Fees, rent::Rent, Sysvar},
 };
 
-use crate::state::{NativeStreamData, TokenStreamInstruction};
+use crate::state::{NativeStreamData, StreamInstruction};
 use crate::utils::{duration_sanity, pretty_time};
 
 /// Initializes a native SOL stream
@@ -44,7 +44,7 @@ use crate::utils::{duration_sanity, pretty_time};
 pub fn initialize_native_stream(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
-    ix: TokenStreamInstruction,
+    ix: StreamInstruction,
 ) -> ProgramResult {
     msg!("Initializing native SOL stream");
     let account_info_iter = &mut accounts.iter();
@@ -93,12 +93,12 @@ pub fn initialize_native_stream(
         ix.start_time,
         ix.end_time,
         ix.amount,
-        *sender_wallet.key,
-        *recipient_wallet.key,
-        *escrow_account.key,
         ix.period,
         ix.cliff,
         ix.cliff_amount,
+        *sender_wallet.key,
+        *recipient_wallet.key,
+        *escrow_account.key,
     );
     let bytes = bincode::serialize(&metadata).unwrap();
 
@@ -111,7 +111,7 @@ pub fn initialize_native_stream(
         &system_instruction::create_account(
             sender_wallet.key,
             escrow_account.key,
-            metadata.amount + cluster_rent.minimum_balance(struct_size),
+            metadata.ix.amount + cluster_rent.minimum_balance(struct_size),
             struct_size as u64,
             program_id,
         ),
@@ -128,18 +128,18 @@ pub fn initialize_native_stream(
 
     msg!(
         "Successfully initialized {} SOL stream for {}",
-        lamports_to_sol(metadata.amount),
+        lamports_to_sol(metadata.ix.amount),
         recipient_wallet.key
     );
     msg!("Called by {}", sender_wallet.key);
     msg!("Funds locked in {}", escrow_account.key);
     msg!(
         "Stream duration is {}",
-        pretty_time(metadata.end_time - metadata.start_time)
+        pretty_time(metadata.ix.end_time - metadata.ix.start_time)
     );
 
-    if metadata.cliff > 0 && metadata.cliff_amount > 0 {
-        msg!("Cliff happens in {}", pretty_time(metadata.cliff));
+    if metadata.ix.cliff > 0 && metadata.ix.cliff_amount > 0 {
+        msg!("Cliff happens in {}", pretty_time(metadata.ix.cliff));
     }
 
     Ok(())
@@ -212,7 +212,7 @@ pub fn withdraw_native_stream(
     data[0..bytes.len()].clone_from_slice(&bytes);
 
     // Return rent when everything is withdrawn
-    if metadata.withdrawn == metadata.amount {
+    if metadata.withdrawn == metadata.ix.amount {
         msg!("Returning rent to {}", sender_wallet.key);
         let rent = escrow_account.lamports();
         **escrow_account.try_borrow_mut_lamports()? -= rent;
@@ -222,7 +222,7 @@ pub fn withdraw_native_stream(
     msg!("Withdrawn: {} SOL", lamports_to_sol(req));
     msg!(
         "Remaining: {} SOL",
-        lamports_to_sol(metadata.amount - metadata.withdrawn)
+        lamports_to_sol(metadata.ix.amount - metadata.withdrawn)
     );
 
     Ok(())

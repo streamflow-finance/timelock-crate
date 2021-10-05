@@ -27,7 +27,7 @@ use solana_program::{
 };
 use spl_associated_token_account::create_associated_token_account;
 
-use crate::state::{TokenStreamData, TokenStreamInstruction};
+use crate::state::{StreamInstruction, TokenStreamData};
 use crate::utils::{
     duration_sanity, encode_base10, pretty_time, unpack_mint_account, unpack_token_account,
 };
@@ -55,7 +55,7 @@ use crate::utils::{
 pub fn initialize_token_stream(
     program_id: &Pubkey,
     accounts: &[AccountInfo],
-    ix: TokenStreamInstruction,
+    ix: StreamInstruction,
 ) -> ProgramResult {
     msg!("Initializing SPL token stream");
     let account_info_iter = &mut accounts.iter();
@@ -146,15 +146,15 @@ pub fn initialize_token_stream(
         ix.start_time,
         ix.end_time,
         ix.amount,
+        ix.period,
+        ix.cliff,
+        ix.cliff_amount,
         *sender_wallet.key,
         *sender_tokens.key,
         *recipient_wallet.key,
         *recipient_tokens.key,
         *mint_account.key,
         *escrow_account.key,
-        ix.period,
-        ix.cliff,
-        ix.cliff_amount,
     );
     let bytes = bincode::serialize(&metadata).unwrap();
 
@@ -241,7 +241,7 @@ pub fn initialize_token_stream(
             escrow_account.key,
             sender_wallet.key,
             &[],
-            metadata.amount,
+            metadata.ix.amount,
         )?,
         &[
             sender_tokens.clone(),
@@ -253,7 +253,7 @@ pub fn initialize_token_stream(
 
     msg!(
         "Successfully initialized {} {} token stream for {}",
-        encode_base10(metadata.amount, mint_info.decimals.into()),
+        encode_base10(metadata.ix.amount, mint_info.decimals.into()),
         metadata.mint,
         recipient_wallet.key
     );
@@ -262,11 +262,11 @@ pub fn initialize_token_stream(
     msg!("Funds locked in {}", escrow_account.key);
     msg!(
         "Stream duration is {}",
-        pretty_time(metadata.end_time - metadata.start_time)
+        pretty_time(metadata.ix.end_time - metadata.ix.start_time)
     );
 
-    if metadata.cliff > 0 && metadata.cliff_amount > 0 {
-        msg!("Cliff happens in {}", pretty_time(metadata.cliff));
+    if metadata.ix.cliff > 0 && metadata.ix.cliff_amount > 0 {
+        msg!("Cliff happens in {}", pretty_time(metadata.ix.cliff));
     }
 
     Ok(())
@@ -402,7 +402,7 @@ pub fn withdraw_token_stream(
     data[0..bytes.len()].clone_from_slice(&bytes);
 
     // Return rent when everything is withdrawn
-    if metadata.withdrawn == metadata.amount {
+    if metadata.withdrawn == metadata.ix.amount {
         msg!("Returning rent to {}", sender_wallet.key);
         let rent = metadata_account.lamports();
         **metadata_account.try_borrow_mut_lamports()? -= rent;
@@ -419,7 +419,7 @@ pub fn withdraw_token_stream(
     msg!(
         "Remaining: {} {} tokens",
         encode_base10(
-            metadata.amount - metadata.withdrawn,
+            metadata.ix.amount - metadata.withdrawn,
             mint_info.decimals.into()
         ),
         metadata.mint
@@ -534,7 +534,7 @@ pub fn cancel_token_stream(program_id: &Pubkey, accounts: &[AccountInfo]) -> Pro
     )?;
 
     metadata.withdrawn += available;
-    let remains = metadata.amount - metadata.withdrawn;
+    let remains = metadata.ix.amount - metadata.withdrawn;
 
     if remains > 0 {
         invoke_signed(
