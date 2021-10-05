@@ -193,6 +193,7 @@ impl TokenStreamData {
             0
         };
 
+        //TODO: use uint arithmetics, floats are imprecise
         let num_periods = (self.ix.end_time - cliff) as f64 / self.ix.period as f64;
         let period_amount = (self.ix.amount - cliff_amount) as f64 / num_periods;
         let periods_passed = (now - cliff) / self.ix.period;
