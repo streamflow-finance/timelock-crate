@@ -16,8 +16,7 @@
 use serde::{Deserialize, Serialize};
 use solana_program::{account_info::AccountInfo, pubkey::Pubkey};
 
-/// TokenStreamInstruction is the struct containing instructions for
-/// initializing a SOL/SPL stream.
+/// The struct containing instructions for initializing a stream
 #[repr(C)]
 #[derive(Deserialize, Serialize, Debug)]
 pub struct StreamInstruction {
@@ -35,113 +34,81 @@ pub struct StreamInstruction {
     pub cliff_amount: u64,
 }
 
-/// NativeStreamData is the struct containing metadata for a native SOL stream.
-#[repr(C)]
-#[derive(Deserialize, Serialize, Debug)]
-pub struct NativeStreamData {
-    /// The stream instruction
-    pub ix: StreamInstruction,
-    /// Amount of funds withdrawn
-    pub withdrawn: u64,
-    /// Pubkey of the stream initializer
-    pub sender: Pubkey,
-    /// Pubkey of the stream recipient
-    pub recipient: Pubkey,
-    /// Pubkey of the escrow account holding the locked SOL.
-    pub escrow: Pubkey,
-}
-
-/// The account-holding struct for a native stream initialization
-pub struct NativeStreamInitAccounts<'a> {
-    /// The initializer of the stream
+/// The account-holding struct for the stream initialization instruction
+#[derive(Debug)]
+pub struct InitializeAccounts<'a> {
+    /// The main wallet address of the initializer
     pub sender_wallet: AccountInfo<'a>,
-    /// The recipient of the stream
+    /// The associated token account address of `sender_wallet`
+    pub sender_tokens: AccountInfo<'a>,
+    /// The main wallet address of the recipient
     pub recipient_wallet: AccountInfo<'a>,
-    /// The escrow and metadata account of the stream
+    /// The associated token account address of `recipient_wallet`
+    pub recipient_tokens: AccountInfo<'a>,
+    /// The account holding the stream metadata
+    pub metadata_account: AccountInfo<'a>,
+    /// The escrow account holding the stream funds
     pub escrow_account: AccountInfo<'a>,
+    /// The SPL token mint account
+    pub mint_account: AccountInfo<'a>,
+    /// The Rent Sysvar account
+    pub rent_account: AccountInfo<'a>,
+    /// The program using this crate
+    pub timelock_program_account: AccountInfo<'a>,
+    /// The SPL token program
+    pub token_program_account: AccountInfo<'a>,
+    /// The Associated Token program
+    pub associated_token_program_account: AccountInfo<'a>,
     /// The Solana system program
     pub system_program_account: AccountInfo<'a>,
 }
 
-/// The account-holding struct for a native stream withdrawal
-pub struct NativeStreamWithdrawAccounts<'a> {
-    /// The initializer of the stream
+/// The account-holding struct for the stream withdraw instruction
+pub struct WithdrawAccounts<'a> {
+    /// The main wallet address of the initializer
     pub sender_wallet: AccountInfo<'a>,
-    /// The recipient of the stream
+    /// The associated token account address of `sender_wallet`
+    pub sender_tokens: AccountInfo<'a>,
+    /// The main wallet address of the recipient
     pub recipient_wallet: AccountInfo<'a>,
-    /// The escrow and metadata account of the stream
+    /// The associated token account address of `recipient_wallet`
+    pub recipient_tokens: AccountInfo<'a>,
+    /// The account holding the stream metadata
+    pub metadata_account: AccountInfo<'a>,
+    /// The escrow account holding the stream funds
     pub escrow_account: AccountInfo<'a>,
+    /// The SPL token mint account
+    pub mint_account: AccountInfo<'a>,
+    /// The program using this crate
+    pub timelock_program_account: AccountInfo<'a>,
+    /// The SPL token program
+    pub token_program_account: AccountInfo<'a>,
+    /// The Solana system program
+    pub system_program_account: AccountInfo<'a>,
 }
 
-/// The account-holding struct for a native stream canellation
-pub struct NativeStreamCancelAccounts<'a> {
-    /// The initializer of the stream
+/// The account-holding struct for the stream cancel instruction
+pub struct CancelAccounts<'a> {
+    /// The main wallet address of the initializer
     pub sender_wallet: AccountInfo<'a>,
-    /// The recipient of the stream
+    /// The associated token account address of `sender_wallet`
+    pub sender_tokens: AccountInfo<'a>,
+    /// The main wallet address of the recipient
     pub recipient_wallet: AccountInfo<'a>,
-    /// The escrow and metadata account of the stream
+    /// The associated token account address of `recipient_wallet`
+    pub recipient_tokens: AccountInfo<'a>,
+    /// The account holding the stream metadata
+    pub metadata_account: AccountInfo<'a>,
+    /// The escrow account holding the stream funds
     pub escrow_account: AccountInfo<'a>,
-}
-
-#[allow(clippy::too_many_arguments)]
-impl NativeStreamData {
-    /// Initialize a new `NativeStreamData` struct.
-    pub fn new(
-        start_time: u64,
-        end_time: u64,
-        amount: u64,
-        period: u64,
-        cliff: u64,
-        cliff_amount: u64,
-        sender: Pubkey,
-        recipient: Pubkey,
-        escrow: Pubkey,
-    ) -> Self {
-        let ix = StreamInstruction {
-            start_time,
-            end_time,
-            amount,
-            period,
-            cliff,
-            cliff_amount,
-        };
-
-        Self {
-            ix,
-            withdrawn: 0,
-            sender,
-            recipient,
-            escrow,
-        }
-    }
-
-    /// Calculate amount available for withdrawal with given timestamp.
-    pub fn available(&self, now: u64) -> u64 {
-        if self.ix.start_time > now || self.ix.cliff > now {
-            return 0;
-        }
-
-        if now >= self.ix.end_time {
-            return self.ix.amount - self.withdrawn;
-        }
-
-        let cliff = if self.ix.cliff > 0 {
-            self.ix.cliff
-        } else {
-            self.ix.start_time
-        };
-
-        let cliff_amount = if self.ix.cliff_amount > 0 {
-            self.ix.cliff_amount
-        } else {
-            0
-        };
-
-        let num_periods = (self.ix.end_time - cliff) as f64 / self.ix.period as f64;
-        let period_amount = (self.ix.amount - cliff_amount) as f64 / num_periods;
-        let periods_passed = (now - cliff) / self.ix.period;
-        (periods_passed as f64 * period_amount) as u64 + cliff_amount - self.withdrawn
-    }
+    /// The SPL token mint account
+    pub mint_account: AccountInfo<'a>,
+    /// The program using this crate
+    pub timelock_program_account: AccountInfo<'a>,
+    /// The SPL token program
+    pub token_program_account: AccountInfo<'a>,
+    /// The Solana system program
+    pub system_program_account: AccountInfo<'a>,
 }
 
 /// TokenStreamData is the struct containing metadata for an SPL token stream.
