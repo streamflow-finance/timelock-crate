@@ -46,13 +46,14 @@ pub fn unpack_mint_account(
     spl_token::state::Mint::unpack(&account_info.data.borrow())
 }
 
-/// Returns a hours/minutes/seconds string from given `t` seconds.
+/// Returns a days/hours/minutes/seconds string from given `t` seconds.
 pub fn pretty_time(t: u64) -> String {
     let seconds = t % 60;
     let minutes = (t / 60) % 60;
-    let hours = (t / 60) / 60;
+    let hours = (t / (60 * 60)) % 24;
+    let days = t / (60 * 60 * 24);
 
-    format!("{} hours, {} minutes, {} seconds", hours, minutes, seconds)
+    format!("{} days, {} hours, {} minutes, {} seconds", days, hours, minutes, seconds)
 }
 
 pub fn encode_base10(amount: u64, decimal_places: usize) -> String {
