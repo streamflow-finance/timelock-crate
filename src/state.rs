@@ -71,8 +71,6 @@ pub struct WithdrawAccounts<'a> {
     /// The SPL token mint account
     //todo: needed only for logging/debugging purposes, to get the token decimals
     pub mint_account: AccountInfo<'a>,
-    /// The program using this crate
-    pub timelock_program_account: AccountInfo<'a>,
     /// The SPL token program
     pub token_program_account: AccountInfo<'a>,
 }
@@ -94,8 +92,6 @@ pub struct CancelAccounts<'a> {
     /// The SPL token mint account
     //todo: needed only for logging/debugging purposes, to get the token decimals
     pub mint_account: AccountInfo<'a>,
-    /// The program using this crate
-    pub timelock_program_account: AccountInfo<'a>,
     /// The SPL token program
     pub token_program_account: AccountInfo<'a>,
 }
