@@ -43,11 +43,11 @@ pub struct InitializeAccounts<'a> {
     pub sender_tokens: AccountInfo<'a>,
     /// The main wallet address of the recipient
     pub recipient_wallet: AccountInfo<'a>,
-    /// The associated token account address of `recipient_wallet`
+    /// The associated token account address of `recipient_wallet` (could be either empty or initialized)
     pub recipient_tokens: AccountInfo<'a>,
-    /// The account holding the stream metadata
+    /// The account holding the stream metadata — expects empty (not-initialized) account
     pub metadata_account: AccountInfo<'a>,
-    /// The escrow account holding the stream funds
+    /// The escrow account holding the stream funds — expects empty (not-initialized) account
     pub escrow_account: AccountInfo<'a>,
     /// The SPL token mint account
     pub mint_account: AccountInfo<'a>,
@@ -65,11 +65,6 @@ pub struct InitializeAccounts<'a> {
 
 /// The account-holding struct for the stream withdraw instruction
 pub struct WithdrawAccounts<'a> {
-    /// The main wallet address of the initializer
-    pub sender_wallet: AccountInfo<'a>,
-    /// The associated token account address of `sender_wallet`
-    pub sender_tokens: AccountInfo<'a>,
-    /// The main wallet address of the recipient
     pub recipient_wallet: AccountInfo<'a>,
     /// The associated token account address of `recipient_wallet`
     pub recipient_tokens: AccountInfo<'a>,
@@ -78,13 +73,11 @@ pub struct WithdrawAccounts<'a> {
     /// The escrow account holding the stream funds
     pub escrow_account: AccountInfo<'a>,
     /// The SPL token mint account
-    pub mint_account: AccountInfo<'a>,
+    pub mint_account: AccountInfo<'a>, //todo: needed only for logging/debugging purposes, to get the token decimals
     /// The program using this crate
     pub timelock_program_account: AccountInfo<'a>,
     /// The SPL token program
     pub token_program_account: AccountInfo<'a>,
-    /// The Solana system program
-    pub system_program_account: AccountInfo<'a>,
 }
 
 /// The account-holding struct for the stream cancel instruction
@@ -102,13 +95,11 @@ pub struct CancelAccounts<'a> {
     /// The escrow account holding the stream funds
     pub escrow_account: AccountInfo<'a>,
     /// The SPL token mint account
-    pub mint_account: AccountInfo<'a>,
+    pub mint_account: AccountInfo<'a>, //todo: needed only for logging/debugging purposes, to get the token decimals
     /// The program using this crate
     pub timelock_program_account: AccountInfo<'a>,
     /// The SPL token program
     pub token_program_account: AccountInfo<'a>,
-    /// The Solana system program
-    pub system_program_account: AccountInfo<'a>,
 }
 
 /// TokenStreamData is the struct containing metadata for an SPL token stream.
