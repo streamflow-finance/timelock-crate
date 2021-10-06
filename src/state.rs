@@ -53,12 +53,8 @@ pub struct InitializeAccounts<'a> {
     pub mint_account: AccountInfo<'a>,
     /// The Rent Sysvar account
     pub rent_account: AccountInfo<'a>,
-    /// The program using this crate
-    pub timelock_program_account: AccountInfo<'a>,
     /// The SPL token program
     pub token_program_account: AccountInfo<'a>,
-    /// The Associated Token program
-    pub associated_token_program_account: AccountInfo<'a>,
     /// The Solana system program
     pub system_program_account: AccountInfo<'a>,
 }
@@ -73,7 +69,8 @@ pub struct WithdrawAccounts<'a> {
     /// The escrow account holding the stream funds
     pub escrow_account: AccountInfo<'a>,
     /// The SPL token mint account
-    pub mint_account: AccountInfo<'a>, //todo: needed only for logging/debugging purposes, to get the token decimals
+    //todo: needed only for logging/debugging purposes, to get the token decimals
+    pub mint_account: AccountInfo<'a>,
     /// The program using this crate
     pub timelock_program_account: AccountInfo<'a>,
     /// The SPL token program
@@ -95,11 +92,34 @@ pub struct CancelAccounts<'a> {
     /// The escrow account holding the stream funds
     pub escrow_account: AccountInfo<'a>,
     /// The SPL token mint account
-    pub mint_account: AccountInfo<'a>, //todo: needed only for logging/debugging purposes, to get the token decimals
+    //todo: needed only for logging/debugging purposes, to get the token decimals
+    pub mint_account: AccountInfo<'a>,
     /// The program using this crate
     pub timelock_program_account: AccountInfo<'a>,
     /// The SPL token program
     pub token_program_account: AccountInfo<'a>,
+}
+
+/// Accounts needed for updating stream recipient
+pub struct TransferAccounts<'a> {
+    /// Wallet address of the existing recipient
+    pub existing_recipient_wallet: AccountInfo<'a>,
+    /// New stream beneficiary
+    pub new_recipient_wallet: AccountInfo<'a>,
+    /// New stream beneficiary's token account. If not initialized, it will be created and `existing_recipient_wallet` is a fee payer
+    pub new_recipient_tokens: AccountInfo<'a>,
+    /// The account holding the stream metadata
+    pub metadata_account: AccountInfo<'a>,
+    /// The escrow account holding the stream funds
+    pub escrow_account: AccountInfo<'a>,
+    /// The SPL token mint account needed in case associated account for the new recipients is being created
+    pub mint_account: AccountInfo<'a>,
+    /// Rent account
+    pub rent_account: AccountInfo<'a>,
+    /// The Associated Token program needed in case associated account for the new recipients is being created
+    pub token_program_account: AccountInfo<'a>,
+    /// The Solana system program needed in case associated account for the new recipients is being created
+    pub system_program_account: AccountInfo<'a>,
 }
 
 /// TokenStreamData is the struct containing metadata for an SPL token stream.

@@ -16,7 +16,7 @@
 use solana_program::{
     entrypoint::ProgramResult,
     msg,
-   // native_token::lamports_to_sol,
+    // native_token::lamports_to_sol,
     program::{invoke, invoke_signed},
     program_error::ProgramError,
     program_pack::Pack,
@@ -27,7 +27,7 @@ use solana_program::{
 use spl_associated_token_account::{create_associated_token_account, get_associated_token_address};
 
 use crate::state::{
-    CancelAccounts, InitializeAccounts, StreamInstruction, TokenStreamData, WithdrawAccounts,
+    CancelAccounts, InitializeAccounts, StreamInstruction, TokenStreamData, WithdrawAccounts, TransferAccounts,
 };
 use crate::utils::{
     duration_sanity, encode_base10, pretty_time, unpack_mint_account, unpack_token_account,
@@ -67,7 +67,6 @@ pub fn initialize_token_stream(
 
     if acc.system_program_account.key != &system_program::id()
         || acc.token_program_account.key != &spl_token::id()
-        || acc.timelock_program_account.key != program_id
         || acc.rent_account.key != &sysvar::rent::id()
         || acc.escrow_account.key != &escrow_pubkey
         || acc.recipient_tokens.key != &recipient_tokens_key
@@ -513,6 +512,97 @@ pub fn cancel_token_stream(program_id: &Pubkey, acc: CancelAccounts) -> ProgramR
     //     "Returned rent: {} SOL",
     //     lamports_to_sol(remains_escrow + remains_meta)
     // );
+
+    Ok(())
+}
+
+pub fn update_recipient(
+    program_id: &Pubkey,
+    acc: TransferAccounts,
+) -> ProgramResult {
+    msg!("Transferring stream recipient");
+    if acc.metadata_account.data_is_empty()
+        || acc.metadata_account.owner != program_id
+        || acc.escrow_account.data_is_empty()
+        || acc.escrow_account.owner != &spl_token::id()
+    {
+        return Err(ProgramError::UninitializedAccount);
+    }
+
+    if !acc.existing_recipient_wallet.is_signer
+    {
+        return Err(ProgramError::MissingRequiredSignature);
+    }
+
+    if !acc.metadata_account.is_writable
+        || !acc.existing_recipient_wallet.is_writable
+        || !acc.new_recipient_tokens.is_writable
+    {
+        return Err(ProgramError::InvalidAccountData);
+    }
+
+    let mut data = acc.metadata_account.try_borrow_mut_data()?;
+    let mut metadata = match bincode::deserialize::<TokenStreamData>(&data) {
+        Ok(v) => v,
+        Err(_) => return Err(ProgramError::Custom(1)),//todo: add "Invalid Metadata" as an error
+    };
+
+    let (escrow_pubkey, nonce) =
+        Pubkey::find_program_address(&[acc.metadata_account.key.as_ref()], program_id);
+    let new_recipient_tokens_key =
+        get_associated_token_address(acc.new_recipient_wallet.key, acc.mint_account.key);
+
+    if acc.new_recipient_tokens.key != &new_recipient_tokens_key
+        || acc.mint_account.key != &metadata.mint
+        || acc.existing_recipient_wallet.key != &metadata.recipient_wallet
+        || acc.escrow_account.key != &metadata.escrow
+        || acc.escrow_account.key != &escrow_pubkey
+        || acc.token_program_account.key != &spl_token::id()
+        || acc.system_program_account.key != &system_program::id()
+        || acc.rent_account.key != &sysvar::rent::id()
+    {
+        return Err(ProgramError::InvalidAccountData);
+    }
+
+    if acc.new_recipient_tokens.data_is_empty() {
+        //initialize a new_beneficiary_owner account
+        let tokens_struct_size = spl_token::state::Account::LEN;
+        let cluster_rent = Rent::get()?;
+        let tokens_rent = cluster_rent.minimum_balance(tokens_struct_size);
+        let fees = Fees::get()?;
+        let lps = fees.fee_calculator.lamports_per_signature;
+
+        // TODO: Check if wrapped SOL
+        if acc.existing_recipient_wallet.lamports() < tokens_rent + lps {
+            msg!("Error: Insufficient funds in {}", acc.existing_recipient_wallet.key);
+            return Err(ProgramError::InsufficientFunds);
+        }
+
+        msg!("Initializing new recipient's associated token account");
+        invoke(
+            &create_associated_token_account(
+                acc.existing_recipient_wallet.key,
+                acc.new_recipient_wallet.key,
+                acc.mint_account.key,
+            ),
+            &[
+                acc.existing_recipient_wallet.clone(), //funding
+                acc.new_recipient_tokens.clone(), //associated token account's address
+                acc.new_recipient_wallet.clone(), //wallet address
+                acc.mint_account.clone(),
+                acc.system_program_account.clone(),
+                acc.token_program_account.clone(),
+                acc.rent_account.clone(),
+            ],
+        )?;
+    }
+
+    //update recipient
+    metadata.recipient_wallet = *acc.new_recipient_wallet.key;
+    metadata.recipient_tokens = *acc.new_recipient_tokens.key;
+
+    let bytes = bincode::serialize(&metadata).unwrap();
+    data[0..bytes.len()].clone_from_slice(&bytes);
 
     Ok(())
 }
