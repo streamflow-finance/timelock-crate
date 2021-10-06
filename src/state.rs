@@ -38,84 +38,84 @@ pub struct StreamInstruction {
 #[derive(Debug)]
 pub struct InitializeAccounts<'a> {
     /// The main wallet address of the initializer
-    pub sender_wallet: AccountInfo<'a>,
-    /// The associated token account address of `sender_wallet`
+    pub sender: AccountInfo<'a>,
+    /// The associated token account address of `sender`
     pub sender_tokens: AccountInfo<'a>,
     /// The main wallet address of the recipient
-    pub recipient_wallet: AccountInfo<'a>,
-    /// The associated token account address of `recipient_wallet` (could be either empty or initialized)
+    pub recipient: AccountInfo<'a>,
+    /// The associated token account address of `recipient` (could be either empty or initialized)
     pub recipient_tokens: AccountInfo<'a>,
     /// The account holding the stream metadata — expects empty (not-initialized) account
-    pub metadata_account: AccountInfo<'a>,
+    pub metadata: AccountInfo<'a>,
     /// The escrow account holding the stream funds — expects empty (not-initialized) account
-    pub escrow_account: AccountInfo<'a>,
+    pub escrow_tokens: AccountInfo<'a>,
     /// The SPL token mint account
-    pub mint_account: AccountInfo<'a>,
+    pub mint: AccountInfo<'a>,
     /// The Rent Sysvar account
-    pub rent_account: AccountInfo<'a>,
+    pub rent: AccountInfo<'a>,
     /// The SPL token program
-    pub token_program_account: AccountInfo<'a>,
+    pub token_program: AccountInfo<'a>,
     /// The Solana system program
-    pub system_program_account: AccountInfo<'a>,
+    pub system_program: AccountInfo<'a>,
 }
 
 /// The account-holding struct for the stream withdraw instruction
 pub struct WithdrawAccounts<'a> {
-    pub recipient_wallet: AccountInfo<'a>,
-    /// The associated token account address of `recipient_wallet`
+    pub recipient: AccountInfo<'a>,
+    /// The associated token account address of `recipient`
     pub recipient_tokens: AccountInfo<'a>,
     /// The account holding the stream metadata
-    pub metadata_account: AccountInfo<'a>,
+    pub metadata: AccountInfo<'a>,
     /// The escrow account holding the stream funds
-    pub escrow_account: AccountInfo<'a>,
+    pub escrow_tokens: AccountInfo<'a>,
     /// The SPL token mint account
     //todo: needed only for logging/debugging purposes, to get the token decimals
-    pub mint_account: AccountInfo<'a>,
+    pub mint: AccountInfo<'a>,
     /// The SPL token program
-    pub token_program_account: AccountInfo<'a>,
+    pub token_program: AccountInfo<'a>,
 }
 
 /// The account-holding struct for the stream cancel instruction
 pub struct CancelAccounts<'a> {
     /// The main wallet address of the initializer
-    pub sender_wallet: AccountInfo<'a>,
-    /// The associated token account address of `sender_wallet`
+    pub sender: AccountInfo<'a>,
+    /// The associated token account address of `sender`
     pub sender_tokens: AccountInfo<'a>,
     /// The main wallet address of the recipient
-    pub recipient_wallet: AccountInfo<'a>,
-    /// The associated token account address of `recipient_wallet`
+    pub recipient: AccountInfo<'a>,
+    /// The associated token account address of `recipient`
     pub recipient_tokens: AccountInfo<'a>,
     /// The account holding the stream metadata
-    pub metadata_account: AccountInfo<'a>,
+    pub metadata: AccountInfo<'a>,
     /// The escrow account holding the stream funds
-    pub escrow_account: AccountInfo<'a>,
+    pub escrow_tokens: AccountInfo<'a>,
     /// The SPL token mint account
     //todo: needed only for logging/debugging purposes, to get the token decimals
-    pub mint_account: AccountInfo<'a>,
+    pub mint: AccountInfo<'a>,
     /// The SPL token program
-    pub token_program_account: AccountInfo<'a>,
+    pub token_program: AccountInfo<'a>,
 }
 
 /// Accounts needed for updating stream recipient
 pub struct TransferAccounts<'a> {
     /// Wallet address of the existing recipient
-    pub existing_recipient_wallet: AccountInfo<'a>,
+    pub existing_recipient: AccountInfo<'a>,
     /// New stream beneficiary
-    pub new_recipient_wallet: AccountInfo<'a>,
-    /// New stream beneficiary's token account. If not initialized, it will be created and `existing_recipient_wallet` is a fee payer
+    pub new_recipient: AccountInfo<'a>,
+    /// New stream beneficiary's token account. If not initialized, it will be created and `existing_recipient` is a fee payer
     pub new_recipient_tokens: AccountInfo<'a>,
     /// The account holding the stream metadata
-    pub metadata_account: AccountInfo<'a>,
+    pub metadata: AccountInfo<'a>,
     /// The escrow account holding the stream funds
-    pub escrow_account: AccountInfo<'a>,
+    pub escrow_tokens: AccountInfo<'a>,
     /// The SPL token mint account needed in case associated account for the new recipients is being created
-    pub mint_account: AccountInfo<'a>,
+    pub mint: AccountInfo<'a>,
     /// Rent account
-    pub rent_account: AccountInfo<'a>,
+    pub rent: AccountInfo<'a>,
     /// The Associated Token program needed in case associated account for the new recipients is being created
-    pub token_program_account: AccountInfo<'a>,
+    pub token_program: AccountInfo<'a>,
     /// The Solana system program needed in case associated account for the new recipients is being created
-    pub system_program_account: AccountInfo<'a>,
+    pub system_program: AccountInfo<'a>,
 }
 
 /// TokenStreamData is the struct containing metadata for an SPL token stream.
@@ -127,17 +127,17 @@ pub struct TokenStreamData {
     /// Amount of funds withdrawn
     pub withdrawn: u64,
     /// Pubkey of the stream initializer
-    pub sender_wallet: Pubkey,
+    pub sender: Pubkey,
     /// Pubkey of the stream initializer's token account
     pub sender_tokens: Pubkey,
     /// Pubkey of the stream recipient
-    pub recipient_wallet: Pubkey,
+    pub recipient: Pubkey,
     /// Pubkey of the stream recipient's token account
     pub recipient_tokens: Pubkey,
     /// Pubkey of the token mint
     pub mint: Pubkey,
     /// Pubkey of the account holding the locked tokens
-    pub escrow: Pubkey,
+    pub escrow_tokens: Pubkey,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -150,12 +150,12 @@ impl TokenStreamData {
         period: u64,
         cliff: u64,
         cliff_amount: u64,
-        sender_wallet: Pubkey,
+        sender: Pubkey,
         sender_tokens: Pubkey,
-        recipient_wallet: Pubkey,
+        recipient: Pubkey,
         recipient_tokens: Pubkey,
         mint: Pubkey,
-        escrow: Pubkey,
+        escrow_tokens: Pubkey,
     ) -> Self {
         let ix = StreamInstruction {
             start_time,
@@ -169,12 +169,12 @@ impl TokenStreamData {
         Self {
             ix,
             withdrawn: 0,
-            sender_wallet,
+            sender,
             sender_tokens,
-            recipient_wallet,
+            recipient,
             recipient_tokens,
             mint,
-            escrow,
+            escrow_tokens,
         }
     }
 
