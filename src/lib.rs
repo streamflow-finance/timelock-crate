@@ -16,6 +16,10 @@
 
 //! streamflow-timelock is the code providing timelock primitives
 //! used by [streamflow.finance](https://streamflow.finance).
+#[cfg(feature = "anchor-support")]
+use anchor_lang::prelude::*;
+#[cfg(feature = "anchor-support")]
+declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
 /// Functions related to SPL tokens
 pub mod associated_token;

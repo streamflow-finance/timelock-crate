@@ -13,6 +13,7 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
+use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{
     entrypoint::ProgramResult,
     msg,
@@ -60,7 +61,7 @@ pub fn initialize_token_stream(
         || !acc.metadata.is_writable
         || !acc.escrow_tokens.is_writable
     {
-        return Err(ProgramError::Custom(1));//TODO: Add custom error "Account not writeable"
+        return Err(ProgramError::Custom(1)); //TODO: Add custom error "Account not writeable"
     }
 
     let (escrow_tokens_pubkey, nonce) =
@@ -132,7 +133,8 @@ pub fn initialize_token_stream(
         *acc.mint.key,
         *acc.escrow_tokens.key,
     );
-    let bytes = bincode::serialize(&metadata).unwrap();
+    //let bytes = bincode::serialize(&metadata).unwrap();
+    let bytes = metadata.try_to_vec().unwrap();
 
     if acc.recipient_tokens.data_is_empty() {
         msg!("Initializing recipient's associated token account");
@@ -289,7 +291,8 @@ pub fn withdraw_token_stream(
     }
 
     let mut data = acc.metadata.try_borrow_mut_data()?;
-    let mut metadata = match bincode::deserialize::<TokenStreamData>(&data) {
+    //let mut metadata = match bincode::deserialize::<TokenStreamData>(&data) {
+    let mut metadata = match TokenStreamData::try_from_slice(&data) {
         Ok(v) => v,
         Err(_) => return Err(ProgramError::Custom(1)), // TODO: Add "Invalid Metadata" as an error
     };
@@ -341,7 +344,8 @@ pub fn withdraw_token_stream(
     )?;
 
     metadata.withdrawn += requested;
-    let bytes = bincode::serialize(&metadata).unwrap();
+    //let bytes = bincode::serialize(&metadata).unwrap();
+    let bytes = metadata.try_to_vec().unwrap();
     data[0..bytes.len()].clone_from_slice(&bytes);
 
     // Return rent when everything is withdrawn
@@ -413,7 +417,8 @@ pub fn cancel_token_stream(program_id: &Pubkey, acc: CancelAccounts) -> ProgramR
     }
 
     let data = acc.metadata.try_borrow_mut_data()?;
-    let mut metadata = match bincode::deserialize::<TokenStreamData>(&data) {
+    //let mut metadata = match bincode::deserialize::<TokenStreamData>(&data) {
+    let mut metadata = match TokenStreamData::try_from_slice(&data) {
         Ok(v) => v,
         Err(_) => return Err(ProgramError::Custom(143)),
     };
@@ -525,7 +530,8 @@ pub fn update_recipient(program_id: &Pubkey, acc: TransferAccounts) -> ProgramRe
     }
 
     let mut data = acc.metadata.try_borrow_mut_data()?;
-    let mut metadata = match bincode::deserialize::<TokenStreamData>(&data) {
+    //let mut metadata = match bincode::deserialize::<TokenStreamData>(&data) {
+    let mut metadata = match TokenStreamData::try_from_slice(&data) {
         Ok(v) => v,
         Err(_) => return Err(ProgramError::Custom(1)), // TODO: Add "Invalid Metadata" as an error
     };
@@ -587,7 +593,8 @@ pub fn update_recipient(program_id: &Pubkey, acc: TransferAccounts) -> ProgramRe
     metadata.recipient = *acc.new_recipient.key;
     metadata.recipient_tokens = *acc.new_recipient_tokens.key;
 
-    let bytes = bincode::serialize(&metadata).unwrap();
+    //let bytes = bincode::serialize(&metadata).unwrap();
+    let bytes = metadata.try_to_vec().unwrap();
     data[0..bytes.len()].clone_from_slice(&bytes);
 
     Ok(())

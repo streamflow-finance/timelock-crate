@@ -13,12 +13,17 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
-use serde::{Deserialize, Serialize};
+#[cfg(feature = "anchor-support")]
+use anchor_lang::prelude::*;
+#[cfg(feature = "anchor-support")]
+declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+
+use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{account_info::AccountInfo, pubkey::Pubkey};
 
 /// The struct containing instructions for initializing a stream
 #[repr(C)]
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(BorshDeserialize, BorshSerialize, Clone, Debug)]
 pub struct StreamInstruction {
     /// Timestamp when the funds start unlocking
     pub start_time: u64,
@@ -32,6 +37,20 @@ pub struct StreamInstruction {
     pub cliff: u64,
     /// Amount unlocked at the "cliff" timestamp
     pub cliff_amount: u64,
+}
+
+#[cfg(feature = "no-anchor-support")]
+impl Default for StreamInstruction {
+    fn default() -> Self {
+        StreamInstruction {
+            start_time: 0,
+            end_time: 0,
+            amount: 0,
+            period: 1,
+            cliff: 0,
+            cliff_amount: 0,
+        }
+    }
 }
 
 /// The account-holding struct for the stream initialization instruction
@@ -122,8 +141,12 @@ pub struct TransferAccounts<'a> {
 }
 
 /// TokenStreamData is the struct containing metadata for an SPL token stream.
+#[cfg_attr(feature = "anchor-support", account)]
+#[cfg_attr(
+    feature = "no-anchor-support",
+    derive(BorshSerialize, BorshDeserialize, Default, Debug)
+)]
 #[repr(C)]
-#[derive(Deserialize, Serialize, Debug)]
 pub struct TokenStreamData {
     /// The stream instruction
     pub ix: StreamInstruction,
