@@ -53,7 +53,10 @@ pub fn pretty_time(t: u64) -> String {
     let hours = (t / (60 * 60)) % 24;
     let days = t / (60 * 60 * 24);
 
-    format!("{} days, {} hours, {} minutes, {} seconds", days, hours, minutes, seconds)
+    format!(
+        "{} days, {} hours, {} minutes, {} seconds",
+        days, hours, minutes, seconds
+    )
 }
 
 pub fn encode_base10(amount: u64, decimal_places: usize) -> String {
