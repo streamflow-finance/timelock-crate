@@ -21,13 +21,16 @@ use solana_program::{
     program_error::ProgramError,
     program_pack::Pack,
     pubkey::Pubkey,
-    system_instruction, system_program, sysvar,
+    system_instruction,
+    system_program,
+    sysvar,
     sysvar::{clock::Clock, fees::Fees, rent::Rent, Sysvar},
 };
 use spl_associated_token_account::{create_associated_token_account, get_associated_token_address};
 
 use crate::state::{
-    CancelAccounts, InitializeAccounts, StreamInstruction, TokenStreamData, WithdrawAccounts, TransferAccounts,
+    CancelAccounts, InitializeAccounts, StreamInstruction, TokenStreamData, TransferAccounts,
+    WithdrawAccounts,
 };
 use crate::utils::{
     duration_sanity, encode_base10, pretty_time, unpack_mint_account, unpack_token_account,
@@ -52,7 +55,7 @@ pub fn initialize_token_stream(
 
     if !acc.sender.is_writable
         || !acc.sender_tokens.is_writable
-        || !acc.recipient.is_writable//todo: could it be read-only?
+        || !acc.recipient.is_writable // TODO: Could it be read-only?
         || !acc.recipient_tokens.is_writable
         || !acc.metadata.is_writable
         || !acc.escrow_tokens.is_writable
@@ -62,8 +65,7 @@ pub fn initialize_token_stream(
 
     let (escrow_tokens_pubkey, nonce) =
         Pubkey::find_program_address(&[acc.metadata.key.as_ref()], program_id);
-    let recipient_tokens_key =
-        get_associated_token_address(acc.recipient.key, acc.mint.key);
+    let recipient_tokens_key = get_associated_token_address(acc.recipient.key, acc.mint.key);
 
     if acc.system_program.key != &system_program::id()
         || acc.token_program.key != &spl_token::id()
@@ -107,7 +109,6 @@ pub fn initialize_token_stream(
 
     // TODO: Check if wrapped SOL
     if acc.sender.lamports() < metadata_rent + tokens_rent + (2 * lps) {
-        //two signatures
         msg!("Error: Insufficient funds in {}", acc.sender.key);
         return Err(ProgramError::InsufficientFunds);
     }
@@ -136,11 +137,7 @@ pub fn initialize_token_stream(
     if acc.recipient_tokens.data_is_empty() {
         msg!("Initializing recipient's associated token account");
         invoke(
-            &create_associated_token_account(
-                acc.sender.key,
-                acc.recipient.key,
-                acc.mint.key,
-            ),
+            &create_associated_token_account(acc.sender.key, acc.recipient.key, acc.mint.key),
             &[
                 acc.sender.clone(),
                 acc.recipient_tokens.clone(),
@@ -191,10 +188,7 @@ pub fn initialize_token_stream(
         &[&seeds],
     )?;
 
-    msg!(
-        "Initializing escrow account for {} token",
-        acc.mint.key
-    );
+    msg!("Initializing escrow account for {} token", acc.mint.key);
     invoke(
         &spl_token::instruction::initialize_account(
             acc.token_program.key,
@@ -281,9 +275,7 @@ pub fn withdraw_token_stream(
 
     let (escrow_tokens_pubkey, nonce) =
         Pubkey::find_program_address(&[acc.metadata.key.as_ref()], program_id);
-    let recipient_tokens_key =
-        get_associated_token_address(acc.recipient.key, acc.mint.key);
-
+    let recipient_tokens_key = get_associated_token_address(acc.recipient.key, acc.mint.key);
 
     if acc.token_program.key != &spl_token::id()
         || acc.escrow_tokens.key != &escrow_tokens_pubkey
@@ -299,10 +291,9 @@ pub fn withdraw_token_stream(
     let mut data = acc.metadata.try_borrow_mut_data()?;
     let mut metadata = match bincode::deserialize::<TokenStreamData>(&data) {
         Ok(v) => v,
-        Err(_) => return Err(ProgramError::Custom(1)),//todo: add "Invalid Metadata" as an error
+        Err(_) => return Err(ProgramError::Custom(1)), // TODO: Add "Invalid Metadata" as an error
     };
 
-    //todo: not needed apart from pretty printing the decimals
     let mint_info = unpack_mint_account(&acc.mint)?;
 
     if acc.recipient.key != &metadata.recipient
@@ -323,8 +314,9 @@ pub fn withdraw_token_stream(
         return Err(ProgramError::InvalidArgument);
     }
 
+    // 0 == MAX
     if amount == 0 {
-        requested = available; //0 == MAX
+        requested = available;
     } else {
         requested = amount;
     }
@@ -340,10 +332,10 @@ pub fn withdraw_token_stream(
             requested,
         )?,
         &[
-            acc.escrow_tokens.clone(), //src
-            acc.recipient_tokens.clone(), //dest
-            acc.escrow_tokens.clone(), //auth
-            acc.token_program.clone(), //program
+            acc.escrow_tokens.clone(),    // src
+            acc.recipient_tokens.clone(), // dest
+            acc.escrow_tokens.clone(),    // auth
+            acc.token_program.clone(),    // program
         ],
         &[&seeds],
     )?;
@@ -352,7 +344,7 @@ pub fn withdraw_token_stream(
     let bytes = bincode::serialize(&metadata).unwrap();
     data[0..bytes.len()].clone_from_slice(&bytes);
 
-    // // Return rent when everything is withdrawn
+    // Return rent when everything is withdrawn
     // if metadata.withdrawn == metadata.ix.amount {
     //     msg!("Returning rent to {}", acc.sender.key);
     //     let rent = acc.metadata.lamports();
@@ -397,7 +389,7 @@ pub fn cancel_token_stream(program_id: &Pubkey, acc: CancelAccounts) -> ProgramR
 
     if !acc.sender.is_writable
         || !acc.sender_tokens.is_writable
-        || !acc.recipient.is_writable //todo: might not be needed
+        || !acc.recipient.is_writable // TODO: Might not be needed
         || !acc.recipient_tokens.is_writable
         || !acc.metadata.is_writable
         || !acc.escrow_tokens.is_writable
@@ -407,9 +399,7 @@ pub fn cancel_token_stream(program_id: &Pubkey, acc: CancelAccounts) -> ProgramR
 
     let (escrow_tokens_pubkey, nonce) =
         Pubkey::find_program_address(&[acc.metadata.key.as_ref()], program_id);
-    let recipient_tokens_key =
-        get_associated_token_address(acc.recipient.key, acc.mint.key);
-
+    let recipient_tokens_key = get_associated_token_address(acc.recipient.key, acc.mint.key);
 
     if acc.token_program.key != &spl_token::id()
         || acc.escrow_tokens.key != &escrow_tokens_pubkey
@@ -429,7 +419,6 @@ pub fn cancel_token_stream(program_id: &Pubkey, acc: CancelAccounts) -> ProgramR
     };
 
     let mint_info = unpack_mint_account(&acc.mint)?;
-    //todo: can we go without the mint account as a param?
 
     if acc.sender.key != &metadata.sender
         || acc.sender_tokens.key != &metadata.sender_tokens
@@ -455,10 +444,10 @@ pub fn cancel_token_stream(program_id: &Pubkey, acc: CancelAccounts) -> ProgramR
             available,
         )?,
         &[
-            acc.escrow_tokens.clone(), //src
-            acc.recipient_tokens.clone(), //dest
-            acc.escrow_tokens.clone(), //auth
-            acc.token_program.clone(), //program
+            acc.escrow_tokens.clone(),    // src
+            acc.recipient_tokens.clone(), // dest
+            acc.escrow_tokens.clone(),    // auth
+            acc.token_program.clone(),    // program
         ],
         &[&seeds],
     )?;
@@ -466,8 +455,8 @@ pub fn cancel_token_stream(program_id: &Pubkey, acc: CancelAccounts) -> ProgramR
     metadata.withdrawn += available;
     let remains = metadata.ix.amount - metadata.withdrawn;
 
+    // Return any remaining funds to the stream initializer
     if remains > 0 {
-        //return what remains back to the sender
         invoke_signed(
             &spl_token::instruction::transfer(
                 acc.token_program.key,
@@ -486,8 +475,6 @@ pub fn cancel_token_stream(program_id: &Pubkey, acc: CancelAccounts) -> ProgramR
             &[&seeds],
         )?;
     }
-
-    // Keep the historical data on the chain for the sake of convenience
 
     // TODO: Check this for wrapped SOL
     // let remains_escrow_tokens = acc.escrow_tokens.lamports();
@@ -516,10 +503,7 @@ pub fn cancel_token_stream(program_id: &Pubkey, acc: CancelAccounts) -> ProgramR
     Ok(())
 }
 
-pub fn update_recipient(
-    program_id: &Pubkey,
-    acc: TransferAccounts,
-) -> ProgramResult {
+pub fn update_recipient(program_id: &Pubkey, acc: TransferAccounts) -> ProgramResult {
     msg!("Transferring stream recipient");
     if acc.metadata.data_is_empty()
         || acc.metadata.owner != program_id
@@ -529,8 +513,7 @@ pub fn update_recipient(
         return Err(ProgramError::UninitializedAccount);
     }
 
-    if !acc.existing_recipient.is_signer
-    {
+    if !acc.existing_recipient.is_signer {
         return Err(ProgramError::MissingRequiredSignature);
     }
 
@@ -544,10 +527,10 @@ pub fn update_recipient(
     let mut data = acc.metadata.try_borrow_mut_data()?;
     let mut metadata = match bincode::deserialize::<TokenStreamData>(&data) {
         Ok(v) => v,
-        Err(_) => return Err(ProgramError::Custom(1)),//todo: add "Invalid Metadata" as an error
+        Err(_) => return Err(ProgramError::Custom(1)), // TODO: Add "Invalid Metadata" as an error
     };
 
-    let (escrow_tokens_pubkey, nonce) =
+    let (escrow_tokens_pubkey, _) =
         Pubkey::find_program_address(&[acc.metadata.key.as_ref()], program_id);
     let new_recipient_tokens_key =
         get_associated_token_address(acc.new_recipient.key, acc.mint.key);
@@ -565,7 +548,7 @@ pub fn update_recipient(
     }
 
     if acc.new_recipient_tokens.data_is_empty() {
-        //initialize a new_beneficiary_owner account
+        // Initialize a new_beneficiary_owner account
         let tokens_struct_size = spl_token::state::Account::LEN;
         let cluster_rent = Rent::get()?;
         let tokens_rent = cluster_rent.minimum_balance(tokens_struct_size);
@@ -574,7 +557,10 @@ pub fn update_recipient(
 
         // TODO: Check if wrapped SOL
         if acc.existing_recipient.lamports() < tokens_rent + lps {
-            msg!("Error: Insufficient funds in {}", acc.existing_recipient.key);
+            msg!(
+                "Error: Insufficient funds in {}",
+                acc.existing_recipient.key
+            );
             return Err(ProgramError::InsufficientFunds);
         }
 
@@ -586,9 +572,9 @@ pub fn update_recipient(
                 acc.mint.key,
             ),
             &[
-                acc.existing_recipient.clone(), //funding
-                acc.new_recipient_tokens.clone(), //associated token account's address
-                acc.new_recipient.clone(), //wallet address
+                acc.existing_recipient.clone(),   // Funding
+                acc.new_recipient_tokens.clone(), // Associated token account's address
+                acc.new_recipient.clone(),        // Wallet address
                 acc.mint.clone(),
                 acc.system_program.clone(),
                 acc.token_program.clone(),
@@ -597,7 +583,7 @@ pub fn update_recipient(
         )?;
     }
 
-    //update recipient
+    // Update recipient
     metadata.recipient = *acc.new_recipient.key;
     metadata.recipient_tokens = *acc.new_recipient_tokens.key;
 
