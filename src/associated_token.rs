@@ -469,7 +469,7 @@ pub fn cancel_token_stream(program_id: &Pubkey, acc: CancelAccounts) -> ProgramR
                 acc.sender_tokens.key,
                 acc.escrow_tokens.key,
                 &[],
-                available,
+                remains,
             )?,
             &[
                 acc.escrow_tokens.clone(),
