@@ -53,8 +53,10 @@ pub struct InitializeAccounts<'a> {
     pub mint: AccountInfo<'a>,
     /// The Rent Sysvar account
     pub rent: AccountInfo<'a>,
-    /// The SPL token program
+    /// The SPL program needed in case associated account for the new recipients is being created
     pub token_program: AccountInfo<'a>,
+    /// The Associated Token program needed in case associated account for the new recipients is being created
+    pub associated_token_program: AccountInfo<'a>,
     /// The Solana system program
     pub system_program: AccountInfo<'a>,
 }
@@ -112,8 +114,10 @@ pub struct TransferAccounts<'a> {
     pub mint: AccountInfo<'a>,
     /// Rent account
     pub rent: AccountInfo<'a>,
-    /// The Associated Token program needed in case associated account for the new recipients is being created
+    /// The SPL program needed in case associated account for the new recipients is being created
     pub token_program: AccountInfo<'a>,
+    /// The Associated Token program needed in case associated account for the new recipients is being created
+    pub associated_token_program: AccountInfo<'a>,
     /// The Solana system program needed in case associated account for the new recipients is being created
     pub system_program: AccountInfo<'a>,
 }

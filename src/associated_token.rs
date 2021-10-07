@@ -57,7 +57,7 @@ pub fn initialize_token_stream(
         || !acc.metadata.is_writable
         || !acc.escrow_tokens.is_writable
     {
-        return Err(ProgramError::InvalidAccountData);
+        return Err(ProgramError::Custom(1));//TODO: Add custom error "Account not writeable"
     }
 
     let (escrow_tokens_pubkey, nonce) =
@@ -82,7 +82,7 @@ pub fn initialize_token_stream(
     let mint_info = unpack_mint_account(&acc.mint)?;
 
     if &sender_token_info.mint != acc.mint.key {
-        return Err(ProgramError::InvalidAccountData);
+        return Err(ProgramError::Custom(3)); //mint missmatch
     }
 
     let now = Clock::get()?.unix_timestamp as u64;
