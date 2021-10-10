@@ -1,6 +1,6 @@
 // Copyright (c) 2021 Ivan Jelincic <parazyd@dyne.org>
 //
-// This file is part of streamflow-timelock
+// This file is part of streamflow-finance/timelock-crate
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License version 3

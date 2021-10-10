@@ -1,6 +1,6 @@
 // Copyright (c) 2021 Ivan Jelincic <parazyd@dyne.org>
 //
-// This file is part of streamflow-timelock
+// This file is part of streamflow-finance/timelock-crate
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License version 3
@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-//! streamflow-timelock is the code providing timelock primitives
+//! The code providing timelock primitives
 //! used by [streamflow.finance](https://streamflow.finance).
 #[cfg(feature = "anchor-support")]
 use anchor_lang::prelude::*;
