@@ -17,14 +17,11 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{
     entrypoint::ProgramResult,
     msg,
-    // native_token::lamports_to_sol,
     program::{invoke, invoke_signed},
     program_error::ProgramError,
     program_pack::Pack,
     pubkey::Pubkey,
-    system_instruction,
-    system_program,
-    sysvar,
+    system_instruction, system_program, sysvar,
     sysvar::{clock::Clock, fees::Fees, rent::Rent, Sysvar},
 };
 use spl_associated_token_account::{create_associated_token_account, get_associated_token_address};
@@ -61,7 +58,8 @@ pub fn initialize_token_stream(
         || !acc.metadata.is_writable
         || !acc.escrow_tokens.is_writable
     {
-        return Err(ProgramError::Custom(1)); //TODO: Add custom error "Account not writeable"
+        // TODO: Add custom error "Accounts not writable"
+        return Err(ProgramError::Custom(1));
     }
 
     let (escrow_tokens_pubkey, nonce) =
@@ -85,7 +83,8 @@ pub fn initialize_token_stream(
     let mint_info = unpack_mint_account(&acc.mint)?;
 
     if &sender_token_info.mint != acc.mint.key {
-        return Err(ProgramError::Custom(3)); //mint missmatch
+        // Mint mismatch
+        return Err(ProgramError::Custom(3));
     }
 
     let now = Clock::get()?.unix_timestamp as u64;
@@ -99,19 +98,16 @@ pub fn initialize_token_stream(
     let tokens_struct_size = spl_token::state::Account::LEN;
     let cluster_rent = Rent::get()?;
     let metadata_rent = cluster_rent.minimum_balance(metadata_struct_size);
-    let escrow_tokens_rent = cluster_rent.minimum_balance(tokens_struct_size);
-    let recipient_tokens_rent = if acc.recipient_tokens.data_is_empty() {
-        cluster_rent.minimum_balance(tokens_struct_size)
-    } else {
-        0
-    };
+    let mut tokens_rent = cluster_rent.minimum_balance(tokens_struct_size);
+    if acc.recipient_tokens.data_is_empty() {
+        tokens_rent += cluster_rent.minimum_balance(tokens_struct_size);
+    }
+
     let fees = Fees::get()?;
     let lps = fees.fee_calculator.lamports_per_signature;
 
     // TODO: Check if wrapped SOL
-    if acc.sender.lamports()
-        < metadata_rent + escrow_tokens_rent + recipient_tokens_rent + (2 * lps)
-    {
+    if acc.sender.lamports() < metadata_rent + tokens_rent + (2 * lps) {
         msg!("Error: Insufficient funds in {}", acc.sender.key);
         return Err(ProgramError::InsufficientFunds);
     }
@@ -121,11 +117,11 @@ pub fn initialize_token_stream(
         return Err(ProgramError::InsufficientFunds);
     }
 
-    //todo: calculate cancel_data once continuous streams are ready
+    // TODO: Calculate cancel_data once continuous streams are ready
     let metadata = TokenStreamData::new(
         ix.start_time,
         ix.end_time,
-        ix.total_amount, //todo: update once continuous streams are ready
+        ix.total_amount, // TODO: update once continuous streams are ready
         ix.total_amount,
         ix.period,
         ix.cliff,
@@ -138,8 +134,7 @@ pub fn initialize_token_stream(
         *acc.mint.key,
         *acc.escrow_tokens.key,
     );
-    //let bytes = bincode::serialize(&metadata).unwrap();
-    let bytes = metadata.try_to_vec().unwrap();
+    let bytes = metadata.try_to_vec()?;
 
     if acc.recipient_tokens.data_is_empty() {
         msg!("Initializing recipient's associated token account");
@@ -183,7 +178,7 @@ pub fn initialize_token_stream(
         &system_instruction::create_account(
             acc.sender.key,
             acc.escrow_tokens.key,
-            escrow_tokens_rent,
+            cluster_rent.minimum_balance(tokens_struct_size),
             tokens_struct_size as u64,
             &spl_token::id(),
         ),
@@ -296,10 +291,10 @@ pub fn withdraw_token_stream(
     }
 
     let mut data = acc.metadata.try_borrow_mut_data()?;
-    //let mut metadata = match bincode::deserialize::<TokenStreamData>(&data) {
     let mut metadata = match TokenStreamData::try_from_slice(&data) {
         Ok(v) => v,
-        Err(_) => return Err(ProgramError::Custom(1)), // TODO: Add "Invalid Metadata" as an error
+        // TODO: Add "Invalid Metadata" as error
+        Err(_) => return Err(ProgramError::Custom(2)),
     };
 
     let mint_info = unpack_mint_account(&acc.mint)?;
@@ -349,8 +344,7 @@ pub fn withdraw_token_stream(
     )?;
 
     metadata.withdrawn += requested;
-    //let bytes = bincode::serialize(&metadata).unwrap();
-    let bytes = metadata.try_to_vec().unwrap();
+    let bytes = metadata.try_to_vec()?;
     data[0..bytes.len()].clone_from_slice(&bytes);
 
     // Return rent when everything is withdrawn
@@ -422,10 +416,10 @@ pub fn cancel_token_stream(program_id: &Pubkey, acc: CancelAccounts) -> ProgramR
     }
 
     let data = acc.metadata.try_borrow_mut_data()?;
-    //let mut metadata = match bincode::deserialize::<TokenStreamData>(&data) {
     let mut metadata = match TokenStreamData::try_from_slice(&data) {
         Ok(v) => v,
-        Err(_) => return Err(ProgramError::Custom(143)),
+        // TODO: Invalid Metadata error
+        Err(_) => return Err(ProgramError::Custom(3)),
     };
 
     let mint_info = unpack_mint_account(&acc.mint)?;
@@ -535,10 +529,10 @@ pub fn update_recipient(program_id: &Pubkey, acc: TransferAccounts) -> ProgramRe
     }
 
     let mut data = acc.metadata.try_borrow_mut_data()?;
-    //let mut metadata = match bincode::deserialize::<TokenStreamData>(&data) {
     let mut metadata = match TokenStreamData::try_from_slice(&data) {
         Ok(v) => v,
-        Err(_) => return Err(ProgramError::Custom(1)), // TODO: Add "Invalid Metadata" as an error
+        // TODO: Add "Invalid Metadata" as an error
+        Err(_) => return Err(ProgramError::Custom(3)),
     };
 
     let (escrow_tokens_pubkey, _) =
@@ -598,8 +592,7 @@ pub fn update_recipient(program_id: &Pubkey, acc: TransferAccounts) -> ProgramRe
     metadata.recipient = *acc.new_recipient.key;
     metadata.recipient_tokens = *acc.new_recipient_tokens.key;
 
-    //let bytes = bincode::serialize(&metadata).unwrap();
-    let bytes = metadata.try_to_vec().unwrap();
+    let bytes = metadata.try_to_vec()?;
     data[0..bytes.len()].clone_from_slice(&bytes);
 
     Ok(())

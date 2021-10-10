@@ -53,25 +53,30 @@ impl Default for StreamInstruction {
 /// The account-holding struct for the stream initialization instruction
 #[derive(Debug)]
 pub struct InitializeAccounts<'a> {
-    /// The main wallet address of the initializer
+    /// The main wallet address of the initializer.
     pub sender: AccountInfo<'a>,
-    /// The associated token account address of `sender`
+    /// The associated token account address of `sender`.
     pub sender_tokens: AccountInfo<'a>,
-    /// The main wallet address of the recipient
+    /// The main wallet address of the recipient.
     pub recipient: AccountInfo<'a>,
-    /// The associated token account address of `recipient` (could be either empty or initialized)
+    /// The associated token account address of `recipient`.
+    /// (Can be either empty or initialized).
     pub recipient_tokens: AccountInfo<'a>,
-    /// The account holding the stream metadata — expects empty (non-initialized) account
+    /// The account holding the stream metadata.
+    /// Eexpects empty (non-initialized) account.
     pub metadata: AccountInfo<'a>,
-    /// The escrow account holding the stream funds — expects empty (non-initialized) account
+    /// The escrow account holding the stream funds.
+    /// Expects empty (non-initialized) account.
     pub escrow_tokens: AccountInfo<'a>,
     /// The SPL token mint account
     pub mint: AccountInfo<'a>,
     /// The Rent Sysvar account
     pub rent: AccountInfo<'a>,
-    /// The SPL program needed in case associated account for the new recipients is being created
+    /// The SPL program needed in case an associated account
+    /// for the new recipient is being created.
     pub token_program: AccountInfo<'a>,
-    /// The Associated Token program needed in case associated account for the new recipients is being created
+    /// The Associated Token program needed in case associated
+    /// account for the new recipient is being created.
     pub associated_token_program: AccountInfo<'a>,
     /// The Solana system program
     pub system_program: AccountInfo<'a>,
@@ -118,8 +123,9 @@ pub struct TransferAccounts<'a> {
     pub existing_recipient: AccountInfo<'a>,
     /// New stream beneficiary
     pub new_recipient: AccountInfo<'a>,
-    /// New stream beneficiary's token account
-    /// If not initialized, it will be created and `existing_recipient` is the fee payer
+    /// New stream beneficiary's token account.
+    /// If not initialized, it will be created and
+    /// `existing_recipient` is the fee payer
     pub new_recipient_tokens: AccountInfo<'a>,
     /// The account holding the stream metadata
     pub metadata: AccountInfo<'a>,
@@ -129,11 +135,14 @@ pub struct TransferAccounts<'a> {
     pub mint: AccountInfo<'a>,
     /// Rent account
     pub rent: AccountInfo<'a>,
-    /// The SPL program needed in case associated account for the new recipients is being created
+    /// The SPL program needed in case associated account
+    /// for the new recipients is being created.
     pub token_program: AccountInfo<'a>,
-    /// The Associated Token program needed in case associated account for the new recipients is being created
+    /// The Associated Token program needed in case associated
+    /// account for the new recipients is being created.
     pub associated_token_program: AccountInfo<'a>,
-    /// The Solana system program needed in case associated account for the new recipients is being created
+    /// The Solana system program needed in case associated
+    /// account for the new recipients is being created.
     pub system_program: AccountInfo<'a>,
 }
 
@@ -195,7 +204,7 @@ impl TokenStreamData {
             cliff,
             cliff_amount,
         };
-        //todo: calculate cancel_time based on other parameters
+        // TODO: calculate cancel_time based on other parameters
         Self {
             magic: 0,
             ix,

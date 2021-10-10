@@ -59,6 +59,7 @@ pub fn pretty_time(t: u64) -> String {
     )
 }
 
+/// Encode given amount to a string with given decimal places.
 pub fn encode_base10(amount: u64, decimal_places: usize) -> String {
     let mut s: Vec<char> = format!("{:0width$}", amount, width = 1 + decimal_places)
         .chars()
