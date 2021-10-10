@@ -157,7 +157,9 @@ pub struct TokenStreamData {
     pub created_at: u64,
     /// Amount of funds withdrawn
     pub withdrawn: u64,
-    /// Timestamp at which stream can be safely cancelled by a 3rd party (Stream is either fully vested or there isn't enough capital to keep it active)
+    /// Timestamp at which stream can be safely cancelled by a 3rd party
+    /// (Stream is either fully vested or there isn't enough capital to
+    /// keep it active)
     pub cancel_time: u64,
     /// Pubkey of the stream initializer
     pub sender: Pubkey,
