@@ -99,17 +99,19 @@ pub fn initialize_token_stream(
     let tokens_struct_size = spl_token::state::Account::LEN;
     let cluster_rent = Rent::get()?;
     let metadata_rent = cluster_rent.minimum_balance(metadata_struct_size);
-    let mut tokens_rent = cluster_rent.minimum_balance(tokens_struct_size);
+    let escrow_tokens_rent = cluster_rent.minimum_balance(tokens_struct_size);
+    let recipient_tokens_rent = if acc.recipient_tokens.data_is_empty() {
+        cluster_rent.minimum_balance(tokens_struct_size)
+    } else {
+        0
+    };
     let fees = Fees::get()?;
     let lps = fees.fee_calculator.lamports_per_signature;
 
-    // Check if we have to initialize recipient's associated token account.
-    if acc.recipient_tokens.data_is_empty() {
-        tokens_rent += cluster_rent.minimum_balance(tokens_struct_size);
-    }
-
     // TODO: Check if wrapped SOL
-    if acc.sender.lamports() < metadata_rent + tokens_rent + (2 * lps) {
+    if acc.sender.lamports()
+        < metadata_rent + escrow_tokens_rent + recipient_tokens_rent + (2 * lps)
+    {
         msg!("Error: Insufficient funds in {}", acc.sender.key);
         return Err(ProgramError::InsufficientFunds);
     }
@@ -178,7 +180,7 @@ pub fn initialize_token_stream(
         &system_instruction::create_account(
             acc.sender.key,
             acc.escrow_tokens.key,
-            tokens_rent,
+            escrow_tokens_rent,
             tokens_struct_size as u64,
             &spl_token::id(),
         ),
