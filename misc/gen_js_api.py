@@ -91,7 +91,7 @@ def main():
     output = run(["git", "rev-parse", "--show-toplevel"], capture_output=True)
     toplevel = output.stdout.decode()[:-1]
 
-    print("const BuferLayout = require('buffer-layout');")
+    print("const BufferLayout = require('buffer-layout');")
     print("const { PublicKey } = require('@solana/web3.js');")
     print("const anchor = require('@project-serum/anchor');")
     print("const { BN } = anchor;\n")
