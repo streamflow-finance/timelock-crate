@@ -15,8 +15,6 @@ solana-program = "1.7.11"
 spl-associated-token-account = "1.0.3"
 spl-token = { version = "3.2.0", features = ["no-entrypoint"] }
 
-anchor-lang = { version = "0.17.0", optional = true }
-
 #[dev-dependencies]
 #solana-program-test = "1.7.14"
 #solana-client = "1.7.14"
@@ -24,7 +22,3 @@ anchor-lang = { version = "0.17.0", optional = true }
 
 [lib]
 crate-type = ["cdylib", "lib"]
-
-[features]
-no-anchor-support = []
-anchor-support = ["anchor-lang"]

@@ -13,11 +13,6 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
-#[cfg(feature = "anchor-support")]
-use anchor_lang::prelude::*;
-#[cfg(feature = "anchor-support")]
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
-
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{account_info::AccountInfo, pubkey::Pubkey};
 
@@ -41,7 +36,6 @@ pub struct StreamInstruction {
     pub cliff_amount: u64,
 }
 
-#[cfg(feature = "no-anchor-support")]
 impl Default for StreamInstruction {
     fn default() -> Self {
         StreamInstruction {
@@ -144,13 +138,11 @@ pub struct TransferAccounts<'a> {
 }
 
 /// TokenStreamData is the struct containing metadata for an SPL token stream.
-#[cfg_attr(feature = "anchor-support", account)]
-#[cfg_attr(
-    feature = "no-anchor-support",
-    derive(BorshSerialize, BorshDeserialize, Default, Debug)
-)]
+#[derive(BorshSerialize, BorshDeserialize, Default, Debug)]
 #[repr(C)]
 pub struct TokenStreamData {
+    /// Magic bytes
+    pub magic: u64,
     /// The stream instruction
     pub ix: StreamInstruction,
     /// Timestamp when stream was created
@@ -205,6 +197,7 @@ impl TokenStreamData {
         };
         //todo: calculate cancel_time based on other parameters
         Self {
+            magic: 0,
             ix,
             created_at,
             withdrawn: 0,
