@@ -116,18 +116,21 @@ pub fn initialize_token_stream(
         return Err(ProgramError::InsufficientFunds);
     }
 
-    if sender_token_info.amount < ix.amount {
+    if sender_token_info.amount < ix.total_amount {
         msg!("Error: Insufficient tokens in sender's wallet");
         return Err(ProgramError::InsufficientFunds);
     }
 
+    //todo: calculate cancel_data once continuous streams are ready
     let metadata = TokenStreamData::new(
         ix.start_time,
         ix.end_time,
-        ix.amount,
+        ix.total_amount, //todo: update once continuous streams are ready
+        ix.total_amount,
         ix.period,
         ix.cliff,
         ix.cliff_amount,
+        now,
         *acc.sender.key,
         *acc.sender_tokens.key,
         *acc.recipient.key,
@@ -217,7 +220,7 @@ pub fn initialize_token_stream(
             acc.escrow_tokens.key,
             acc.sender.key,
             &[],
-            metadata.ix.amount,
+            metadata.ix.total_amount,
         )?,
         &[
             acc.sender_tokens.clone(),
@@ -229,7 +232,7 @@ pub fn initialize_token_stream(
 
     msg!(
         "Successfully initialized {} {} token stream for {}",
-        encode_base10(metadata.ix.amount, mint_info.decimals.into()),
+        encode_base10(metadata.ix.total_amount, mint_info.decimals.into()),
         metadata.mint,
         acc.recipient.key
     );
@@ -351,7 +354,7 @@ pub fn withdraw_token_stream(
     data[0..bytes.len()].clone_from_slice(&bytes);
 
     // Return rent when everything is withdrawn
-    // if metadata.withdrawn == metadata.ix.amount {
+    // if metadata.withdrawn == metadata.ix.total_amount {
     //     msg!("Returning rent to {}", acc.sender.key);
     //     let rent = acc.metadata.lamports();
     //     **acc.metadata.try_borrow_mut_lamports()? -= rent;
@@ -368,7 +371,7 @@ pub fn withdraw_token_stream(
     msg!(
         "Remaining: {} {} tokens",
         encode_base10(
-            metadata.ix.amount - metadata.withdrawn,
+            metadata.ix.total_amount - metadata.withdrawn,
             mint_info.decimals.into()
         ),
         metadata.mint
@@ -460,7 +463,7 @@ pub fn cancel_token_stream(program_id: &Pubkey, acc: CancelAccounts) -> ProgramR
     )?;
 
     metadata.withdrawn += available;
-    let remains = metadata.ix.amount - metadata.withdrawn;
+    let remains = metadata.ix.total_amount - metadata.withdrawn;
 
     // Return any remaining funds to the stream initializer
     if remains > 0 {

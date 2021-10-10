@@ -25,13 +25,15 @@ use solana_program::{account_info::AccountInfo, pubkey::Pubkey};
 #[repr(C)]
 #[derive(BorshDeserialize, BorshSerialize, Clone, Debug)]
 pub struct StreamInstruction {
-    /// Timestamp when the funds start unlocking
+    /// Timestamp when the tokens start vesting
     pub start_time: u64,
-    /// Timestamp when all funds are unlocked
+    /// Timestamp when all tokens are fully vested
     pub end_time: u64,
-    /// Amount of funds locked
-    pub amount: u64,
-    /// Time step (period) per which vesting occurs
+    /// Initially deposited amount of tokens (<= total_amount)
+    pub deposited_amount: u64,
+    /// Total amount of the tokens in the escrow account if contract is fully vested
+    pub total_amount: u64,
+    /// Time step (period) in seconds per which the vesting occurs
     pub period: u64,
     /// Vesting contract "cliff" timestamp
     pub cliff: u64,
@@ -45,7 +47,8 @@ impl Default for StreamInstruction {
         StreamInstruction {
             start_time: 0,
             end_time: 0,
-            amount: 0,
+            deposited_amount: 0,
+            total_amount: 0,
             period: 1,
             cliff: 0,
             cliff_amount: 0,
@@ -150,8 +153,12 @@ pub struct TransferAccounts<'a> {
 pub struct TokenStreamData {
     /// The stream instruction
     pub ix: StreamInstruction,
+    /// Timestamp when stream was created
+    pub created_at: u64,
     /// Amount of funds withdrawn
     pub withdrawn: u64,
+    /// Timestamp at which stream can be safely cancelled by a 3rd party (Stream is either fully vested or there isn't enough capital to keep it active)
+    pub cancel_time: u64,
     /// Pubkey of the stream initializer
     pub sender: Pubkey,
     /// Pubkey of the stream initializer's token account
@@ -172,10 +179,12 @@ impl TokenStreamData {
     pub fn new(
         start_time: u64,
         end_time: u64,
-        amount: u64,
+        deposited_amount: u64,
+        total_amount: u64,
         period: u64,
         cliff: u64,
         cliff_amount: u64,
+        created_at: u64,
         sender: Pubkey,
         sender_tokens: Pubkey,
         recipient: Pubkey,
@@ -186,15 +195,18 @@ impl TokenStreamData {
         let ix = StreamInstruction {
             start_time,
             end_time,
-            amount,
+            deposited_amount,
+            total_amount,
             period,
             cliff,
             cliff_amount,
         };
-
+        //todo: calculate cancel_time based on other parameters
         Self {
             ix,
+            created_at,
             withdrawn: 0,
+            cancel_time: end_time,
             sender,
             sender_tokens,
             recipient,
@@ -211,7 +223,7 @@ impl TokenStreamData {
         }
 
         if now >= self.ix.end_time {
-            return self.ix.amount - self.withdrawn;
+            return self.ix.total_amount - self.withdrawn;
         }
 
         let cliff = if self.ix.cliff > 0 {
@@ -228,7 +240,7 @@ impl TokenStreamData {
 
         // TODO: Use uint arithmetics, floats are imprecise
         let num_periods = (self.ix.end_time - cliff) as f64 / self.ix.period as f64;
-        let period_amount = (self.ix.amount - cliff_amount) as f64 / num_periods;
+        let period_amount = (self.ix.total_amount - cliff_amount) as f64 / num_periods;
         let periods_passed = (now - cliff) / self.ix.period;
         (periods_passed as f64 * period_amount) as u64 + cliff_amount - self.withdrawn
     }
