@@ -416,6 +416,7 @@ pub fn cancel_token_stream(program_id: &Pubkey, acc: CancelAccounts) -> ProgramR
     }
 
     let data = acc.metadata.try_borrow_mut_data()?;
+    let mut data = acc.metadata.try_borrow_mut_data()?;
     let mut metadata = match TokenStreamData::try_from_slice(&data) {
         Ok(v) => v,
         // TODO: Invalid Metadata error
@@ -479,6 +480,10 @@ pub fn cancel_token_stream(program_id: &Pubkey, acc: CancelAccounts) -> ProgramR
             &[&seeds],
         )?;
     }
+
+    // Write the metadata to the account
+    let bytes = metadata.try_to_vec().unwrap();
+    data[0..bytes.len()].clone_from_slice(&bytes);
 
     // TODO: Check this for wrapped SOL
     // let remains_escrow_tokens = acc.escrow_tokens.lamports();
