@@ -1,7 +1,6 @@
 streamflow-timelock
 ===================
-
-![Build and test](https://github.com/streamflow-finance/streamflow-timelock/actions/workflows/rust-tests.yml/badge.svg)
+**Disclaimer: The software isn't audited. No warranties provided.**
 
 License
 -------
