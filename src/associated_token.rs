@@ -415,7 +415,6 @@ pub fn cancel_token_stream(program_id: &Pubkey, acc: CancelAccounts) -> ProgramR
         return Err(ProgramError::MissingRequiredSignature);
     }
 
-    let data = acc.metadata.try_borrow_mut_data()?;
     let mut data = acc.metadata.try_borrow_mut_data()?;
     let mut metadata = match TokenStreamData::try_from_slice(&data) {
         Ok(v) => v,
