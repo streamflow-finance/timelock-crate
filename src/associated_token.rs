@@ -348,14 +348,38 @@ pub fn withdraw_token_stream(
     data[0..bytes.len()].clone_from_slice(&bytes);
 
     // Return rent when everything is withdrawn
-    // if metadata.withdrawn == metadata.ix.total_amount {
-    //     msg!("Returning rent to {}", acc.sender.key);
-    //     let rent = acc.metadata.lamports();
-    //     **acc.metadata.try_borrow_mut_lamports()? -= rent;
-    //     **acc.sender.try_borrow_mut_lamports()? += rent;
-    //
-    //     // TODO: Close token account, has to have close authority
-    // }
+    if metadata.withdrawn == metadata.ix.total_amount {
+        if !acc.sender.is_writable || acc.sender.key != &metadata.sender {
+            return Err(ProgramError::InvalidAccountData);
+        }
+        //TODO: Close metadata account once there is alternative storage solution for historic data.
+        // let rent = acc.metadata.lamports();
+        // **acc.metadata.try_borrow_mut_lamports()? -= rent;
+        // **acc.sender.try_borrow_mut_lamports()? += rent;
+
+        let escrow_tokens_rent = acc.escrow_tokens.lamports();
+        //Close escrow token account
+        msg!(
+            "Returning {} lamports (rent) to {}",
+            escrow_tokens_rent,
+            acc.sender.key
+        );
+        invoke_signed(
+            &spl_token::instruction::close_account(
+                acc.token_program.key,
+                acc.escrow_tokens.key,
+                acc.sender.key,
+                acc.escrow_tokens.key,
+                &[],
+            )?,
+            &[
+                acc.escrow_tokens.clone(),
+                acc.sender.clone(),
+                acc.escrow_tokens.clone(),
+            ],
+            &[&seeds],
+        )?;
+    }
 
     msg!(
         "Withdrawn: {} {} tokens",
@@ -480,18 +504,32 @@ pub fn cancel_token_stream(program_id: &Pubkey, acc: CancelAccounts) -> ProgramR
         )?;
     }
 
+    // TODO: Check this for wrapped SOL
+    let rent_escrow_tokens = acc.escrow_tokens.lamports();
+    // let remains_meta = acc.metadata.lamports();
+
+    //Close escrow token account
+    invoke_signed(
+        &spl_token::instruction::close_account(
+            acc.token_program.key,
+            acc.escrow_tokens.key,
+            acc.sender.key,
+            acc.escrow_tokens.key,
+            &[],
+        )?,
+        &[
+            acc.escrow_tokens.clone(),
+            acc.sender.clone(),
+            acc.escrow_tokens.clone(),
+        ],
+        &[&seeds],
+    )?;
+
+    //TODO: Close metadata account once there is alternative storage solution for historic data.
+
     // Write the metadata to the account
     let bytes = metadata.try_to_vec().unwrap();
     data[0..bytes.len()].clone_from_slice(&bytes);
-
-    // TODO: Check this for wrapped SOL
-    // let remains_escrow_tokens = acc.escrow_tokens.lamports();
-    // let remains_meta = acc.metadata.lamports();
-    //
-    // **acc.escrow_tokens.try_borrow_mut_lamports()? -= remains_escrow_tokens;
-    // **acc.sender.try_borrow_mut_lamports()? += remains_escrow_tokens;
-    // **acc.metadata.try_borrow_mut_lamports()? -= remains_meta;
-    // **acc.sender.try_borrow_mut_lamports()? += remains_meta;
 
     msg!(
         "Transferred: {} {} tokens",
@@ -503,10 +541,10 @@ pub fn cancel_token_stream(program_id: &Pubkey, acc: CancelAccounts) -> ProgramR
         encode_base10(remains, mint_info.decimals.into()),
         metadata.mint
     );
-    // msg!(
-    //     "Returned rent: {} SOL",
-    //     lamports_to_sol(remains_escrow_tokens + remains_meta)
-    // );
+    msg!(
+        "Returned rent: {} lamports",
+        rent_escrow_tokens /* + remains_meta */
+    );
 
     Ok(())
 }

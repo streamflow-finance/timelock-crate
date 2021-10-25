@@ -84,6 +84,9 @@ pub struct InitializeAccounts<'a> {
 
 /// The account-holding struct for the stream withdraw instruction
 pub struct WithdrawAccounts<'a> {
+    /// Solana address of the sender
+    pub sender: AccountInfo<'a>,
+    /// Solana address of the recipient
     pub recipient: AccountInfo<'a>,
     /// The associated token account address of `recipient`
     pub recipient_tokens: AccountInfo<'a>,
