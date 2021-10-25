@@ -17,7 +17,7 @@ High level overview
 Check the [docs](https://docs.rs/streamflow-timelock/) to get familiar with the crate.
 Or check the [Timelock program implementation](https://github.com/streamflow-finance/timelock) where this crate is used.
 
-Run `python3 misc/gen_js_api.py` to generate JS IDL to be used for easy (de)serialization of the program account data structs.
+Run `python3 misc/gen_js_api.py > OUTPUT_FILE.js` to generate JS IDL to be used for easy (de)serialization of the program account data structs.
 
 License
 -------

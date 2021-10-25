@@ -42,7 +42,8 @@ pub struct StreamInstruction {
     pub is_withdrawal_public: bool,
     /// Whether or not a recipient can transfer the stream (currently not used, set to TRUE)
     pub is_transferable: bool,
-    pub padding: u32, //4 bytes of padding to make the struct size multiple of 64bit (8 bytes)
+    //4 bytes of padding to make the struct size multiple of 64bit (8 bytes)
+    pub padding: u32,
 }
 
 impl Default for StreamInstruction {
