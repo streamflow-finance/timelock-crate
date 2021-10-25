@@ -40,7 +40,7 @@ use crate::utils::{
 /// and the stream's metadata. Both accounts will be funded to be
 /// rent-exempt if necessary. When the stream is finished, these
 /// shall be returned to the stream initializer.
-pub fn initialize_token_stream(
+pub fn create(
     program_id: &Pubkey,
     acc: InitializeAccounts,
     ix: StreamInstruction,
@@ -119,13 +119,6 @@ pub fn initialize_token_stream(
 
     // TODO: Calculate cancel_data once continuous streams are ready
     let metadata = TokenStreamData::new(
-        ix.start_time,
-        ix.end_time,
-        ix.total_amount, // TODO: update once continuous streams are ready
-        ix.total_amount,
-        ix.period,
-        ix.cliff,
-        ix.cliff_amount,
         now,
         *acc.sender.key,
         *acc.sender_tokens.key,
@@ -133,6 +126,17 @@ pub fn initialize_token_stream(
         *acc.recipient_tokens.key,
         *acc.mint.key,
         *acc.escrow_tokens.key,
+        ix.start_time,
+        ix.end_time,
+        ix.total_amount,
+        ix.total_amount,
+        ix.period,
+        ix.cliff,
+        ix.cliff_amount,
+        ix.is_cancelable_by_sender,
+        ix.is_cancelable_by_recipient,
+        ix.is_withdrawal_public,
+        ix.is_transferable,
     );
     let bytes = metadata.try_to_vec()?;
 
@@ -252,11 +256,7 @@ pub fn initialize_token_stream(
 /// if there are any unlocked funds. If so, they will be transferred from the
 /// escrow account to the stream recipient. If the entire amount has been
 /// withdrawn, the remaining rents shall be returned to the stream initializer.
-pub fn withdraw_token_stream(
-    program_id: &Pubkey,
-    acc: WithdrawAccounts,
-    amount: u64,
-) -> ProgramResult {
+pub fn withdraw(program_id: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResult {
     msg!("Withdrawing from SPL token stream");
 
     if acc.escrow_tokens.data_is_empty()
@@ -282,11 +282,13 @@ pub fn withdraw_token_stream(
     if acc.token_program.key != &spl_token::id()
         || acc.escrow_tokens.key != &escrow_tokens_pubkey
         || acc.recipient_tokens.key != &recipient_tokens_key
+        //TODO: Update in future releases based on `is_withdrawal_public`
+        || acc.withdraw_authority.key != acc.recipient.key
     {
         return Err(ProgramError::InvalidAccountData);
     }
 
-    if !acc.recipient.is_signer {
+    if !acc.withdraw_authority.is_signer {
         return Err(ProgramError::MissingRequiredSignature);
     }
 
@@ -343,12 +345,13 @@ pub fn withdraw_token_stream(
         &[&seeds],
     )?;
 
-    metadata.withdrawn += requested;
+    metadata.withdrawn_amount += requested;
+    metadata.last_withdrawn_at = now;
     let bytes = metadata.try_to_vec()?;
     data[0..bytes.len()].clone_from_slice(&bytes);
 
     // Return rent when everything is withdrawn
-    if metadata.withdrawn == metadata.ix.total_amount {
+    if metadata.withdrawn_amount == metadata.ix.total_amount {
         if !acc.sender.is_writable || acc.sender.key != &metadata.sender {
             return Err(ProgramError::InvalidAccountData);
         }
@@ -389,7 +392,7 @@ pub fn withdraw_token_stream(
     msg!(
         "Remaining: {} {} tokens",
         encode_base10(
-            metadata.ix.total_amount - metadata.withdrawn,
+            metadata.ix.total_amount - metadata.withdrawn_amount,
             mint_info.decimals.into()
         ),
         metadata.mint
@@ -403,7 +406,7 @@ pub fn withdraw_token_stream(
 /// The function will read the instructions from the metadata account and see
 /// if there are any unlocked funds. If so, they will be transferred to the
 /// stream recipient.
-pub fn cancel_token_stream(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
+pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
     msg!("Cancelling SPL token stream");
 
     if acc.escrow_tokens.data_is_empty()
@@ -431,11 +434,13 @@ pub fn cancel_token_stream(program_id: &Pubkey, acc: CancelAccounts) -> ProgramR
     if acc.token_program.key != &spl_token::id()
         || acc.escrow_tokens.key != &escrow_tokens_pubkey
         || acc.recipient_tokens.key != &recipient_tokens_key
+        //TODO: Update in future releases based on `is_cancelable_by_sender/recipient`
+        || acc.cancel_authority.key != acc.sender.key
     {
         return Err(ProgramError::InvalidAccountData);
     }
 
-    if !acc.sender.is_signer {
+    if !acc.cancel_authority.is_signer {
         return Err(ProgramError::MissingRequiredSignature);
     }
 
@@ -480,8 +485,8 @@ pub fn cancel_token_stream(program_id: &Pubkey, acc: CancelAccounts) -> ProgramR
         &[&seeds],
     )?;
 
-    metadata.withdrawn += available;
-    let remains = metadata.ix.total_amount - metadata.withdrawn;
+    metadata.withdrawn_amount += available;
+    let remains = metadata.ix.total_amount - metadata.withdrawn_amount;
 
     // Return any remaining funds to the stream initializer
     if remains > 0 {
@@ -527,6 +532,8 @@ pub fn cancel_token_stream(program_id: &Pubkey, acc: CancelAccounts) -> ProgramR
 
     //TODO: Close metadata account once there is alternative storage solution for historic data.
 
+    metadata.last_withdrawn_at = now;
+    metadata.canceled_at = now;
     // Write the metadata to the account
     let bytes = metadata.try_to_vec().unwrap();
     data[0..bytes.len()].clone_from_slice(&bytes);
@@ -549,7 +556,7 @@ pub fn cancel_token_stream(program_id: &Pubkey, acc: CancelAccounts) -> ProgramR
     Ok(())
 }
 
-pub fn update_recipient(program_id: &Pubkey, acc: TransferAccounts) -> ProgramResult {
+pub fn transfer_recipient(program_id: &Pubkey, acc: TransferAccounts) -> ProgramResult {
     msg!("Transferring stream recipient");
     if acc.metadata.data_is_empty()
         || acc.metadata.owner != program_id
