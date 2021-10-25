@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Ivan Jelincic <parazyd@dyne.org>
+// Copyright (c) 2021 Ivan Jelincic <parazyd@dyne.org>, imprfekt <imprfekt@icloud.com>
 //
 // This file is part of streamflow-finance/timelock-crate
 //
@@ -34,6 +34,15 @@ pub struct StreamInstruction {
     pub cliff: u64,
     /// Amount unlocked at the "cliff" timestamp
     pub cliff_amount: u64,
+    /// Whether or not a stream can be canceled by a sender (currently not used, set to TRUE)
+    pub is_cancelable_by_sender: bool,
+    /// Whether or not a stream can be canceled by a recipient (currently not used, set to FALSE)
+    pub is_cancelable_by_recipient: bool,
+    /// Whether or not a 3rd party can initiate withdraw in the name of recipient (currently not used, set to FALSE)
+    pub is_withdrawal_public: bool,
+    /// Whether or not a recipient can transfer the stream (currently not used, set to TRUE)
+    pub is_transferable: bool,
+    pub padding: u32, //4 bytes of padding to make the struct size multiple of 64bit (8 bytes)
 }
 
 impl Default for StreamInstruction {
@@ -46,7 +55,134 @@ impl Default for StreamInstruction {
             period: 1,
             cliff: 0,
             cliff_amount: 0,
+            is_cancelable_by_sender: true,
+            is_cancelable_by_recipient: false,
+            is_withdrawal_public: false,
+            is_transferable: true,
+            padding: 0,
+            //title: "".to_string(),
         }
+    }
+}
+
+/// TokenStreamData is the struct containing metadata for an SPL token stream.
+#[derive(BorshSerialize, BorshDeserialize, Default, Debug)]
+#[repr(C)]
+pub struct TokenStreamData {
+    /// Magic bytes
+    pub magic: u64,
+    /// Timestamp when stream was created
+    pub created_at: u64,
+    /// Amount of funds withdrawn
+    pub withdrawn_amount: u64,
+    /// Timestamp when stream was canceled (if canceled)
+    pub canceled_at: u64,
+    /// Timestamp at which stream can be safely canceled by a 3rd party
+    /// (Stream is either fully vested or there isn't enough capital to
+    /// keep it active)
+    pub cancellable_at: u64,
+    /// Timestamp of the last withdrawal
+    pub last_withdrawn_at: u64,
+    /// Pubkey of the stream initializer
+    pub sender: Pubkey,
+    /// Pubkey of the stream initializer's token account
+    pub sender_tokens: Pubkey,
+    /// Pubkey of the stream recipient
+    pub recipient: Pubkey,
+    /// Pubkey of the stream recipient's token account
+    pub recipient_tokens: Pubkey,
+    /// Pubkey of the token mint
+    pub mint: Pubkey,
+    /// Pubkey of the account holding the locked tokens
+    pub escrow_tokens: Pubkey,
+    /// The stream instruction
+    pub ix: StreamInstruction,
+}
+
+#[allow(clippy::too_many_arguments)]
+impl TokenStreamData {
+    /// Initialize a new `TokenStreamData` struct.
+    pub fn new(
+        created_at: u64,
+        sender: Pubkey,
+        sender_tokens: Pubkey,
+        recipient: Pubkey,
+        recipient_tokens: Pubkey,
+        mint: Pubkey,
+        escrow_tokens: Pubkey,
+        start_time: u64,
+        end_time: u64,
+        deposited_amount: u64,
+        total_amount: u64,
+        period: u64,
+        cliff: u64,
+        cliff_amount: u64,
+        is_cancelable_by_sender: bool,
+        is_cancelable_by_recipient: bool,
+        is_withdrawal_public: bool,
+        is_transferable: bool,
+        //title: String,
+    ) -> Self {
+        let ix = StreamInstruction {
+            start_time,
+            end_time,
+            deposited_amount,
+            total_amount,
+            period,
+            cliff,
+            cliff_amount,
+            is_cancelable_by_sender,
+            is_cancelable_by_recipient,
+            is_withdrawal_public,
+            is_transferable,
+            // title,
+            padding: 0,
+        };
+        // TODO: calculate cancel_time based on other parameters (incl. deposited_amount)
+        Self {
+            magic: 0,
+            created_at,
+            withdrawn_amount: 0,
+            canceled_at: 0,
+            cancellable_at: end_time,
+            last_withdrawn_at: 0,
+            sender,
+            sender_tokens,
+            recipient,
+            recipient_tokens,
+            mint,
+            escrow_tokens,
+            ix,
+        }
+    }
+
+    /// Calculate amount available for withdrawal with given timestamp.
+    pub fn available(&self, now: u64) -> u64 {
+        if self.ix.start_time > now || self.ix.cliff > now {
+            return 0;
+        }
+
+        if now >= self.ix.end_time {
+            return self.ix.total_amount - self.withdrawn_amount;
+        }
+
+        let cliff = if self.ix.cliff > 0 {
+            self.ix.cliff
+        } else {
+            self.ix.start_time
+        };
+
+        let cliff_amount = if self.ix.cliff_amount > 0 {
+            self.ix.cliff_amount
+        } else {
+            0
+        };
+
+        // TODO: Use uint arithmetics, floats are imprecise
+        let num_periods = (self.ix.end_time - cliff) as f64 / self.ix.period as f64;
+        let period_amount = (self.ix.total_amount - cliff_amount) as f64 / num_periods;
+        let periods_passed = (now - cliff) / self.ix.period;
+        (periods_passed as f64 * period_amount) as u64 + cliff_amount - self.withdrawn_amount
     }
 }
 
@@ -63,7 +199,7 @@ pub struct InitializeAccounts<'a> {
     /// (Can be either empty or initialized).
     pub recipient_tokens: AccountInfo<'a>,
     /// The account holding the stream metadata.
-    /// Eexpects empty (non-initialized) account.
+    /// Expects empty (non-initialized) account.
     pub metadata: AccountInfo<'a>,
     /// The escrow account holding the stream funds.
     /// Expects empty (non-initialized) account.
@@ -84,11 +220,14 @@ pub struct InitializeAccounts<'a> {
 
 /// The account-holding struct for the stream withdraw instruction
 pub struct WithdrawAccounts<'a> {
-    /// Solana address of the sender
+    /// Account invoking transaction. Must match `recipient`
+    // Same as `recipient` if `is_withdrawal_public == true`, can be any other account otherwise.
+    pub withdraw_authority: AccountInfo<'a>,
+    /// Sender account is needed to collect the rent for escrow token account after the last withdrawal
     pub sender: AccountInfo<'a>,
-    /// Solana address of the recipient
+    /// Recipient's wallet address
     pub recipient: AccountInfo<'a>,
-    /// The associated token account address of `recipient`
+    /// The associated token account address of a stream `recipient`
     pub recipient_tokens: AccountInfo<'a>,
     /// The account holding the stream metadata
     pub metadata: AccountInfo<'a>,
@@ -102,6 +241,9 @@ pub struct WithdrawAccounts<'a> {
 
 /// The account-holding struct for the stream cancel instruction
 pub struct CancelAccounts<'a> {
+    /// Account invoking cancel. Must match `sender`.
+    //Can be either `sender` or `recipient` depending on the value of `is_cancelable_by_sender` and `is_cancelable_by_recipient`
+    pub cancel_authority: AccountInfo<'a>,
     /// The main wallet address of the initializer
     pub sender: AccountInfo<'a>,
     /// The associated token account address of `sender`
@@ -147,108 +289,4 @@ pub struct TransferAccounts<'a> {
     /// The Solana system program needed in case associated
     /// account for the new recipients is being created.
     pub system_program: AccountInfo<'a>,
-}
-
-/// TokenStreamData is the struct containing metadata for an SPL token stream.
-#[derive(BorshSerialize, BorshDeserialize, Default, Debug)]
-#[repr(C)]
-pub struct TokenStreamData {
-    /// Magic bytes
-    pub magic: u64,
-    /// The stream instruction
-    pub ix: StreamInstruction,
-    /// Timestamp when stream was created
-    pub created_at: u64,
-    /// Amount of funds withdrawn
-    pub withdrawn: u64,
-    /// Timestamp at which stream can be safely cancelled by a 3rd party
-    /// (Stream is either fully vested or there isn't enough capital to
-    /// keep it active)
-    pub cancel_time: u64,
-    /// Pubkey of the stream initializer
-    pub sender: Pubkey,
-    /// Pubkey of the stream initializer's token account
-    pub sender_tokens: Pubkey,
-    /// Pubkey of the stream recipient
-    pub recipient: Pubkey,
-    /// Pubkey of the stream recipient's token account
-    pub recipient_tokens: Pubkey,
-    /// Pubkey of the token mint
-    pub mint: Pubkey,
-    /// Pubkey of the account holding the locked tokens
-    pub escrow_tokens: Pubkey,
-}
-
-#[allow(clippy::too_many_arguments)]
-impl TokenStreamData {
-    /// Initialize a new `TokenStreamData` struct.
-    pub fn new(
-        start_time: u64,
-        end_time: u64,
-        deposited_amount: u64,
-        total_amount: u64,
-        period: u64,
-        cliff: u64,
-        cliff_amount: u64,
-        created_at: u64,
-        sender: Pubkey,
-        sender_tokens: Pubkey,
-        recipient: Pubkey,
-        recipient_tokens: Pubkey,
-        mint: Pubkey,
-        escrow_tokens: Pubkey,
-    ) -> Self {
-        let ix = StreamInstruction {
-            start_time,
-            end_time,
-            deposited_amount,
-            total_amount,
-            period,
-            cliff,
-            cliff_amount,
-        };
-        // TODO: calculate cancel_time based on other parameters
-        Self {
-            magic: 0,
-            ix,
-            created_at,
-            withdrawn: 0,
-            cancel_time: end_time,
-            sender,
-            sender_tokens,
-            recipient,
-            recipient_tokens,
-            mint,
-            escrow_tokens,
-        }
-    }
-
-    /// Calculate amount available for withdrawal with given timestamp.
-    pub fn available(&self, now: u64) -> u64 {
-        if self.ix.start_time > now || self.ix.cliff > now {
-            return 0;
-        }
-
-        if now >= self.ix.end_time {
-            return self.ix.total_amount - self.withdrawn;
-        }
-
-        let cliff = if self.ix.cliff > 0 {
-            self.ix.cliff
-        } else {
-            self.ix.start_time
-        };
-
-        let cliff_amount = if self.ix.cliff_amount > 0 {
-            self.ix.cliff_amount
-        } else {
-            0
-        };
-
-        // TODO: Use uint arithmetics, floats are imprecise
-        let num_periods = (self.ix.end_time - cliff) as f64 / self.ix.period as f64;
-        let period_amount = (self.ix.total_amount - cliff_amount) as f64 / num_periods;
-        let periods_passed = (now - cliff) / self.ix.period;
-        (periods_passed as f64 * period_amount) as u64 + cliff_amount - self.withdrawn
-    }
 }
