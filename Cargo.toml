@@ -8,6 +8,10 @@ repository = "https://github.com/streamflow-finance/timelock-crate"
 readme = "README.md"
 license = "AGPL-3.0-only"
 edition = "2018"
+exclude = [
+    "misc/*",
+    ".github/*"
+]
 
 [dependencies]
 borsh = "0.9.1"
