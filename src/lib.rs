@@ -17,9 +17,9 @@
 //! The code providing timelock primitives
 //! used by [streamflow.finance](https://streamflow.finance).
 
-/// Functions related to SPL tokens
-pub mod associated_token;
 /// Structs and data
 pub mod state;
+/// Functions related to SPL tokens
+pub mod token;
 /// Utility functions
 pub mod utils;
