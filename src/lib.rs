@@ -26,3 +26,5 @@ pub mod state;
 pub mod token;
 /// Utility functions
 pub mod utils;
+/// Errors
+pub mod error;
