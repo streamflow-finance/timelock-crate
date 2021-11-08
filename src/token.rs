@@ -35,6 +35,7 @@ use crate::utils::{
     duration_sanity, encode_base10, pretty_time, unpack_mint_account, unpack_token_account,
 };
 
+use crate::error::StreamFlowError::{AccountsNotWritable, MintMismatch, InvalidMetaData};
 /// Initialize an SPL token stream
 ///
 /// The function shall initialize new accounts to hold the tokens,
@@ -59,8 +60,7 @@ pub fn create(
         || !acc.metadata.is_writable
         || !acc.escrow_tokens.is_writable
     {
-        // TODO: Add custom error "Accounts not writable"
-        return Err(ProgramError::Custom(1));
+        return Err(AccountsNotWritable.into());
     }
 
     let (escrow_tokens_pubkey, nonce) =
@@ -85,7 +85,7 @@ pub fn create(
 
     if &sender_token_info.mint != acc.mint.key {
         // Mint mismatch
-        return Err(ProgramError::Custom(3));
+        return Err(MintMismatch.into());
     }
 
     let now = Clock::get()?.unix_timestamp as u64;
@@ -298,8 +298,7 @@ pub fn withdraw(program_id: &Pubkey, acc: WithdrawAccounts, amount: u64) -> Prog
     // This thing is nasty lol
     let mut metadata: TokenStreamData = match solana_borsh::try_from_slice_unchecked(&data) {
         Ok(v) => v,
-        // TODO: Add "Invalid Metadata" as error
-        Err(_) => return Err(ProgramError::Custom(2)),
+        Err(_) => return Err(InvalidMetaData.into()),
     };
 
     let mint_info = unpack_mint_account(&acc.mint)?;
@@ -450,8 +449,7 @@ pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
     let mut data = acc.metadata.try_borrow_mut_data()?;
     let mut metadata = match TokenStreamData::try_from_slice(&data) {
         Ok(v) => v,
-        // TODO: Invalid Metadata error
-        Err(_) => return Err(ProgramError::Custom(3)),
+        Err(_) => return Err(InvalidMetaData.into()),
     };
 
     let mint_info = unpack_mint_account(&acc.mint)?;
@@ -583,8 +581,7 @@ pub fn transfer_recipient(program_id: &Pubkey, acc: TransferAccounts) -> Program
     let mut data = acc.metadata.try_borrow_mut_data()?;
     let mut metadata = match TokenStreamData::try_from_slice(&data) {
         Ok(v) => v,
-        // TODO: Add "Invalid Metadata" as an error
-        Err(_) => return Err(ProgramError::Custom(3)),
+        Err(_) => return Err(InvalidMetaData.into()),
     };
 
     let (escrow_tokens_pubkey, _) =
