@@ -6,9 +6,14 @@ use solana_program::{
     entrypoint::ProgramResult,
     program_error::ProgramError,
     pubkey::Pubkey,
+    system_instruction,
 };
 use solana_program_test::{processor, tokio, ProgramTest};
-use solana_sdk::{signature::Signer, signer::keypair::Keypair};
+use solana_sdk::{
+    account::Account, native_token::sol_to_lamports, program_pack::Pack, signature::Signer,
+    signer::keypair::Keypair, transaction::Transaction,
+};
+use spl_associated_token_account::{create_associated_token_account, get_associated_token_address};
 use std::convert::TryInto;
 
 use streamflow_timelock::state::{
@@ -120,13 +125,83 @@ async fn test_program() -> Result<()> {
     let program_id = program_kp.pubkey();
 
     let mut runtime = ProgramTest::default();
+
     runtime.add_program(
         "streamflow_timelock",
         program_id,
         processor!(process_instruction),
     );
 
+    let alice = Keypair::new();
+    runtime.add_account(
+        alice.pubkey(),
+        Account {
+            lamports: sol_to_lamports(1.0),
+            ..Account::default()
+        },
+    );
+
+    let bob = Keypair::new();
+    let charlie = Keypair::new();
+
     let (mut banks_client, payer, recent_blockhash) = runtime.start().await;
+
+    // Create a new SPL token
+    let rent = banks_client.get_rent().await?;
+    let strm_token_mint = Keypair::new();
+
+    // Build a transaction to initialize our mint.
+    let mut tx = Transaction::new_with_payer(
+        &[
+            system_instruction::create_account(
+                &payer.pubkey(),
+                &strm_token_mint.pubkey(),
+                rent.minimum_balance(spl_token::state::Mint::LEN),
+                spl_token::state::Mint::LEN as u64,
+                &spl_token::id(),
+            ),
+            spl_token::instruction::initialize_mint(
+                &spl_token::id(),
+                &strm_token_mint.pubkey(),
+                &payer.pubkey(),
+                None,
+                8,
+            )?,
+        ],
+        Some(&payer.pubkey()),
+    );
+    tx.sign(&[&payer, &strm_token_mint], recent_blockhash);
+    banks_client.process_transaction(tx).await?;
+
+    // Once that is done, let's mint some to Alice.
+    let alice_ass_token = get_associated_token_address(&alice.pubkey(), &strm_token_mint.pubkey());
+    let mut tx = Transaction::new_with_payer(
+        &[
+            create_associated_token_account(
+                &payer.pubkey(),
+                &alice.pubkey(),
+                &strm_token_mint.pubkey(),
+            ),
+            spl_token::instruction::mint_to(
+                &spl_token::id(),
+                &strm_token_mint.pubkey(),
+                &alice_ass_token,
+                &payer.pubkey(),
+                &[],
+                spl_token::ui_amount_to_amount(100.0, 8),
+            )?,
+        ],
+        Some(&payer.pubkey()),
+    );
+    tx.sign(&[&payer], recent_blockhash);
+    banks_client.process_transaction(tx).await?;
+
+    let alice_ass_account = banks_client.get_account(alice_ass_token).await?;
+    let alice_ass_account = alice_ass_account.unwrap();
+    let token_data = spl_token::state::Account::unpack_from_slice(&alice_ass_account.data)?;
+    assert_eq!(token_data.mint, strm_token_mint.pubkey());
+    assert_eq!(token_data.owner, alice.pubkey());
+    assert_eq!(token_data.amount, spl_token::ui_amount_to_amount(100.0, 8));
 
     Ok(())
 }
