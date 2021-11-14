@@ -4,6 +4,7 @@ use solana_program::system_instruction;
 use solana_program_test::{processor, tokio, ProgramTest};
 use solana_sdk::{
     account::Account,
+    borsh as solana_borsh,
     instruction::{AccountMeta, Instruction},
     native_token::sol_to_lamports,
     program_pack::Pack,
@@ -195,6 +196,36 @@ async fn test_program() -> Result<()> {
         token_data.amount,
         spl_token::ui_amount_to_amount(100.0 - stream_total_amount, 8)
     );
+
+    let metadata_account = banks_client.get_account(metadata_acc.pubkey()).await?;
+    let metadata_account = metadata_account.unwrap();
+    // This thing is nasty lol
+    let metadata_data: TokenStreamData =
+        solana_borsh::try_from_slice_unchecked(&metadata_account.data)?;
+
+    assert_eq!(metadata_account.owner, program_id);
+    assert_eq!(metadata_data.magic, 0);
+    assert_eq!(metadata_data.withdrawn_amount, 0);
+    assert_eq!(metadata_data.canceled_at, 0);
+    assert_eq!(metadata_data.cancellable_at, now + 600);
+    assert_eq!(metadata_data.last_withdrawn_at, 0);
+    assert_eq!(metadata_data.sender, alice.pubkey());
+    assert_eq!(metadata_data.sender_tokens, alice_ass_token);
+    assert_eq!(metadata_data.recipient, bob.pubkey());
+    assert_eq!(metadata_data.recipient_tokens, bob_ass_token);
+    assert_eq!(metadata_data.mint, strm_token_mint.pubkey());
+    assert_eq!(metadata_data.escrow_tokens, escrow_tokens);
+    assert_eq!(metadata_data.ix.start_time, now);
+    assert_eq!(metadata_data.ix.end_time, now + 600);
+    assert_eq!(
+        metadata_data.ix.deposited_amount,
+        spl_token::ui_amount_to_amount(stream_total_amount, 8)
+    );
+    assert_eq!(
+        metadata_data.ix.total_amount,
+        spl_token::ui_amount_to_amount(stream_total_amount, 8)
+    );
+    assert_eq!(metadata_data.ix.stream_name, "TheTestoooooooor".to_string());
 
     Ok(())
 }
