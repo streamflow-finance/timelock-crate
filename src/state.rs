@@ -35,15 +35,15 @@ pub struct StreamInstruction {
     /// Amount unlocked at the "cliff" timestamp
     pub cliff_amount: u64,
     /// Whether or not a stream can be canceled by a sender (currently not used, set to TRUE)
-    pub is_cancelable_by_sender: bool,
+    pub cancelable_by_sender: bool,
     /// Whether or not a stream can be canceled by a recipient (currently not used, set to FALSE)
-    pub is_cancelable_by_recipient: bool,
+    pub cancelable_by_recipient: bool,
     /// Whether or not a 3rd party can initiate withdraw in the name of recipient (currently not used, set to FALSE)
-    pub is_withdrawal_public: bool,
+    pub withdrawal_public: bool,
     /// Whether or not a recipient can transfer the stream (currently not used, set to TRUE)
-    pub is_transferable: bool,
-    //4 bytes of padding to make the struct size multiple of 64bit (8 bytes)
-    pub padding: u32,
+    pub transferable: bool,
+    /// The name of this stream
+    pub stream_name: String,
 }
 
 impl Default for StreamInstruction {
@@ -56,12 +56,11 @@ impl Default for StreamInstruction {
             period: 1,
             cliff: 0,
             cliff_amount: 0,
-            is_cancelable_by_sender: true,
-            is_cancelable_by_recipient: false,
-            is_withdrawal_public: false,
-            is_transferable: true,
-            padding: 0,
-            //title: "".to_string(),
+            cancelable_by_sender: true,
+            cancelable_by_recipient: false,
+            withdrawal_public: false,
+            transferable: true,
+            stream_name: "Stream".to_string(),
         }
     }
 }
@@ -118,11 +117,11 @@ impl TokenStreamData {
         period: u64,
         cliff: u64,
         cliff_amount: u64,
-        is_cancelable_by_sender: bool,
-        is_cancelable_by_recipient: bool,
-        is_withdrawal_public: bool,
-        is_transferable: bool,
-        //title: String,
+        cancelable_by_sender: bool,
+        cancelable_by_recipient: bool,
+        withdrawal_public: bool,
+        transferable: bool,
+        stream_name: String,
     ) -> Self {
         let ix = StreamInstruction {
             start_time,
@@ -132,13 +131,13 @@ impl TokenStreamData {
             period,
             cliff,
             cliff_amount,
-            is_cancelable_by_sender,
-            is_cancelable_by_recipient,
-            is_withdrawal_public,
-            is_transferable,
-            // title,
-            padding: 0,
+            cancelable_by_sender,
+            cancelable_by_recipient,
+            withdrawal_public,
+            transferable,
+            stream_name,
         };
+
         // TODO: calculate cancel_time based on other parameters (incl. deposited_amount)
         Self {
             magic: 0,
@@ -222,7 +221,7 @@ pub struct InitializeAccounts<'a> {
 /// The account-holding struct for the stream withdraw instruction
 pub struct WithdrawAccounts<'a> {
     /// Account invoking transaction. Must match `recipient`
-    // Same as `recipient` if `is_withdrawal_public == true`, can be any other account otherwise.
+    // Same as `recipient` if `withdrawal_public == true`, can be any other account otherwise.
     pub withdraw_authority: AccountInfo<'a>,
     /// Sender account is needed to collect the rent for escrow token account after the last withdrawal
     pub sender: AccountInfo<'a>,
@@ -243,7 +242,7 @@ pub struct WithdrawAccounts<'a> {
 /// The account-holding struct for the stream cancel instruction
 pub struct CancelAccounts<'a> {
     /// Account invoking cancel. Must match `sender`.
-    //Can be either `sender` or `recipient` depending on the value of `is_cancelable_by_sender` and `is_cancelable_by_recipient`
+    //Can be either `sender` or `recipient` depending on the value of `cancelable_by_sender` and `cancelable_by_recipient`
     pub cancel_authority: AccountInfo<'a>,
     /// The main wallet address of the initializer
     pub sender: AccountInfo<'a>,

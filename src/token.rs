@@ -133,10 +133,11 @@ pub fn create(
         ix.period,
         ix.cliff,
         ix.cliff_amount,
-        ix.is_cancelable_by_sender,
-        ix.is_cancelable_by_recipient,
-        ix.is_withdrawal_public,
-        ix.is_transferable,
+        ix.cancelable_by_sender,
+        ix.cancelable_by_recipient,
+        ix.withdrawal_public,
+        ix.transferable,
+        ix.stream_name,
     );
     let bytes = metadata.try_to_vec()?;
 
@@ -434,7 +435,7 @@ pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
     if acc.token_program.key != &spl_token::id()
         || acc.escrow_tokens.key != &escrow_tokens_pubkey
         || acc.recipient_tokens.key != &recipient_tokens_key
-        //TODO: Update in future releases based on `is_cancelable_by_sender/recipient`
+        //TODO: Update in future releases based on `cancelable_by_sender/recipient`
         || acc.cancel_authority.key != acc.sender.key
     {
         return Err(ProgramError::InvalidAccountData);
