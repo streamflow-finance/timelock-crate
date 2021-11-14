@@ -17,6 +17,9 @@
 //! The code providing timelock primitives
 //! used by [streamflow.finance](https://streamflow.finance).
 
+/// Entrypoint
+#[cfg(not(feature = "no-entrypoint"))]
+pub mod entrypoint;
 /// Structs and data
 pub mod state;
 /// Functions related to SPL tokens

@@ -17,7 +17,6 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{account_info::AccountInfo, pubkey::Pubkey};
 
 /// The struct containing instructions for initializing a stream
-#[repr(C)]
 #[derive(BorshDeserialize, BorshSerialize, Clone, Debug)]
 pub struct StreamInstruction {
     /// Timestamp when the tokens start vesting
@@ -67,7 +66,6 @@ impl Default for StreamInstruction {
 
 /// TokenStreamData is the struct containing metadata for an SPL token stream.
 #[derive(BorshSerialize, BorshDeserialize, Default, Debug)]
-#[repr(C)]
 pub struct TokenStreamData {
     /// Magic bytes
     pub magic: u64,
