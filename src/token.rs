@@ -15,6 +15,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{
+    borsh as solana_borsh,
     entrypoint::ProgramResult,
     msg,
     program::{invoke, invoke_signed},
@@ -294,7 +295,8 @@ pub fn withdraw(program_id: &Pubkey, acc: WithdrawAccounts, amount: u64) -> Prog
     }
 
     let mut data = acc.metadata.try_borrow_mut_data()?;
-    let mut metadata = match TokenStreamData::try_from_slice(&data) {
+    // This thing is nasty lol
+    let mut metadata: TokenStreamData = match solana_borsh::try_from_slice_unchecked(&data) {
         Ok(v) => v,
         // TODO: Add "Invalid Metadata" as error
         Err(_) => return Err(ProgramError::Custom(2)),
