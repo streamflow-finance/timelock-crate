@@ -290,3 +290,26 @@ pub struct TransferAccounts<'a> {
     /// account for the new recipients is being created.
     pub system_program: AccountInfo<'a>,
 }
+
+/// The account-holding struct for the stream topup instruction
+#[derive(Debug)]
+pub struct TopUpAccounts<'a> {
+    /// The main wallet address of the initializer.
+    pub sender: AccountInfo<'a>,
+    /// The associated token account address of `sender`.
+    pub sender_tokens: AccountInfo<'a>,
+    /// The main wallet address of the recipient.
+    pub recipient_tokens: AccountInfo<'a>,
+    /// The account holding the stream metadata.
+    /// Expects existing account.
+    pub metadata: AccountInfo<'a>,
+    /// The escrow account holding the stream funds.
+    /// Expects empty (non-initialized) account.
+    pub escrow_tokens: AccountInfo<'a>,
+    /// The SPL token mint account
+    pub mint: AccountInfo<'a>,
+    /// The SPL program needed for transfer
+    pub token_program: AccountInfo<'a>,
+     /// The Solana system program
+    pub system_program: AccountInfo<'a>,
+}
