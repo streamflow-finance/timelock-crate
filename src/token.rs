@@ -29,7 +29,7 @@ use spl_associated_token_account::{create_associated_token_account, get_associat
 
 use crate::state::{
     CancelAccounts, InitializeAccounts, StreamInstruction, TokenStreamData, TransferAccounts,
-    WithdrawAccounts,
+    WithdrawAccounts, TopUpAccounts,
 };
 use crate::utils::{
     duration_sanity, encode_base10, pretty_time, unpack_mint_account, unpack_token_account,
@@ -643,6 +643,61 @@ pub fn transfer_recipient(program_id: &Pubkey, acc: TransferAccounts) -> Program
 
     let bytes = metadata.try_to_vec()?;
     data[0..bytes.len()].clone_from_slice(&bytes);
+
+    Ok(())
+}
+
+/// Top up the SPL Token stream
+///
+/// The function will add the amount to the metadata SPL account
+pub fn topup_stream(acc: TopUpAccounts, amount: u64) -> ProgramResult {
+
+    // Negative amount would be a problem (public function) and 0 doesn't change anything
+    if amount<= 0 {
+        return Err(ProgramError::InvalidArgument);
+    }
+
+    msg!("Topping up the stream account");
+    if acc.metadata.data_is_empty()
+    || acc.escrow_tokens.owner != &spl_token::id()
+    {
+        return Err(ProgramError::UninitializedAccount);
+    }
+    // Why mut in other functions?
+    let data = acc.metadata.try_borrow_mut_data()?;
+    // Take metadata
+    let mut metadata: TokenStreamData = match solana_borsh::try_from_slice_unchecked(&data) {
+        Ok(v) => v,
+        // TODO: Add "Invalid Metadata" as error
+        Err(_) => return Err(ProgramError::Custom(2)),
+    };
+
+    msg!("Topping up the escrow account");
+    invoke(
+        &spl_token::instruction::transfer(
+            acc.token_program.key,
+            acc.sender_tokens.key,
+            acc.escrow_tokens.key,
+            acc.sender.key,
+            &[],
+            amount,
+        )?,
+        &[
+            acc.sender_tokens.clone(),
+            acc.escrow_tokens.clone(),
+            acc.sender.clone(),
+            acc.token_program.clone(),
+        ],
+    )?;
+    // Update metadata amount
+    metadata.ix.deposited_amount += amount;
+    let mint_info = unpack_mint_account(&acc.mint)?;
+    msg!(
+        "Successfully topped up {} to token stream {} on behalf of {}",
+        encode_base10(amount, mint_info.decimals.into()),
+        acc.escrow_tokens.key,
+        acc.sender.key,
+        );
 
     Ok(())
 }
