@@ -24,6 +24,7 @@ solana-program-test = "1.8.2"
 solana-client = "1.8.2"
 solana-sdk = "1.8.2"
 anyhow = "1.0.44"
+test-sdk = { path = "./test-sdk" }
 
 [lib]
 crate-type = ["cdylib", "lib"]

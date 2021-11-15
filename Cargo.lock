@@ -3309,6 +3309,7 @@ dependencies = [
  "solana-sdk",
  "spl-associated-token-account",
  "spl-token",
+ "test-sdk",
 ]
 
 [[package]]
@@ -3446,6 +3447,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "411c5bf740737c7918b8b1fe232dca4dc9f8e754b8ad5e20966814001ed0ac6b"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "test-sdk"
+version = "0.1.0"
+dependencies = [
+ "arrayref",
+ "bincode",
+ "borsh",
+ "num-derive",
+ "num-traits",
+ "serde",
+ "serde_derive",
+ "solana-program",
+ "solana-program-test",
+ "solana-sdk",
+ "spl-associated-token-account",
+ "spl-token",
+ "thiserror",
 ]
 
 [[package]]
