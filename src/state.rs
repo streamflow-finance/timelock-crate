@@ -184,6 +184,39 @@ impl TokenStreamData {
         let periods_passed = (now - cliff) / self.ix.period;
         (periods_passed as f64 * period_amount) as u64 + cliff_amount - self.withdrawn_amount
     }
+
+        /// Calculate timestamp when stream is cancellable
+        /// end_time when deposit=total else time when funds run out
+        pub fn cancelable(&self) -> u64 {
+  
+            let cliff_time = if self.ix.cliff > 0 {
+                self.ix.cliff
+            } else {
+                self.ix.start_time
+            };
+    
+            let cliff_amount = if self.ix.cliff_amount > 0 {
+                self.ix.cliff_amount
+            } else {
+                0
+            };
+            // Deposit smaller then cliff amount, cancelable at cliff
+            if self.ix.deposited_amount < cliff_amount {
+                return cliff_time;
+            }
+            // Nr of seconds after the cliff
+            let seconds_nr = self.ix.end_time - cliff_time;
+            // stream per second
+            let amount_per_second = (self.ix.total_amount - cliff_amount) / seconds_nr; 
+            // Seconds till account runs out of available funds
+            let seconds_left = (self.ix.deposited_amount - cliff_amount) / amount_per_second;
+            // Cancellable_at time
+            if cliff_time + seconds_left > self.ix.end_time {
+                self.ix.end_time
+            } else {
+                cliff_time + seconds_left
+            }
+        }
 }
 
 /// The account-holding struct for the stream initialization instruction
