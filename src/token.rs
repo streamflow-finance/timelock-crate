@@ -28,8 +28,8 @@ use solana_program::{
 use spl_associated_token_account::{create_associated_token_account, get_associated_token_address};
 
 use crate::state::{
-    CancelAccounts, InitializeAccounts, StreamInstruction, TokenStreamData, TransferAccounts,
-    WithdrawAccounts, TopUpAccounts,
+    CancelAccounts, InitializeAccounts, StreamInstruction, TokenStreamData, TopUpAccounts,
+    TransferAccounts, WithdrawAccounts,
 };
 use crate::utils::{
     duration_sanity, encode_base10, pretty_time, unpack_mint_account, unpack_token_account,
@@ -651,16 +651,13 @@ pub fn transfer_recipient(program_id: &Pubkey, acc: TransferAccounts) -> Program
 ///
 /// The function will add the amount to the metadata SPL account
 pub fn topup_stream(acc: TopUpAccounts, amount: u64) -> ProgramResult {
-
     // Negative amount would be a problem (public function) and 0 doesn't change anything
-    if amount<= 0 {
+    if amount <= 0 {
         return Err(ProgramError::InvalidArgument);
     }
 
     msg!("Topping up the stream account");
-    if acc.metadata.data_is_empty()
-    || acc.escrow_tokens.owner != &spl_token::id()
-    {
+    if acc.metadata.data_is_empty() || acc.escrow_tokens.owner != &spl_token::id() {
         return Err(ProgramError::UninitializedAccount);
     }
     // Why mut in other functions?
@@ -697,7 +694,7 @@ pub fn topup_stream(acc: TopUpAccounts, amount: u64) -> ProgramResult {
         encode_base10(amount, mint_info.decimals.into()),
         acc.escrow_tokens.key,
         acc.sender.key,
-        );
+    );
 
     Ok(())
 }
