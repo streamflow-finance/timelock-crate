@@ -24,9 +24,10 @@ use solana_program::{
 use std::convert::TryInto;
 
 use crate::state::{
-    CancelAccounts, InitializeAccounts, StreamInstruction, TransferAccounts, WithdrawAccounts,
+    CancelAccounts, InitializeAccounts, StreamInstruction, TopUpAccounts, TransferAccounts,
+    WithdrawAccounts,
 };
-use crate::token::{cancel, create, transfer_recipient, withdraw};
+use crate::token::{cancel, create, topup_stream, transfer_recipient, withdraw};
 
 entrypoint!(process_instruction);
 pub fn process_instruction(pid: &Pubkey, acc: &[AccountInfo], ix: &[u8]) -> ProgramResult {
@@ -99,6 +100,19 @@ pub fn process_instruction(pid: &Pubkey, acc: &[AccountInfo], ix: &[u8]) -> Prog
             };
 
             return transfer_recipient(pid, ta);
+        }
+        4 => {
+            let ta = TopUpAccounts {
+                sender: next_account_info(ai)?.clone(),
+                sender_tokens: next_account_info(ai)?.clone(),
+                metadata: next_account_info(ai)?.clone(),
+                escrow_tokens: next_account_info(ai)?.clone(),
+                mint: next_account_info(ai)?.clone(),
+                token_program: next_account_info(ai)?.clone(),
+            };
+            let amount = u64::from_le_bytes(ix[1..].try_into().unwrap());
+
+            return topup_stream(ta, amount);
         }
         _ => {}
     }
