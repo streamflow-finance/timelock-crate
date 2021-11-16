@@ -30,6 +30,12 @@ struct WithdrawStreamIx {
     amount: u64,
 }
 
+#[derive(BorshSerialize, BorshDeserialize, Clone)]
+struct TopUpIx {
+    ix: u8,
+    amount: u64,
+}
+
 pub struct TimelockProgramTest {
     pub bench: ProgramTestBench,
     pub program_id: Pubkey,
@@ -70,6 +76,7 @@ impl TimelockProgramTest {
 
 #[tokio::test]
 async fn timelock_program_test() -> Result<()> {
+    println!("Start");
     let mut tt = TimelockProgramTest::start_new().await;
 
     let alice = clone_keypair(&tt.bench.alice);
@@ -211,7 +218,33 @@ async fn timelock_program_test() -> Result<()> {
     let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
     assert_eq!(metadata_data.withdrawn_amount, 1180000000);
 
-    println!("{:#?}", metadata_data);
+    // Top up account with 12 and see new amount in escrow account
+    let topup_ix = TopUpIx {
+        ix: 4,
+        amount: spl_token::ui_amount_to_amount(12.0, 8),
+    }; // 4 => topup_stream
+    let topupix_bytes = Instruction::new_with_bytes(
+        tt.program_id,
+        &topup_ix.try_to_vec()?,
+        vec![
+            AccountMeta::new(alice.pubkey(), true),
+            AccountMeta::new(alice_ass_token, false),
+            AccountMeta::new(metadata_kp.pubkey(), false),
+            AccountMeta::new(escrow_tokens_pubkey, false),
+            AccountMeta::new_readonly(strm_token_mint.pubkey(), false),
+            AccountMeta::new_readonly(spl_token::id(), false),
+        ],
+    );
+    tt.bench
+        .process_transaction(&[topupix_bytes], Some(&[&alice]))
+        .await?;
+    // let metadata_acc = tt.bench.get_account(&metadata_kp.pubkey()).await.unwrap();
+    let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
+    assert_eq!(
+        metadata_data.ix.total_amount,
+        spl_token::ui_amount_to_amount(32.0, 8)
+    );
 
+    println!("{:#?}", metadata_data);
     Ok(())
 }

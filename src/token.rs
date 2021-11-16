@@ -656,12 +656,12 @@ pub fn topup_stream(acc: TopUpAccounts, amount: u64) -> ProgramResult {
         return Err(ProgramError::InvalidArgument);
     }
 
-    msg!("Topping up the stream account");
+    msg!("Topping up the escrow account");
     if acc.metadata.data_is_empty() || acc.escrow_tokens.owner != &spl_token::id() {
         return Err(ProgramError::UninitializedAccount);
     }
-    // Why mut in other functions?
-    let data = acc.metadata.try_borrow_mut_data()?;
+
+    let mut data = acc.metadata.try_borrow_mut_data()?;
     // Take metadata
     let mut metadata: TokenStreamData = match solana_borsh::try_from_slice_unchecked(&data) {
         Ok(v) => v,
@@ -669,7 +669,7 @@ pub fn topup_stream(acc: TopUpAccounts, amount: u64) -> ProgramResult {
         Err(_) => return Err(ProgramError::Custom(2)),
     };
 
-    msg!("Topping up the escrow account");
+    msg!("Transferring to the escrow account");
     invoke(
         &spl_token::instruction::transfer(
             acc.token_program.key,
@@ -686,8 +686,12 @@ pub fn topup_stream(acc: TopUpAccounts, amount: u64) -> ProgramResult {
             acc.token_program.clone(),
         ],
     )?;
-    // Update metadata amount
-    metadata.ix.deposited_amount += amount;
+    // Update metadata total amount (don't touch initial deposit)
+    metadata.ix.total_amount += amount;
+    // Write the metadata to the account
+    let bytes = metadata.try_to_vec().unwrap();
+    data[0..bytes.len()].clone_from_slice(&bytes);
+
     let mint_info = unpack_mint_account(&acc.mint)?;
     msg!(
         "Successfully topped up {} to token stream {} on behalf of {}",
