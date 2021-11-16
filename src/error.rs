@@ -1,6 +1,6 @@
+use solana_program::msg;
 use solana_program::program_error::ProgramError;
 use thiserror::Error;
-use  solana_program::msg;
 
 #[derive(Error, Debug, Copy, Clone)]
 pub enum StreamFlowError {

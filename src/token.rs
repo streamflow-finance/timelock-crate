@@ -35,7 +35,7 @@ use crate::utils::{
     duration_sanity, encode_base10, pretty_time, unpack_mint_account, unpack_token_account,
 };
 
-use crate::error::StreamFlowError::{AccountsNotWritable, MintMismatch, InvalidMetaData};
+use crate::error::StreamFlowError::{AccountsNotWritable, InvalidMetaData, MintMismatch};
 /// Initialize an SPL token stream
 ///
 /// The function shall initialize new accounts to hold the tokens,

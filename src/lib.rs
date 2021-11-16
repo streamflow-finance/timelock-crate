@@ -20,11 +20,11 @@
 /// Entrypoint
 #[cfg(not(feature = "no-entrypoint"))]
 pub mod entrypoint;
+/// Errors
+pub mod error;
 /// Structs and data
 pub mod state;
 /// Functions related to SPL tokens
 pub mod token;
 /// Utility functions
 pub mod utils;
-/// Errors
-pub mod error;
