@@ -118,8 +118,9 @@ pub fn create(
         return Err(ProgramError::InsufficientFunds);
     }
 
+
     // TODO: Calculate cancel_data once continuous streams are ready
-    let metadata = TokenStreamData::new(
+    let mut metadata = TokenStreamData::new(
         now,
         *acc.sender.key,
         *acc.sender_tokens.key,
@@ -129,7 +130,7 @@ pub fn create(
         *acc.escrow_tokens.key,
         ix.start_time,
         ix.end_time,
-        ix.total_amount,
+        ix.deposited_amount,
         ix.total_amount,
         ix.period,
         ix.cliff,
@@ -140,6 +141,12 @@ pub fn create(
         ix.transferable,
         ix.stream_name,
     );
+
+    // Move cancellable_at (from third party)
+    if ix.deposited_amount < ix.total_amount {
+        metadata.cancellable_at = metadata.cancelable();
+    }
+
     let bytes = metadata.try_to_vec()?;
 
     if acc.recipient_tokens.data_is_empty() {
@@ -686,8 +693,10 @@ pub fn topup_stream(acc: TopUpAccounts, amount: u64) -> ProgramResult {
             acc.token_program.clone(),
         ],
     )?;
-    // Update metadata total amount (don't touch initial deposit)
-    metadata.ix.total_amount += amount;
+    // Update metadata deposited amount
+    metadata.ix.deposited_amount += amount;
+    // Update cancellable_at
+    metadata.cancellable_at = metadata.cancelable();
     // Write the metadata to the account
     let bytes = metadata.try_to_vec().unwrap();
     data[0..bytes.len()].clone_from_slice(&bytes);
