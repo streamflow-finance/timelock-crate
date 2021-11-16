@@ -1,21 +1,18 @@
 use anyhow::Result;
 use borsh::{BorshDeserialize, BorshSerialize};
-use solana_program::system_instruction;
+
 use solana_program_test::{processor, tokio};
 use solana_sdk::{
-    account::Account,
     clock::UnixTimestamp,
     instruction::{AccountMeta, Instruction},
-    native_token::sol_to_lamports,
     program_pack::Pack,
     pubkey::Pubkey,
     signature::Signer,
     signer::keypair::Keypair,
     system_program,
     sysvar::rent,
-    transaction::Transaction,
 };
-use spl_associated_token_account::{create_associated_token_account, get_associated_token_address};
+use spl_associated_token_account::{get_associated_token_address};
 use test_sdk::{tools::clone_keypair, ProgramTestBench, TestBenchProgram};
 
 use streamflow_timelock::entrypoint::process_instruction;
@@ -210,7 +207,7 @@ async fn timelock_program_test() -> Result<()> {
         .process_transaction(&[withdraw_stream_ix_bytes], Some(&[&bob]))
         .await?;
 
-    let metadata_acc = tt.bench.get_account(&metadata_kp.pubkey()).await.unwrap();
+    let _metadata_acc = tt.bench.get_account(&metadata_kp.pubkey()).await.unwrap();
     let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
     assert_eq!(metadata_data.withdrawn_amount, 1180000000);
 
