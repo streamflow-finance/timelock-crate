@@ -125,7 +125,7 @@ async fn timelock_program_test() -> Result<()> {
         metadata: StreamInstruction {
             start_time: now + 5,
             end_time: now + 605,
-            deposited_amount: 0,
+            deposited_amount: spl_token::ui_amount_to_amount(20.0, 8),
             total_amount: spl_token::ui_amount_to_amount(20.0, 8),
             period: 1,
             cliff: 0,
@@ -218,10 +218,81 @@ async fn timelock_program_test() -> Result<()> {
     let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
     assert_eq!(metadata_data.withdrawn_amount, 1180000000);
 
+         
+    let metadata_kp = Keypair::new();
+    let (escrow_tokens_pubkey, _) =
+        Pubkey::find_program_address(&[metadata_kp.pubkey().as_ref()], &tt.program_id);
+
+    let clock = tt.bench.get_clock().await;
+    let now = clock.unix_timestamp as u64;
+
+ 
+
+    let create_stream_ix = CreateStreamIx {
+        ix: 0,
+        metadata: StreamInstruction {
+            start_time: now + 10,
+            end_time: now + 1010,
+            deposited_amount: spl_token::ui_amount_to_amount(10.0, 8),
+            total_amount: spl_token::ui_amount_to_amount(20.0, 8),
+            period: 1,
+            cliff: 0,
+            cliff_amount: 0,
+            cancelable_by_sender: false,
+            cancelable_by_recipient: false,
+            withdrawal_public: false,
+            transferable: false,
+            stream_name: "Test2".to_string(),
+        },
+    };
+
+    let create_stream_ix_bytes = Instruction::new_with_bytes(
+        tt.program_id,
+        &create_stream_ix.try_to_vec()?,
+        vec![
+            AccountMeta::new(alice.pubkey(), true),
+            AccountMeta::new(alice_ass_token, false),
+            AccountMeta::new(bob.pubkey(), false),
+            AccountMeta::new(bob_ass_token, false),
+            AccountMeta::new(metadata_kp.pubkey(), true),
+            AccountMeta::new(escrow_tokens_pubkey, false),
+            AccountMeta::new_readonly(strm_token_mint.pubkey(), false),
+            AccountMeta::new_readonly(rent::id(), false),
+            AccountMeta::new_readonly(spl_token::id(), false),
+            AccountMeta::new_readonly(spl_associated_token_account::id(), false),
+            AccountMeta::new_readonly(system_program::id(), false),
+        ],
+    );
+
+    tt.bench
+        .process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp]))
+        .await?;
+
+    let metadata_acc = tt.bench.get_account(&metadata_kp.pubkey()).await.unwrap();
+    let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
+
+    assert_eq!(metadata_acc.owner, tt.program_id);
+    assert_eq!(metadata_data.cancellable_at, now + 510);
+  
+    assert_eq!(metadata_data.ix.start_time, now + 10);
+    assert_eq!(metadata_data.ix.end_time, now + 1010);
+    assert_eq!(
+        metadata_data.ix.deposited_amount,
+        spl_token::ui_amount_to_amount(10.0, 8)
+    );
+    assert_eq!(
+        metadata_data.ix.total_amount,
+        spl_token::ui_amount_to_amount(20.0, 8)
+    );
+    assert_eq!(
+        metadata_data.ix.stream_name,
+        "Test2".to_string()
+    );
+
     // Top up account with 12 and see new amount in escrow account
     let topup_ix = TopUpIx {
         ix: 4,
-        amount: spl_token::ui_amount_to_amount(12.0, 8),
+        amount: spl_token::ui_amount_to_amount(10.0, 8),
     }; // 4 => topup_stream
     let topupix_bytes = Instruction::new_with_bytes(
         tt.program_id,
@@ -241,8 +312,8 @@ async fn timelock_program_test() -> Result<()> {
     // let metadata_acc = tt.bench.get_account(&metadata_kp.pubkey()).await.unwrap();
     let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
     assert_eq!(
-        metadata_data.ix.total_amount,
-        spl_token::ui_amount_to_amount(32.0, 8)
+        metadata_data.ix.deposited_amount,
+        spl_token::ui_amount_to_amount(20.0, 8)
     );
 
     println!("{:#?}", metadata_data);
