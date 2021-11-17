@@ -24,7 +24,7 @@ pub struct StreamInstruction {
     pub start_time: u64,
     /// Timestamp when all tokens are fully vested
     pub end_time: u64,
-    /// Initially deposited amount of tokens (<= total_amount)
+    /// Deposited amount of tokens (should be <= total_amount)
     pub deposited_amount: u64,
     /// Total amount of the tokens in the escrow account if contract is fully vested
     pub total_amount: u64,
@@ -80,7 +80,7 @@ pub struct TokenStreamData {
     /// Timestamp at which stream can be safely canceled by a 3rd party
     /// (Stream is either fully vested or there isn't enough capital to
     /// keep it active)
-    pub cancellable_at: u64,
+    pub closable_at: u64,
     /// Timestamp of the last withdrawal
     pub last_withdrawn_at: u64,
     /// Pubkey of the stream initializer
@@ -144,7 +144,7 @@ impl TokenStreamData {
             created_at,
             withdrawn_amount: 0,
             canceled_at: 0,
-            cancellable_at: end_time,
+            closable_at: end_time,
             last_withdrawn_at: 0,
             sender,
             sender_tokens,
@@ -185,38 +185,37 @@ impl TokenStreamData {
         (periods_passed as f64 * period_amount) as u64 + cliff_amount - self.withdrawn_amount
     }
 
-        /// Calculate timestamp when stream is cancellable
-        /// end_time when deposit=total else time when funds run out
-        pub fn cancelable(&self) -> u64 {
-  
-            let cliff_time = if self.ix.cliff > 0 {
-                self.ix.cliff
-            } else {
-                self.ix.start_time
-            };
-    
-            let cliff_amount = if self.ix.cliff_amount > 0 {
-                self.ix.cliff_amount
-            } else {
-                0
-            };
-            // Deposit smaller then cliff amount, cancelable at cliff
-            if self.ix.deposited_amount < cliff_amount {
-                return cliff_time;
-            }
-            // Nr of seconds after the cliff
-            let seconds_nr = self.ix.end_time - cliff_time;
-            // stream per second
-            let amount_per_second = (self.ix.total_amount - cliff_amount) / seconds_nr; 
-            // Seconds till account runs out of available funds
-            let seconds_left = (self.ix.deposited_amount - cliff_amount) / amount_per_second;
-            // Cancellable_at time
-            if cliff_time + seconds_left > self.ix.end_time {
-                self.ix.end_time
-            } else {
-                cliff_time + seconds_left
-            }
+    /// Calculate timestamp when stream is cancellable
+    /// end_time when deposit=total else time when funds run out
+    pub fn closable(&self) -> u64 {
+        let cliff_time = if self.ix.cliff > 0 {
+            self.ix.cliff
+        } else {
+            self.ix.start_time
+        };
+
+        let cliff_amount = if self.ix.cliff_amount > 0 {
+            self.ix.cliff_amount
+        } else {
+            0
+        };
+        // Deposit smaller then cliff amount, cancelable at cliff
+        if self.ix.deposited_amount < cliff_amount {
+            return cliff_time;
         }
+        // Nr of seconds after the cliff
+        let seconds_nr = self.ix.end_time - cliff_time;
+        // stream per second
+        let amount_per_second = (self.ix.total_amount - cliff_amount) / seconds_nr;
+        // Seconds till account runs out of available funds, +1 as ceil (integer)
+        let seconds_left = ((self.ix.deposited_amount - cliff_amount) / amount_per_second) + 1;
+        // closable_at time
+        if cliff_time + seconds_left > self.ix.end_time {
+            self.ix.end_time
+        } else {
+            cliff_time + seconds_left
+        }
+    }
 }
 
 /// The account-holding struct for the stream initialization instruction
