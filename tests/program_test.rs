@@ -1,6 +1,7 @@
 use anyhow::Result;
 use borsh::{BorshDeserialize, BorshSerialize};
-
+use solana_program::program_error::ProgramError;
+use solana_program::system_instruction;
 use solana_program_test::{processor, tokio};
 use solana_sdk::{
     clock::UnixTimestamp,
@@ -12,7 +13,7 @@ use solana_sdk::{
     system_program,
     sysvar::rent,
 };
-use spl_associated_token_account::{get_associated_token_address};
+use spl_associated_token_account::get_associated_token_address;
 use test_sdk::{tools::clone_keypair, ProgramTestBench, TestBenchProgram};
 
 use streamflow_timelock::entrypoint::process_instruction;
@@ -134,7 +135,7 @@ async fn timelock_program_test() -> Result<()> {
             withdrawal_public: false,
             transferable: false,
             stream_name: "TheTestoooooooooor".to_string(),
-        }
+        },
     };
 
     let create_stream_ix_bytes = Instruction::new_with_bytes(
@@ -350,5 +351,44 @@ async fn timelock_program_test2() -> Result<()> {
         metadata_data.ix.deposited_amount,
         spl_token::ui_amount_to_amount(20.0, 8)
     );
+    // Closable to end_date, closable fn would return 1010 + 1
+    assert_eq!(metadata_data.closable_at, now + 1010);
+
+    // Warp ahead
+    tt.advance_clock_past_timestamp(now as i64 + 200).await;
+
+    let withdraw_stream_ix = WithdrawStreamIx {
+        ix: 1,
+        amount: spl_token::ui_amount_to_amount(30.0, 8),
+    };
+
+    let withdraw_stream_ix_bytes = Instruction::new_with_bytes(
+        tt.program_id,
+        &withdraw_stream_ix.try_to_vec()?,
+        vec![
+            AccountMeta::new(bob.pubkey(), true),
+            AccountMeta::new(alice.pubkey(), false),
+            AccountMeta::new(bob.pubkey(), false),
+            AccountMeta::new(bob_ass_token, false),
+            AccountMeta::new(metadata_kp.pubkey(), false),
+            AccountMeta::new(escrow_tokens_pubkey, false),
+            AccountMeta::new_readonly(strm_token_mint.pubkey(), false),
+            AccountMeta::new_readonly(spl_token::id(), false),
+        ],
+    );
+
+    let transaction_error = tt
+        .bench
+        .process_transaction(&[withdraw_stream_ix_bytes], Some(&[&bob]))
+        .await
+        .err()
+        .unwrap();
+
+    match transaction_error {
+        error => {
+            assert_eq!(error, ProgramError::InvalidArgument);
+        }
+        _ => panic!("Wrong error occurs while try to withdraw more then due"),
+    }
     Ok(())
 }
