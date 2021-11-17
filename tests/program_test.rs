@@ -135,7 +135,7 @@ async fn timelock_program_test() -> Result<()> {
             withdrawal_public: false,
             transferable: false,
             stream_name: "TheTestoooooooooor".to_string(),
-        },
+        }
     };
 
     let create_stream_ix_bytes = Instruction::new_with_bytes(
@@ -167,7 +167,7 @@ async fn timelock_program_test() -> Result<()> {
     assert_eq!(metadata_data.magic, 0);
     assert_eq!(metadata_data.withdrawn_amount, 0);
     assert_eq!(metadata_data.canceled_at, 0);
-    assert_eq!(metadata_data.cancellable_at, now + 605);
+    assert_eq!(metadata_data.closable_at, now + 605);
     assert_eq!(metadata_data.last_withdrawn_at, 0);
     assert_eq!(metadata_data.sender, alice.pubkey());
     assert_eq!(metadata_data.sender_tokens, alice_ass_token);
@@ -218,15 +218,12 @@ async fn timelock_program_test() -> Result<()> {
     let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
     assert_eq!(metadata_data.withdrawn_amount, 1180000000);
 
-         
     let metadata_kp = Keypair::new();
     let (escrow_tokens_pubkey, _) =
         Pubkey::find_program_address(&[metadata_kp.pubkey().as_ref()], &tt.program_id);
 
     let clock = tt.bench.get_clock().await;
     let now = clock.unix_timestamp as u64;
-
- 
 
     let create_stream_ix = CreateStreamIx {
         ix: 0,
@@ -272,8 +269,8 @@ async fn timelock_program_test() -> Result<()> {
     let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
 
     assert_eq!(metadata_acc.owner, tt.program_id);
-    assert_eq!(metadata_data.cancellable_at, now + 510);
-  
+    assert_eq!(metadata_data.closable_at, now + 510);
+
     assert_eq!(metadata_data.ix.start_time, now + 10);
     assert_eq!(metadata_data.ix.end_time, now + 1010);
     assert_eq!(
@@ -284,10 +281,7 @@ async fn timelock_program_test() -> Result<()> {
         metadata_data.ix.total_amount,
         spl_token::ui_amount_to_amount(20.0, 8)
     );
-    assert_eq!(
-        metadata_data.ix.stream_name,
-        "Test2".to_string()
-    );
+    assert_eq!(metadata_data.ix.stream_name, "Test2".to_string());
 
     // Top up account with 12 and see new amount in escrow account
     let topup_ix = TopUpIx {
