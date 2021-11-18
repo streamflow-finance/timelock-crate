@@ -274,7 +274,8 @@ pub struct WithdrawAccounts<'a> {
 /// The account-holding struct for the stream cancel instruction
 pub struct CancelAccounts<'a> {
     /// Account invoking cancel. Must match `sender`.
-    //Can be either `sender` or `recipient` depending on the value of `cancelable_by_sender` and `cancelable_by_recipient`
+    /// Can be either `sender` or `recipient` depending on the value of `cancelable_by_sender` and `cancelable_by_recipient`
+    /// But when stztream expires anyone can cancel
     pub cancel_authority: AccountInfo<'a>,
     /// The main wallet address of the initializer
     pub sender: AccountInfo<'a>,

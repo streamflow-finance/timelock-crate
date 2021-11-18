@@ -37,6 +37,11 @@ struct TopUpIx {
     amount: u64,
 }
 
+#[derive(BorshSerialize, BorshDeserialize, Clone)]
+struct CancelIx {
+    ix: u8,
+}
+
 pub struct TimelockProgramTest {
     pub bench: ProgramTestBench,
     pub program_id: Pubkey,
@@ -357,6 +362,7 @@ async fn timelock_program_test2() -> Result<()> {
     // Warp ahead
     tt.advance_clock_past_timestamp(now as i64 + 200).await;
 
+   
     let withdraw_stream_ix = WithdrawStreamIx {
         ix: 1,
         amount: spl_token::ui_amount_to_amount(30.0, 8),
@@ -390,5 +396,67 @@ async fn timelock_program_test2() -> Result<()> {
         }
         _ => panic!("Wrong error occurs while try to withdraw more then due"),
     }
+
+    let some_other_kp = Keypair::new();
+    let cancel_ix = CancelIx {
+        ix: 2,
+    };
+
+    let cancel_ix_bytes = Instruction::new_with_bytes(
+        tt.program_id,
+        &cancel_ix.try_to_vec()?,
+        vec![
+            AccountMeta::new(some_other_kp.pubkey(), true), // RANDOM KEY
+            AccountMeta::new(alice.pubkey(), false),
+            AccountMeta::new(alice_ass_token, false),
+            AccountMeta::new(bob.pubkey(), false),
+            AccountMeta::new(bob_ass_token, false),
+            AccountMeta::new(metadata_kp.pubkey(), false),
+            AccountMeta::new(escrow_tokens_pubkey, false),
+            AccountMeta::new_readonly(strm_token_mint.pubkey(), false),
+            AccountMeta::new_readonly(spl_token::id(), false),
+        ],
+    );
+
+    // It should be IA data error, stream hasn't expired
+    let transaction_error = tt
+        .bench
+        .process_transaction(&[cancel_ix_bytes], Some(&[&some_other_kp]))
+        .await
+        .err()
+        .unwrap();
+    
+    match transaction_error {
+        error => {
+            assert_eq!(error, ProgramError::InvalidAccountData);
+        }
+        _ => panic!("Wrong error occurs while try to to cancel open stream"),
+    }
+
+        // Ahead with time, stream expired
+    tt.advance_clock_past_timestamp(now as i64 + 2000).await;
+
+    let cancel_ix_bytes = Instruction::new_with_bytes(
+        tt.program_id,
+        &cancel_ix.try_to_vec()?,
+        vec![
+            AccountMeta::new(some_other_kp.pubkey(), true), // RANDOM KEY
+            AccountMeta::new(alice.pubkey(), false),
+            AccountMeta::new(alice_ass_token, false),
+            AccountMeta::new(bob.pubkey(), false),
+            AccountMeta::new(bob_ass_token, false),
+            AccountMeta::new(metadata_kp.pubkey(), false),
+            AccountMeta::new(escrow_tokens_pubkey, false),
+            AccountMeta::new_readonly(strm_token_mint.pubkey(), false),
+            AccountMeta::new_readonly(spl_token::id(), false),
+        ],
+    );
+
+    // Now stream should be cancelled
+    tt
+        .bench
+        .process_transaction(&[cancel_ix_bytes], Some(&[&some_other_kp]))
+        .await?;
+
     Ok(())
 }
