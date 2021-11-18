@@ -29,7 +29,7 @@ use spl_associated_token_account::{create_associated_token_account, get_associat
 
 use crate::state::{
     CancelAccounts, InitializeAccounts, StreamInstruction, TokenStreamData, TopUpAccounts,
-    TransferAccounts, WithdrawAccounts,
+    TransferAccounts, WithdrawAccounts
 };
 use crate::utils::{
     duration_sanity, encode_base10, pretty_time, unpack_mint_account, unpack_token_account,
@@ -227,7 +227,7 @@ pub fn create(
             acc.escrow_tokens.key,
             acc.sender.key,
             &[],
-            metadata.ix.total_amount,
+            metadata.ix.deposited_amount,
         )?,
         &[
             acc.sender_tokens.clone(),
@@ -442,23 +442,30 @@ pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
     if acc.token_program.key != &spl_token::id()
         || acc.escrow_tokens.key != &escrow_tokens_pubkey
         || acc.recipient_tokens.key != &recipient_tokens_key
-        //TODO: Update in future releases based on `cancelable_by_sender/recipient`
-        || acc.cancel_authority.key != acc.sender.key
     {
         return Err(ProgramError::InvalidAccountData);
     }
 
-    if !acc.cancel_authority.is_signer {
-        return Err(ProgramError::MissingRequiredSignature);
-    }
-
+ 
     let mut data = acc.metadata.try_borrow_mut_data()?;
-    let mut metadata = match TokenStreamData::try_from_slice(&data) {
+    // let mut metadata = match TokenStreamData::try_from_slice(&data) {
+    let mut metadata: TokenStreamData = match solana_borsh::try_from_slice_unchecked(&data) {
         Ok(v) => v,
         Err(_) => return Err(InvalidMetaData.into()),
     };
-
     let mint_info = unpack_mint_account(&acc.mint)?;
+
+    let now = Clock::get()?.unix_timestamp as u64;
+    // if stream expired anyone can close it, if not check cancel authority
+    if now < metadata.closable_at {
+        //TODO: Update in future releases based on `cancelable_by_sender/recipient`
+        if acc.cancel_authority.key != acc.sender.key{
+            return Err(ProgramError::InvalidAccountData);
+        }
+        if !acc.cancel_authority.is_signer {
+            return Err(ProgramError::MissingRequiredSignature);
+        }
+    }
 
     if acc.sender.key != &metadata.sender
         || acc.sender_tokens.key != &metadata.sender_tokens
@@ -470,9 +477,8 @@ pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         return Err(ProgramError::InvalidAccountData);
     }
 
-    let now = Clock::get()?.unix_timestamp as u64;
     let available = metadata.available(now);
-
+    msg!("Available {}", available);
     let seeds = [acc.metadata.key.as_ref(), &[nonce]];
     invoke_signed(
         &spl_token::instruction::transfer(
@@ -491,10 +497,11 @@ pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         ],
         &[&seeds],
     )?;
-
+    let escrow_token_info = unpack_token_account(&acc.escrow_tokens)?;
+    msg!("Amount {}", escrow_token_info.amount);
     metadata.withdrawn_amount += available;
-    let remains = metadata.ix.total_amount - metadata.withdrawn_amount;
-
+    let remains = metadata.ix.deposited_amount - metadata.withdrawn_amount;
+    msg!("Deposited {} , withdrawn: {}, tokens remain {}", metadata.ix.deposited_amount, metadata.withdrawn_amount, remains);
     // Return any remaining funds to the stream initializer
     if remains > 0 {
         invoke_signed(
@@ -519,7 +526,6 @@ pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
     // TODO: Check this for wrapped SOL
     let rent_escrow_tokens = acc.escrow_tokens.lamports();
     // let remains_meta = acc.metadata.lamports();
-
     //Close escrow token account
     invoke_signed(
         &spl_token::instruction::close_account(
@@ -538,9 +544,10 @@ pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
     )?;
 
     //TODO: Close metadata account once there is alternative storage solution for historic data.
-
-    metadata.last_withdrawn_at = now;
-    metadata.canceled_at = now;
+    if now < metadata.closable_at {
+        metadata.last_withdrawn_at = now;
+        metadata.canceled_at = now;
+    }
     // Write the metadata to the account
     let bytes = metadata.try_to_vec().unwrap();
     data[0..bytes.len()].clone_from_slice(&bytes);
