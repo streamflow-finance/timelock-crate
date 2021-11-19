@@ -29,7 +29,7 @@ pub struct StreamInstruction {
     /// Total amount of the tokens in the escrow account if contract is fully vested
     pub total_amount: u64,
     /// Release rate of recurring payment
-    pub release_rate: u64,
+    pub release_rate: u64, 
     /// Time step (period) in seconds per which the vesting occurs
     pub period: u64,
     /// Vesting contract "cliff" timestamp
@@ -185,7 +185,11 @@ impl TokenStreamData {
 
         // TODO: Use uint arithmetics, floats are imprecise
         let num_periods = (self.ix.end_time - cliff) as f64 / self.ix.period as f64;
-        let period_amount = (self.ix.total_amount - cliff_amount) as f64 / num_periods;
+        let period_amount = if self.ix.release_rate > 0 {
+            self.ix.release_rate as f64
+        } else {
+            (self.ix.total_amount - cliff_amount) as f64 / num_periods
+        };
         let periods_passed = (now - cliff) / self.ix.period;
         (periods_passed as f64 * period_amount) as u64 + cliff_amount - self.withdrawn_amount
     }
@@ -210,10 +214,16 @@ impl TokenStreamData {
         }
         // Nr of seconds after the cliff
         let seconds_nr = self.ix.end_time - cliff_time;
-        // stream per second
-        let amount_per_second = (self.ix.total_amount - cliff_amount) / seconds_nr;
+
+        let amount_per_second = if self.ix.release_rate > 0 {
+            self.ix.release_rate / self.ix.period
+        } else {
+            // stream per second
+             ((self.ix.total_amount - cliff_amount) / seconds_nr) as u64
+        };
         // Seconds till account runs out of available funds, +1 as ceil (integer)
         let seconds_left = ((self.ix.deposited_amount - cliff_amount) / amount_per_second) + 1;
+        
         // closable_at time
         if cliff_time + seconds_left > self.ix.end_time {
             self.ix.end_time
