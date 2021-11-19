@@ -132,6 +132,7 @@ async fn timelock_program_test() -> Result<()> {
             end_time: now + 605,
             deposited_amount: spl_token::ui_amount_to_amount(20.0, 8),
             total_amount: spl_token::ui_amount_to_amount(20.0, 8),
+            release_rate: 0,
             period: 1,
             cliff: 0,
             cliff_amount: 0,
@@ -279,6 +280,7 @@ async fn timelock_program_test2() -> Result<()> {
             end_time: now + 1010,
             deposited_amount: spl_token::ui_amount_to_amount(10.0, 8),
             total_amount: spl_token::ui_amount_to_amount(20.0, 8),
+            release_rate: 0,
             period: 1,
             cliff: 0,
             cliff_amount: 0,
@@ -457,6 +459,7 @@ async fn timelock_program_test2() -> Result<()> {
         .bench
         .process_transaction(&[cancel_ix_bytes], Some(&[&some_other_kp]))
         .await?;
+
 
     Ok(())
 }

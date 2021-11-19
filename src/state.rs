@@ -167,8 +167,9 @@ impl TokenStreamData {
             return 0;
         }
 
-        if now >= self.ix.end_time {
-            return self.ix.total_amount - self.withdrawn_amount;
+        // Ignore end date when recurring
+        if now >= self.ix.end_time && self.ix.release_rate == 0{
+            return self.ix.deposited_amount - self.withdrawn_amount;
         }
 
         let cliff = if self.ix.cliff > 0 {
