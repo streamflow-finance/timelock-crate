@@ -28,6 +28,8 @@ pub struct StreamInstruction {
     pub deposited_amount: u64,
     /// Total amount of the tokens in the escrow account if contract is fully vested
     pub total_amount: u64,
+    /// Release rate of recurring payment
+    pub release_rate: u64,
     /// Time step (period) in seconds per which the vesting occurs
     pub period: u64,
     /// Vesting contract "cliff" timestamp
@@ -53,6 +55,7 @@ impl Default for StreamInstruction {
             end_time: 0,
             deposited_amount: 0,
             total_amount: 0,
+            release_rate: 0,
             period: 1,
             cliff: 0,
             cliff_amount: 0,
@@ -114,6 +117,7 @@ impl TokenStreamData {
         end_time: u64,
         deposited_amount: u64,
         total_amount: u64,
+        release_rate: u64,
         period: u64,
         cliff: u64,
         cliff_amount: u64,
@@ -128,6 +132,7 @@ impl TokenStreamData {
             end_time,
             deposited_amount,
             total_amount,
+            release_rate,
             period,
             cliff,
             cliff_amount,

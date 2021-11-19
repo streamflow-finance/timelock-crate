@@ -29,7 +29,7 @@ use spl_associated_token_account::{create_associated_token_account, get_associat
 
 use crate::state::{
     CancelAccounts, InitializeAccounts, StreamInstruction, TokenStreamData, TopUpAccounts,
-    TransferAccounts, WithdrawAccounts
+    TransferAccounts, WithdrawAccounts,
 };
 use crate::utils::{
     duration_sanity, encode_base10, pretty_time, unpack_mint_account, unpack_token_account,
@@ -131,6 +131,7 @@ pub fn create(
         ix.end_time,
         ix.deposited_amount,
         ix.total_amount,
+        ix.release_rate,
         ix.period,
         ix.cliff,
         ix.cliff_amount,
@@ -141,8 +142,8 @@ pub fn create(
         ix.stream_name,
     );
 
-    // Move closable_at (from third party)
-    if ix.deposited_amount < ix.total_amount {
+    // Move closable_at (from third party), when reccuring ignore end_date
+    if ix.deposited_amount < ix.total_amount || ix.release_rate > 0 {
         metadata.closable_at = metadata.closable();
     }
 
@@ -446,10 +447,9 @@ pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         return Err(ProgramError::InvalidAccountData);
     }
 
- 
     let mut data = acc.metadata.try_borrow_mut_data()?;
-    // let mut metadata = match TokenStreamData::try_from_slice(&data) {
-    let mut metadata: TokenStreamData = match solana_borsh::try_from_slice_unchecked(&data) {
+    let mut metadata = match TokenStreamData::try_from_slice(&data) {
+        // let mut metadata: TokenStreamData = match solana_borsh::try_from_slice_unchecked(&data) {
         Ok(v) => v,
         Err(_) => return Err(InvalidMetaData.into()),
     };
@@ -459,7 +459,7 @@ pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
     // if stream expired anyone can close it, if not check cancel authority
     if now < metadata.closable_at {
         //TODO: Update in future releases based on `cancelable_by_sender/recipient`
-        if acc.cancel_authority.key != acc.sender.key{
+        if acc.cancel_authority.key != acc.sender.key {
             return Err(ProgramError::InvalidAccountData);
         }
         if !acc.cancel_authority.is_signer {
@@ -501,7 +501,12 @@ pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
     msg!("Amount {}", escrow_token_info.amount);
     metadata.withdrawn_amount += available;
     let remains = metadata.ix.deposited_amount - metadata.withdrawn_amount;
-    msg!("Deposited {} , withdrawn: {}, tokens remain {}", metadata.ix.deposited_amount, metadata.withdrawn_amount, remains);
+    msg!(
+        "Deposited {} , withdrawn: {}, tokens remain {}",
+        metadata.ix.deposited_amount,
+        metadata.withdrawn_amount,
+        remains
+    );
     // Return any remaining funds to the stream initializer
     if remains > 0 {
         invoke_signed(
