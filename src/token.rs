@@ -113,7 +113,7 @@ pub fn create(
         return Err(ProgramError::InsufficientFunds);
     }
 
-    if sender_token_info.amount < ix.total_amount {
+    if sender_token_info.amount < ix.deposited_amount {
         msg!("Error: Insufficient tokens in sender's wallet");
         return Err(ProgramError::InsufficientFunds);
     }
@@ -240,7 +240,7 @@ pub fn create(
 
     msg!(
         "Successfully initialized {} {} token stream for {}",
-        encode_base10(metadata.ix.total_amount, mint_info.decimals.into()),
+        encode_base10(metadata.ix.deposited_amount, mint_info.decimals.into()),
         metadata.mint,
         acc.recipient.key
     );
@@ -360,7 +360,7 @@ pub fn withdraw(program_id: &Pubkey, acc: WithdrawAccounts, amount: u64) -> Prog
     data[0..bytes.len()].clone_from_slice(&bytes);
 
     // Return rent when everything is withdrawn
-    if metadata.withdrawn_amount == metadata.ix.total_amount {
+    if metadata.withdrawn_amount == metadata.ix.total_amount { // Do we need this?
         if !acc.sender.is_writable || acc.sender.key != &metadata.sender {
             return Err(ProgramError::InvalidAccountData);
         }
