@@ -360,7 +360,7 @@ pub fn withdraw(program_id: &Pubkey, acc: WithdrawAccounts, amount: u64) -> Prog
     data[0..bytes.len()].clone_from_slice(&bytes);
 
     // Return rent when everything is withdrawn
-    if metadata.withdrawn_amount == metadata.ix.total_amount { // Do we need this?
+    if metadata.withdrawn_amount == metadata.ix.deposited_amount { // Do we need this?
         if !acc.sender.is_writable || acc.sender.key != &metadata.sender {
             return Err(ProgramError::InvalidAccountData);
         }
@@ -401,7 +401,7 @@ pub fn withdraw(program_id: &Pubkey, acc: WithdrawAccounts, amount: u64) -> Prog
     msg!(
         "Remaining: {} {} tokens",
         encode_base10(
-            metadata.ix.total_amount - metadata.withdrawn_amount,
+            metadata.ix.deposited_amount - metadata.withdrawn_amount,
             mint_info.decimals.into()
         ),
         metadata.mint
@@ -448,8 +448,8 @@ pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
     }
 
     let mut data = acc.metadata.try_borrow_mut_data()?;
-    let mut metadata = match TokenStreamData::try_from_slice(&data) {
-        // let mut metadata: TokenStreamData = match solana_borsh::try_from_slice_unchecked(&data) {
+    // let mut metadata = match TokenStreamData::try_from_slice(&data) {
+    let mut metadata: TokenStreamData = match solana_borsh::try_from_slice_unchecked(&data) {
         Ok(v) => v,
         Err(_) => return Err(InvalidMetaData.into()),
     };
@@ -479,6 +479,8 @@ pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
 
     let available = metadata.available(now);
     msg!("Available {}", available);
+    let escrow_token_info = unpack_token_account(&acc.escrow_tokens)?;
+    msg!("Amount {}", escrow_token_info.amount);
     let seeds = [acc.metadata.key.as_ref(), &[nonce]];
     invoke_signed(
         &spl_token::instruction::transfer(
