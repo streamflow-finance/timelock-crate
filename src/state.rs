@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use borsh::{BorshDeserialize, BorshSerialize};
-use solana_program::{account_info::AccountInfo, pubkey::Pubkey};
+use solana_program::{account_info::AccountInfo, pubkey::Pubkey, msg};
 
 /// The struct containing instructions for initializing a stream
 #[derive(BorshDeserialize, BorshSerialize, Clone, Debug)]
@@ -224,9 +224,10 @@ impl TokenStreamData {
         };
         // Seconds till account runs out of available funds, +1 as ceil (integer)
         let seconds_left = ((self.ix.deposited_amount - cliff_amount) / amount_per_second) + 1;
-        
-        // closable_at time
-        if cliff_time + seconds_left > self.ix.end_time {
+
+        msg!("Release {}, Period {}, seconds left {}", self.ix.release_rate, self.ix.period, seconds_left);
+        // closable_at time, ignore end time when recurring
+        if cliff_time + seconds_left > self.ix.end_time && self.ix.release_rate == 0 {
             self.ix.end_time
         } else {
             cliff_time + seconds_left
