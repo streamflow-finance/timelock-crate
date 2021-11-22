@@ -463,3 +463,170 @@ async fn timelock_program_test2() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn timelock_program_test_recurring() -> Result<()> {
+    let mut tt = TimelockProgramTest::start_new().await;
+
+    let alice = clone_keypair(&tt.bench.alice);
+    let bob = clone_keypair(&tt.bench.bob);
+    let payer = clone_keypair(&tt.bench.payer);
+
+    let strm_token_mint = Keypair::new();
+    let alice_ass_token = get_associated_token_address(&alice.pubkey(), &strm_token_mint.pubkey());
+    let bob_ass_token = get_associated_token_address(&bob.pubkey(), &strm_token_mint.pubkey());
+
+    tt.bench
+        .create_mint(&strm_token_mint, &tt.bench.payer.pubkey())
+        .await;
+
+    tt.bench
+        .create_associated_token_account(&strm_token_mint.pubkey(), &alice.pubkey())
+        .await;
+
+    tt.bench
+        .mint_tokens(
+            &strm_token_mint.pubkey(),
+            &payer,
+            &alice_ass_token,
+            spl_token::ui_amount_to_amount(100.0, 8),
+        )
+        .await;
+
+    let alice_ass_account = tt.bench.get_account(&alice_ass_token).await.unwrap();
+    let alice_token_data = spl_token::state::Account::unpack_from_slice(&alice_ass_account.data)?;
+    assert_eq!(
+        alice_token_data.amount,
+        spl_token::ui_amount_to_amount(100.0, 8)
+    );
+    assert_eq!(alice_token_data.mint, strm_token_mint.pubkey());
+    assert_eq!(alice_token_data.owner, alice.pubkey());
+
+    let metadata_kp = Keypair::new();
+    let (escrow_tokens_pubkey, _) =
+        Pubkey::find_program_address(&[metadata_kp.pubkey().as_ref()], &tt.program_id);
+
+    let clock = tt.bench.get_clock().await;
+    let now = clock.unix_timestamp as u64;
+
+    let create_stream_ix = CreateStreamIx {
+        ix: 0,
+        metadata: StreamInstruction {
+            start_time: now + 10,
+            end_time: now + 1010,
+            deposited_amount: spl_token::ui_amount_to_amount(10.0, 8),
+            total_amount: spl_token::ui_amount_to_amount(20.0, 8),
+            release_rate: spl_token::ui_amount_to_amount(1.0, 8),
+            period: 200,
+            cliff: 0,
+            cliff_amount: 0,
+            cancelable_by_sender: false,
+            cancelable_by_recipient: false,
+            withdrawal_public: false,
+            transferable: false,
+            stream_name: "Recurring".to_string(),
+        },
+    };
+
+    let create_stream_ix_bytes = Instruction::new_with_bytes(
+        tt.program_id,
+        &create_stream_ix.try_to_vec()?,
+        vec![
+            AccountMeta::new(alice.pubkey(), true),
+            AccountMeta::new(alice_ass_token, false),
+            AccountMeta::new(bob.pubkey(), false),
+            AccountMeta::new(bob_ass_token, false),
+            AccountMeta::new(metadata_kp.pubkey(), true),
+            AccountMeta::new(escrow_tokens_pubkey, false),
+            AccountMeta::new_readonly(strm_token_mint.pubkey(), false),
+            AccountMeta::new_readonly(rent::id(), false),
+            AccountMeta::new_readonly(spl_token::id(), false),
+            AccountMeta::new_readonly(spl_associated_token_account::id(), false),
+            AccountMeta::new_readonly(system_program::id(), false),
+        ],
+    );
+
+    tt.bench
+        .process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp]))
+        .await?;
+
+    let metadata_acc = tt.bench.get_account(&metadata_kp.pubkey()).await.unwrap();
+    let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
+
+    assert_eq!(metadata_acc.owner, tt.program_id);
+    // assert_eq!(metadata_data.closable_at, now + 510 + 1); // 1 after, like in function
+
+    assert_eq!(metadata_data.ix.start_time, now + 10);
+    assert_eq!(metadata_data.ix.end_time, now + 1010);
+    assert_eq!(
+        metadata_data.ix.deposited_amount,
+        spl_token::ui_amount_to_amount(10.0, 8)
+    );
+    assert_eq!(metadata_data.ix.stream_name, "Recurring".to_string());
+
+    
+    let some_other_kp = Keypair::new();
+    let cancel_ix = CancelIx {
+        ix: 2,
+    };
+
+    let cancel_ix_bytes = Instruction::new_with_bytes(
+        tt.program_id,
+        &cancel_ix.try_to_vec()?,
+        vec![
+            AccountMeta::new(some_other_kp.pubkey(), true), // RANDOM KEY
+            AccountMeta::new(alice.pubkey(), false),
+            AccountMeta::new(alice_ass_token, false),
+            AccountMeta::new(bob.pubkey(), false),
+            AccountMeta::new(bob_ass_token, false),
+            AccountMeta::new(metadata_kp.pubkey(), false),
+            AccountMeta::new(escrow_tokens_pubkey, false),
+            AccountMeta::new_readonly(strm_token_mint.pubkey(), false),
+            AccountMeta::new_readonly(spl_token::id(), false),
+        ],
+    );
+
+    // It should be IA data error, stream hasn't expired
+    let transaction_error = tt
+        .bench
+        .process_transaction(&[cancel_ix_bytes], Some(&[&some_other_kp]))
+        .await
+        .err()
+        .unwrap();
+    
+    match transaction_error {
+        error => {
+            assert_eq!(error, ProgramError::InvalidAccountData);
+        }
+        _ => panic!("Wrong error occurs while try to to cancel open stream"),
+    }
+
+        // Ahead with time, stream expired
+    tt.advance_clock_past_timestamp(now as i64 + 2000).await;
+
+    let cancel_ix_bytes = Instruction::new_with_bytes(
+        tt.program_id,
+        &cancel_ix.try_to_vec()?,
+        vec![
+            AccountMeta::new(some_other_kp.pubkey(), true), // RANDOM KEY
+            AccountMeta::new(alice.pubkey(), false),
+            AccountMeta::new(alice_ass_token, false),
+            AccountMeta::new(bob.pubkey(), false),
+            AccountMeta::new(bob_ass_token, false),
+            AccountMeta::new(metadata_kp.pubkey(), false),
+            AccountMeta::new(escrow_tokens_pubkey, false),
+            AccountMeta::new_readonly(strm_token_mint.pubkey(), false),
+            AccountMeta::new_readonly(spl_token::id(), false),
+        ],
+    );
+
+    // Now stream should be cancelled
+    tt
+        .bench
+        .process_transaction(&[cancel_ix_bytes], Some(&[&some_other_kp]))
+        .await?;
+
+
+    Ok(())
+}
+
