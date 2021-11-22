@@ -361,7 +361,8 @@ pub fn withdraw(program_id: &Pubkey, acc: WithdrawAccounts, amount: u64) -> Prog
     data[0..bytes.len()].clone_from_slice(&bytes);
 
     // Return rent when everything is withdrawn
-    if metadata.withdrawn_amount == metadata.ix.deposited_amount { // Do we need this?
+    if metadata.withdrawn_amount == metadata.ix.deposited_amount {
+        // Do we need this?
         if !acc.sender.is_writable || acc.sender.key != &metadata.sender {
             return Err(ProgramError::InvalidAccountData);
         }
@@ -458,6 +459,7 @@ pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
 
     let now = Clock::get()?.unix_timestamp as u64;
     // if stream expired anyone can close it, if not check cancel authority
+    msg!("Now: {}, closable at {}", now, metadata.closable_at);
     if now < metadata.closable_at {
         //TODO: Update in future releases based on `cancelable_by_sender/recipient`
         if acc.cancel_authority.key != acc.sender.key {
