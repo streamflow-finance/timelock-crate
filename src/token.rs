@@ -145,6 +145,7 @@ pub fn create(
     // Move closable_at (from third party), when reccuring ignore end_date
     if ix.deposited_amount < ix.total_amount || ix.release_rate > 0 {
         metadata.closable_at = metadata.closable();
+        msg!("Closable at: {}", metadata.closable_at);
     }
 
     let bytes = metadata.try_to_vec()?;

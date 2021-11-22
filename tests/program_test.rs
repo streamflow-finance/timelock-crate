@@ -554,7 +554,7 @@ async fn timelock_program_test_recurring() -> Result<()> {
     let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
 
     assert_eq!(metadata_acc.owner, tt.program_id);
-    // assert_eq!(metadata_data.closable_at, now + 510 + 1); // 1 after, like in function
+    assert_eq!(metadata_data.closable_at, now + 10 + 2000 + 1); // 1 after, like in function
 
     assert_eq!(metadata_data.ix.start_time, now + 10);
     assert_eq!(metadata_data.ix.end_time, now + 1010);
