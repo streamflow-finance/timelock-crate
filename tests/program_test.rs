@@ -80,389 +80,387 @@ impl TimelockProgramTest {
     }
 }
 
-#[tokio::test]
-async fn timelock_program_test() -> Result<()> {
-    let mut tt = TimelockProgramTest::start_new().await;
+// #[tokio::test]
+// async fn timelock_program_test() -> Result<()> {
+//     let mut tt = TimelockProgramTest::start_new().await;
 
-    let alice = clone_keypair(&tt.bench.alice);
-    let bob = clone_keypair(&tt.bench.bob);
-    let payer = clone_keypair(&tt.bench.payer);
+//     let alice = clone_keypair(&tt.bench.alice);
+//     let bob = clone_keypair(&tt.bench.bob);
+//     let payer = clone_keypair(&tt.bench.payer);
 
-    let strm_token_mint = Keypair::new();
-    let alice_ass_token = get_associated_token_address(&alice.pubkey(), &strm_token_mint.pubkey());
-    let bob_ass_token = get_associated_token_address(&bob.pubkey(), &strm_token_mint.pubkey());
+//     let strm_token_mint = Keypair::new();
+//     let alice_ass_token = get_associated_token_address(&alice.pubkey(), &strm_token_mint.pubkey());
+//     let bob_ass_token = get_associated_token_address(&bob.pubkey(), &strm_token_mint.pubkey());
 
-    tt.bench
-        .create_mint(&strm_token_mint, &tt.bench.payer.pubkey())
-        .await;
+//     tt.bench
+//         .create_mint(&strm_token_mint, &tt.bench.payer.pubkey())
+//         .await;
 
-    tt.bench
-        .create_associated_token_account(&strm_token_mint.pubkey(), &alice.pubkey())
-        .await;
+//     tt.bench
+//         .create_associated_token_account(&strm_token_mint.pubkey(), &alice.pubkey())
+//         .await;
 
-    tt.bench
-        .mint_tokens(
-            &strm_token_mint.pubkey(),
-            &payer,
-            &alice_ass_token,
-            spl_token::ui_amount_to_amount(100.0, 8),
-        )
-        .await;
+//     tt.bench
+//         .mint_tokens(
+//             &strm_token_mint.pubkey(),
+//             &payer,
+//             &alice_ass_token,
+//             spl_token::ui_amount_to_amount(100.0, 8),
+//         )
+//         .await;
 
-    let alice_ass_account = tt.bench.get_account(&alice_ass_token).await.unwrap();
-    let alice_token_data = spl_token::state::Account::unpack_from_slice(&alice_ass_account.data)?;
-    assert_eq!(
-        alice_token_data.amount,
-        spl_token::ui_amount_to_amount(100.0, 8)
-    );
-    assert_eq!(alice_token_data.mint, strm_token_mint.pubkey());
-    assert_eq!(alice_token_data.owner, alice.pubkey());
+//     let alice_ass_account = tt.bench.get_account(&alice_ass_token).await.unwrap();
+//     let alice_token_data = spl_token::state::Account::unpack_from_slice(&alice_ass_account.data)?;
+//     assert_eq!(
+//         alice_token_data.amount,
+//         spl_token::ui_amount_to_amount(100.0, 8)
+//     );
+//     assert_eq!(alice_token_data.mint, strm_token_mint.pubkey());
+//     assert_eq!(alice_token_data.owner, alice.pubkey());
 
-    let metadata_kp = Keypair::new();
-    let (escrow_tokens_pubkey, _) =
-        Pubkey::find_program_address(&[metadata_kp.pubkey().as_ref()], &tt.program_id);
+//     let metadata_kp = Keypair::new();
+//     let (escrow_tokens_pubkey, _) =
+//         Pubkey::find_program_address(&[metadata_kp.pubkey().as_ref()], &tt.program_id);
 
-    let clock = tt.bench.get_clock().await;
-    let now = clock.unix_timestamp as u64;
+//     let clock = tt.bench.get_clock().await;
+//     let now = clock.unix_timestamp as u64;
 
-    let create_stream_ix = CreateStreamIx {
-        ix: 0,
-        metadata: StreamInstruction {
-            start_time: now + 5,
-            end_time: now + 605,
-            deposited_amount: spl_token::ui_amount_to_amount(20.0, 8),
-            total_amount: spl_token::ui_amount_to_amount(20.0, 8),
-            release_rate: 0,
-            period: 1,
-            cliff: 0,
-            cliff_amount: 0,
-            cancelable_by_sender: false,
-            cancelable_by_recipient: false,
-            withdrawal_public: false,
-            transferable: false,
-            stream_name: "TheTestoooooooooor".to_string(),
-        },
-    };
+//     let create_stream_ix = CreateStreamIx {
+//         ix: 0,
+//         metadata: StreamInstruction {
+//             start_time: now + 5,
+//             end_time: now + 605,
+//             deposited_amount: spl_token::ui_amount_to_amount(20.0, 8),
+//             total_amount: spl_token::ui_amount_to_amount(20.0, 8),
+//             release_rate: 0,
+//             period: 1,
+//             cliff: 0,
+//             cliff_amount: 0,
+//             cancelable_by_sender: false,
+//             cancelable_by_recipient: false,
+//             withdrawal_public: false,
+//             transferable: false,
+//             stream_name: "TheTestoooooooooor".to_string(),
+//         },
+//     };
 
-    let create_stream_ix_bytes = Instruction::new_with_bytes(
-        tt.program_id,
-        &create_stream_ix.try_to_vec()?,
-        vec![
-            AccountMeta::new(alice.pubkey(), true),
-            AccountMeta::new(alice_ass_token, false),
-            AccountMeta::new(bob.pubkey(), false),
-            AccountMeta::new(bob_ass_token, false),
-            AccountMeta::new(metadata_kp.pubkey(), true),
-            AccountMeta::new(escrow_tokens_pubkey, false),
-            AccountMeta::new_readonly(strm_token_mint.pubkey(), false),
-            AccountMeta::new_readonly(rent::id(), false),
-            AccountMeta::new_readonly(spl_token::id(), false),
-            AccountMeta::new_readonly(spl_associated_token_account::id(), false),
-            AccountMeta::new_readonly(system_program::id(), false),
-        ],
-    );
+//     let create_stream_ix_bytes = Instruction::new_with_bytes(
+//         tt.program_id,
+//         &create_stream_ix.try_to_vec()?,
+//         vec![
+//             AccountMeta::new(alice.pubkey(), true),
+//             AccountMeta::new(alice_ass_token, false),
+//             AccountMeta::new(bob.pubkey(), false),
+//             AccountMeta::new(bob_ass_token, false),
+//             AccountMeta::new(metadata_kp.pubkey(), true),
+//             AccountMeta::new(escrow_tokens_pubkey, false),
+//             AccountMeta::new_readonly(strm_token_mint.pubkey(), false),
+//             AccountMeta::new_readonly(rent::id(), false),
+//             AccountMeta::new_readonly(spl_token::id(), false),
+//             AccountMeta::new_readonly(spl_associated_token_account::id(), false),
+//             AccountMeta::new_readonly(system_program::id(), false),
+//         ],
+//     );
 
-    tt.bench
-        .process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp]))
-        .await?;
+//     tt.bench
+//         .process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp]))
+//         .await?;
 
-    let metadata_acc = tt.bench.get_account(&metadata_kp.pubkey()).await.unwrap();
-    let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
+//     let metadata_acc = tt.bench.get_account(&metadata_kp.pubkey()).await.unwrap();
+//     let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
 
-    assert_eq!(metadata_acc.owner, tt.program_id);
-    assert_eq!(metadata_data.magic, 0);
-    assert_eq!(metadata_data.withdrawn_amount, 0);
-    assert_eq!(metadata_data.canceled_at, 0);
-    assert_eq!(metadata_data.closable_at, now + 605);
-    assert_eq!(metadata_data.last_withdrawn_at, 0);
-    assert_eq!(metadata_data.sender, alice.pubkey());
-    assert_eq!(metadata_data.sender_tokens, alice_ass_token);
-    assert_eq!(metadata_data.recipient, bob.pubkey());
-    assert_eq!(metadata_data.recipient_tokens, bob_ass_token);
-    assert_eq!(metadata_data.mint, strm_token_mint.pubkey());
-    assert_eq!(metadata_data.escrow_tokens, escrow_tokens_pubkey);
-    assert_eq!(metadata_data.ix.start_time, now + 5);
-    assert_eq!(metadata_data.ix.end_time, now + 605);
-    assert_eq!(
-        metadata_data.ix.deposited_amount,
-        spl_token::ui_amount_to_amount(20.0, 8)
-    );
-    assert_eq!(
-        metadata_data.ix.total_amount,
-        spl_token::ui_amount_to_amount(20.0, 8)
-    );
-    assert_eq!(
-        metadata_data.ix.stream_name,
-        "TheTestoooooooooor".to_string()
-    );
+//     assert_eq!(metadata_acc.owner, tt.program_id);
+//     assert_eq!(metadata_data.magic, 0);
+//     assert_eq!(metadata_data.withdrawn_amount, 0);
+//     assert_eq!(metadata_data.canceled_at, 0);
+//     assert_eq!(metadata_data.closable_at, now + 605);
+//     assert_eq!(metadata_data.last_withdrawn_at, 0);
+//     assert_eq!(metadata_data.sender, alice.pubkey());
+//     assert_eq!(metadata_data.sender_tokens, alice_ass_token);
+//     assert_eq!(metadata_data.recipient, bob.pubkey());
+//     assert_eq!(metadata_data.recipient_tokens, bob_ass_token);
+//     assert_eq!(metadata_data.mint, strm_token_mint.pubkey());
+//     assert_eq!(metadata_data.escrow_tokens, escrow_tokens_pubkey);
+//     assert_eq!(metadata_data.ix.start_time, now + 5);
+//     assert_eq!(metadata_data.ix.end_time, now + 605);
+//     assert_eq!(
+//         metadata_data.ix.deposited_amount,
+//         spl_token::ui_amount_to_amount(20.0, 8)
+//     );
+//     assert_eq!(
+//         metadata_data.ix.total_amount,
+//         spl_token::ui_amount_to_amount(20.0, 8)
+//     );
+//     assert_eq!(
+//         metadata_data.ix.stream_name,
+//         "TheTestoooooooooor".to_string()
+//     );
 
-    // Let's warp ahead and try withdrawing some of the stream.
-    tt.advance_clock_past_timestamp(now as i64 + 300).await;
+//     // Let's warp ahead and try withdrawing some of the stream.
+//     tt.advance_clock_past_timestamp(now as i64 + 300).await;
 
-    let withdraw_stream_ix = WithdrawStreamIx { ix: 1, amount: 0 };
+//     let withdraw_stream_ix = WithdrawStreamIx { ix: 1, amount: 0 };
 
-    let withdraw_stream_ix_bytes = Instruction::new_with_bytes(
-        tt.program_id,
-        &withdraw_stream_ix.try_to_vec()?,
-        vec![
-            AccountMeta::new(bob.pubkey(), true),
-            AccountMeta::new(alice.pubkey(), false),
-            AccountMeta::new(bob.pubkey(), false),
-            AccountMeta::new(bob_ass_token, false),
-            AccountMeta::new(metadata_kp.pubkey(), false),
-            AccountMeta::new(escrow_tokens_pubkey, false),
-            AccountMeta::new_readonly(strm_token_mint.pubkey(), false),
-            AccountMeta::new_readonly(spl_token::id(), false),
-        ],
-    );
+//     let withdraw_stream_ix_bytes = Instruction::new_with_bytes(
+//         tt.program_id,
+//         &withdraw_stream_ix.try_to_vec()?,
+//         vec![
+//             AccountMeta::new(bob.pubkey(), true),
+//             AccountMeta::new(alice.pubkey(), false),
+//             AccountMeta::new(bob.pubkey(), false),
+//             AccountMeta::new(bob_ass_token, false),
+//             AccountMeta::new(metadata_kp.pubkey(), false),
+//             AccountMeta::new(escrow_tokens_pubkey, false),
+//             AccountMeta::new_readonly(strm_token_mint.pubkey(), false),
+//             AccountMeta::new_readonly(spl_token::id(), false),
+//         ],
+//     );
 
-    tt.bench
-        .process_transaction(&[withdraw_stream_ix_bytes], Some(&[&bob]))
-        .await?;
+//     tt.bench
+//         .process_transaction(&[withdraw_stream_ix_bytes], Some(&[&bob]))
+//         .await?;
 
-    let _metadata_acc = tt.bench.get_account(&metadata_kp.pubkey()).await.unwrap();
-    let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
-    assert_eq!(metadata_data.withdrawn_amount, 1180000000);
+//     let metadata_acc = tt.bench.get_account(&metadata_kp.pubkey()).await.unwrap();
+//     let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
+//     assert_eq!(metadata_data.withdrawn_amount, 1180000000);
 
-    println!("{:#?}", metadata_data);
-    Ok(())
-}
+//     println!("{:#?}", metadata_data);
+//     Ok(())
+// }
 
-#[tokio::test]
-async fn timelock_program_test2() -> Result<()> {
-    let mut tt = TimelockProgramTest::start_new().await;
+// #[tokio::test]
+// async fn timelock_program_test2() -> Result<()> {
+//     let mut tt = TimelockProgramTest::start_new().await;
 
-    let alice = clone_keypair(&tt.bench.alice);
-    let bob = clone_keypair(&tt.bench.bob);
-    let payer = clone_keypair(&tt.bench.payer);
+//     let alice = clone_keypair(&tt.bench.alice);
+//     let bob = clone_keypair(&tt.bench.bob);
+//     let payer = clone_keypair(&tt.bench.payer);
 
-    let strm_token_mint = Keypair::new();
-    let alice_ass_token = get_associated_token_address(&alice.pubkey(), &strm_token_mint.pubkey());
-    let bob_ass_token = get_associated_token_address(&bob.pubkey(), &strm_token_mint.pubkey());
+//     let strm_token_mint = Keypair::new();
+//     let alice_ass_token = get_associated_token_address(&alice.pubkey(), &strm_token_mint.pubkey());
+//     let bob_ass_token = get_associated_token_address(&bob.pubkey(), &strm_token_mint.pubkey());
 
-    tt.bench
-        .create_mint(&strm_token_mint, &tt.bench.payer.pubkey())
-        .await;
+//     tt.bench
+//         .create_mint(&strm_token_mint, &tt.bench.payer.pubkey())
+//         .await;
 
-    tt.bench
-        .create_associated_token_account(&strm_token_mint.pubkey(), &alice.pubkey())
-        .await;
+//     tt.bench
+//         .create_associated_token_account(&strm_token_mint.pubkey(), &alice.pubkey())
+//         .await;
 
-    tt.bench
-        .mint_tokens(
-            &strm_token_mint.pubkey(),
-            &payer,
-            &alice_ass_token,
-            spl_token::ui_amount_to_amount(100.0, 8),
-        )
-        .await;
+//     tt.bench
+//         .mint_tokens(
+//             &strm_token_mint.pubkey(),
+//             &payer,
+//             &alice_ass_token,
+//             spl_token::ui_amount_to_amount(100.0, 8),
+//         )
+//         .await;
 
-    let alice_ass_account = tt.bench.get_account(&alice_ass_token).await.unwrap();
-    let alice_token_data = spl_token::state::Account::unpack_from_slice(&alice_ass_account.data)?;
-    assert_eq!(
-        alice_token_data.amount,
-        spl_token::ui_amount_to_amount(100.0, 8)
-    );
-    assert_eq!(alice_token_data.mint, strm_token_mint.pubkey());
-    assert_eq!(alice_token_data.owner, alice.pubkey());
+//     let alice_ass_account = tt.bench.get_account(&alice_ass_token).await.unwrap();
+//     let alice_token_data = spl_token::state::Account::unpack_from_slice(&alice_ass_account.data)?;
+//     assert_eq!(
+//         alice_token_data.amount,
+//         spl_token::ui_amount_to_amount(100.0, 8)
+//     );
+//     assert_eq!(alice_token_data.mint, strm_token_mint.pubkey());
+//     assert_eq!(alice_token_data.owner, alice.pubkey());
 
-    let metadata_kp = Keypair::new();
-    let (escrow_tokens_pubkey, _) =
-        Pubkey::find_program_address(&[metadata_kp.pubkey().as_ref()], &tt.program_id);
+//     let metadata_kp = Keypair::new();
+//     let (escrow_tokens_pubkey, _) =
+//         Pubkey::find_program_address(&[metadata_kp.pubkey().as_ref()], &tt.program_id);
 
-    let clock = tt.bench.get_clock().await;
-    let now = clock.unix_timestamp as u64;
+//     let clock = tt.bench.get_clock().await;
+//     let now = clock.unix_timestamp as u64;
 
-    let create_stream_ix = CreateStreamIx {
-        ix: 0,
-        metadata: StreamInstruction {
-            start_time: now + 10,
-            end_time: now + 1010,
-            deposited_amount: spl_token::ui_amount_to_amount(10.0, 8),
-            total_amount: spl_token::ui_amount_to_amount(20.0, 8),
-            release_rate: 0,
-            period: 1,
-            cliff: 0,
-            cliff_amount: 0,
-            cancelable_by_sender: false,
-            cancelable_by_recipient: false,
-            withdrawal_public: false,
-            transferable: false,
-            stream_name: "Test2".to_string(),
-        },
-    };
+//     let create_stream_ix = CreateStreamIx {
+//         ix: 0,
+//         metadata: StreamInstruction {
+//             start_time: now + 10,
+//             end_time: now + 1010,
+//             deposited_amount: spl_token::ui_amount_to_amount(10.0, 8),
+//             total_amount: spl_token::ui_amount_to_amount(20.0, 8),
+//             release_rate: 0,
+//             period: 1,
+//             cliff: 0,
+//             cliff_amount: 0,
+//             cancelable_by_sender: false,
+//             cancelable_by_recipient: false,
+//             withdrawal_public: false,
+//             transferable: false,
+//             stream_name: "Test2".to_string(),
+//         },
+//     };
 
-    let create_stream_ix_bytes = Instruction::new_with_bytes(
-        tt.program_id,
-        &create_stream_ix.try_to_vec()?,
-        vec![
-            AccountMeta::new(alice.pubkey(), true),
-            AccountMeta::new(alice_ass_token, false),
-            AccountMeta::new(bob.pubkey(), false),
-            AccountMeta::new(bob_ass_token, false),
-            AccountMeta::new(metadata_kp.pubkey(), true),
-            AccountMeta::new(escrow_tokens_pubkey, false),
-            AccountMeta::new_readonly(strm_token_mint.pubkey(), false),
-            AccountMeta::new_readonly(rent::id(), false),
-            AccountMeta::new_readonly(spl_token::id(), false),
-            AccountMeta::new_readonly(spl_associated_token_account::id(), false),
-            AccountMeta::new_readonly(system_program::id(), false),
-        ],
-    );
+//     let create_stream_ix_bytes = Instruction::new_with_bytes(
+//         tt.program_id,
+//         &create_stream_ix.try_to_vec()?,
+//         vec![
+//             AccountMeta::new(alice.pubkey(), true),
+//             AccountMeta::new(alice_ass_token, false),
+//             AccountMeta::new(bob.pubkey(), false),
+//             AccountMeta::new(bob_ass_token, false),
+//             AccountMeta::new(metadata_kp.pubkey(), true),
+//             AccountMeta::new(escrow_tokens_pubkey, false),
+//             AccountMeta::new_readonly(strm_token_mint.pubkey(), false),
+//             AccountMeta::new_readonly(rent::id(), false),
+//             AccountMeta::new_readonly(spl_token::id(), false),
+//             AccountMeta::new_readonly(spl_associated_token_account::id(), false),
+//             AccountMeta::new_readonly(system_program::id(), false),
+//         ],
+//     );
 
-    tt.bench
-        .process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp]))
-        .await?;
+//     tt.bench
+//         .process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp]))
+//         .await?;
 
-    let metadata_acc = tt.bench.get_account(&metadata_kp.pubkey()).await.unwrap();
-    let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
+//     let metadata_acc = tt.bench.get_account(&metadata_kp.pubkey()).await.unwrap();
+//     let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
 
-    assert_eq!(metadata_acc.owner, tt.program_id);
-    assert_eq!(metadata_data.closable_at, now + 510 + 1); // 1 after, like in function
+//     assert_eq!(metadata_acc.owner, tt.program_id);
+//     assert_eq!(metadata_data.closable_at, now + 510 + 1); // 1 after, like in function
 
-    assert_eq!(metadata_data.ix.start_time, now + 10);
-    assert_eq!(metadata_data.ix.end_time, now + 1010);
-    assert_eq!(
-        metadata_data.ix.deposited_amount,
-        spl_token::ui_amount_to_amount(10.0, 8)
-    );
-    assert_eq!(
-        metadata_data.ix.total_amount,
-        spl_token::ui_amount_to_amount(20.0, 8)
-    );
-    assert_eq!(metadata_data.ix.stream_name, "Test2".to_string());
+//     assert_eq!(metadata_data.ix.start_time, now + 10);
+//     assert_eq!(metadata_data.ix.end_time, now + 1010);
+//     assert_eq!(
+//         metadata_data.ix.deposited_amount,
+//         spl_token::ui_amount_to_amount(10.0, 8)
+//     );
+//     assert_eq!(
+//         metadata_data.ix.total_amount,
+//         spl_token::ui_amount_to_amount(20.0, 8)
+//     );
+//     assert_eq!(metadata_data.ix.stream_name, "Test2".to_string());
 
-    // Top up account with 12 and see new amount in escrow account
-    let topup_ix = TopUpIx {
-        ix: 4,
-        amount: spl_token::ui_amount_to_amount(10.0, 8),
-    }; // 4 => topup_stream
-    let topupix_bytes = Instruction::new_with_bytes(
-        tt.program_id,
-        &topup_ix.try_to_vec()?,
-        vec![
-            AccountMeta::new(alice.pubkey(), true),
-            AccountMeta::new(alice_ass_token, false),
-            AccountMeta::new(metadata_kp.pubkey(), false),
-            AccountMeta::new(escrow_tokens_pubkey, false),
-            AccountMeta::new_readonly(strm_token_mint.pubkey(), false),
-            AccountMeta::new_readonly(spl_token::id(), false),
-        ],
-    );
-    tt.bench
-        .process_transaction(&[topupix_bytes], Some(&[&alice]))
-        .await?;
-    // let metadata_acc = tt.bench.get_account(&metadata_kp.pubkey()).await.unwrap();
-    let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
-    assert_eq!(
-        metadata_data.ix.deposited_amount,
-        spl_token::ui_amount_to_amount(20.0, 8)
-    );
-    // Closable to end_date, closable fn would return 1010 + 1
-    assert_eq!(metadata_data.closable_at, now + 1010);
+//     // Top up account with 12 and see new amount in escrow account
+//     let topup_ix = TopUpIx {
+//         ix: 4,
+//         amount: spl_token::ui_amount_to_amount(10.0, 8),
+//     }; // 4 => topup_stream
+//     let topupix_bytes = Instruction::new_with_bytes(
+//         tt.program_id,
+//         &topup_ix.try_to_vec()?,
+//         vec![
+//             AccountMeta::new(alice.pubkey(), true),
+//             AccountMeta::new(alice_ass_token, false),
+//             AccountMeta::new(metadata_kp.pubkey(), false),
+//             AccountMeta::new(escrow_tokens_pubkey, false),
+//             AccountMeta::new_readonly(strm_token_mint.pubkey(), false),
+//             AccountMeta::new_readonly(spl_token::id(), false),
+//         ],
+//     );
+//     tt.bench
+//         .process_transaction(&[topupix_bytes], Some(&[&alice]))
+//         .await?;
+//     // let metadata_acc = tt.bench.get_account(&metadata_kp.pubkey()).await.unwrap();
+//     let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
+//     assert_eq!(
+//         metadata_data.ix.deposited_amount,
+//         spl_token::ui_amount_to_amount(20.0, 8)
+//     );
+//     // Closable to end_date, closable fn would return 1010 + 1
+//     assert_eq!(metadata_data.closable_at, now + 1010);
 
-    // Warp ahead
-    tt.advance_clock_past_timestamp(now as i64 + 200).await;
+//     // Warp ahead
+//     tt.advance_clock_past_timestamp(now as i64 + 200).await;
 
-   
-    let withdraw_stream_ix = WithdrawStreamIx {
-        ix: 1,
-        amount: spl_token::ui_amount_to_amount(30.0, 8),
-    };
+//     let withdraw_stream_ix = WithdrawStreamIx {
+//         ix: 1,
+//         amount: spl_token::ui_amount_to_amount(30.0, 8),
+//     };
 
-    let withdraw_stream_ix_bytes = Instruction::new_with_bytes(
-        tt.program_id,
-        &withdraw_stream_ix.try_to_vec()?,
-        vec![
-            AccountMeta::new(bob.pubkey(), true),
-            AccountMeta::new(alice.pubkey(), false),
-            AccountMeta::new(bob.pubkey(), false),
-            AccountMeta::new(bob_ass_token, false),
-            AccountMeta::new(metadata_kp.pubkey(), false),
-            AccountMeta::new(escrow_tokens_pubkey, false),
-            AccountMeta::new_readonly(strm_token_mint.pubkey(), false),
-            AccountMeta::new_readonly(spl_token::id(), false),
-        ],
-    );
+//     let withdraw_stream_ix_bytes = Instruction::new_with_bytes(
+//         tt.program_id,
+//         &withdraw_stream_ix.try_to_vec()?,
+//         vec![
+//             AccountMeta::new(bob.pubkey(), true),
+//             AccountMeta::new(alice.pubkey(), false),
+//             AccountMeta::new(bob.pubkey(), false),
+//             AccountMeta::new(bob_ass_token, false),
+//             AccountMeta::new(metadata_kp.pubkey(), false),
+//             AccountMeta::new(escrow_tokens_pubkey, false),
+//             AccountMeta::new_readonly(strm_token_mint.pubkey(), false),
+//             AccountMeta::new_readonly(spl_token::id(), false),
+//         ],
+//     );
 
-    let transaction_error = tt
-        .bench
-        .process_transaction(&[withdraw_stream_ix_bytes], Some(&[&bob]))
-        .await
-        .err()
-        .unwrap();
+//     let transaction_error = tt
+//         .bench
+//         .process_transaction(&[withdraw_stream_ix_bytes], Some(&[&bob]))
+//         .await
+//         .err()
+//         .unwrap();
 
-    match transaction_error {
-        error => {
-            assert_eq!(error, ProgramError::InvalidArgument);
-        }
-        _ => panic!("Wrong error occurs while try to withdraw more then due"),
-    }
+//     match transaction_error {
+//         error => {
+//             assert_eq!(error, ProgramError::InvalidArgument);
+//         }
+//         _ => panic!("Wrong error occurs while try to withdraw more then due"),
+//     }
 
-    let some_other_kp = Keypair::new();
-    let cancel_ix = CancelIx {
-        ix: 2,
-    };
+//     let some_other_kp = Keypair::new();
+//     let cancel_ix = CancelIx {
+//         ix: 2,
+//     };
 
-    let cancel_ix_bytes = Instruction::new_with_bytes(
-        tt.program_id,
-        &cancel_ix.try_to_vec()?,
-        vec![
-            AccountMeta::new(some_other_kp.pubkey(), true), // RANDOM KEY
-            AccountMeta::new(alice.pubkey(), false),
-            AccountMeta::new(alice_ass_token, false),
-            AccountMeta::new(bob.pubkey(), false),
-            AccountMeta::new(bob_ass_token, false),
-            AccountMeta::new(metadata_kp.pubkey(), false),
-            AccountMeta::new(escrow_tokens_pubkey, false),
-            AccountMeta::new_readonly(strm_token_mint.pubkey(), false),
-            AccountMeta::new_readonly(spl_token::id(), false),
-        ],
-    );
+//     let cancel_ix_bytes = Instruction::new_with_bytes(
+//         tt.program_id,
+//         &cancel_ix.try_to_vec()?,
+//         vec![
+//             AccountMeta::new(some_other_kp.pubkey(), true), // RANDOM KEY
+//             AccountMeta::new(alice.pubkey(), false),
+//             AccountMeta::new(alice_ass_token, false),
+//             AccountMeta::new(bob.pubkey(), false),
+//             AccountMeta::new(bob_ass_token, false),
+//             AccountMeta::new(metadata_kp.pubkey(), false),
+//             AccountMeta::new(escrow_tokens_pubkey, false),
+//             AccountMeta::new_readonly(strm_token_mint.pubkey(), false),
+//             AccountMeta::new_readonly(spl_token::id(), false),
+//         ],
+//     );
 
-    // It should be IA data error, stream hasn't expired
-    let transaction_error = tt
-        .bench
-        .process_transaction(&[cancel_ix_bytes], Some(&[&some_other_kp]))
-        .await
-        .err()
-        .unwrap();
-    
-    match transaction_error {
-        error => {
-            assert_eq!(error, ProgramError::InvalidAccountData);
-        }
-        _ => panic!("Wrong error occurs while try to to cancel open stream"),
-    }
+//     // It should be IA data error, stream hasn't expired
+//     let transaction_error = tt
+//         .bench
+//         .process_transaction(&[cancel_ix_bytes], Some(&[&some_other_kp]))
+//         .await
+//         .err()
+//         .unwrap();
 
-        // Ahead with time, stream expired
-    tt.advance_clock_past_timestamp(now as i64 + 2000).await;
+//     match transaction_error {
+//         error => {
+//             assert_eq!(error, ProgramError::InvalidAccountData);
+//         }
+//         _ => panic!("Wrong error occurs while try to to cancel open stream"),
+//     }
 
-    let cancel_ix_bytes = Instruction::new_with_bytes(
-        tt.program_id,
-        &cancel_ix.try_to_vec()?,
-        vec![
-            AccountMeta::new(some_other_kp.pubkey(), true), // RANDOM KEY
-            AccountMeta::new(alice.pubkey(), false),
-            AccountMeta::new(alice_ass_token, false),
-            AccountMeta::new(bob.pubkey(), false),
-            AccountMeta::new(bob_ass_token, false),
-            AccountMeta::new(metadata_kp.pubkey(), false),
-            AccountMeta::new(escrow_tokens_pubkey, false),
-            AccountMeta::new_readonly(strm_token_mint.pubkey(), false),
-            AccountMeta::new_readonly(spl_token::id(), false),
-        ],
-    );
+//         // Ahead with time, stream expired
+//     tt.advance_clock_past_timestamp(now as i64 + 2000).await;
 
-    // Now stream should be cancelled
-    tt
-        .bench
-        .process_transaction(&[cancel_ix_bytes], Some(&[&some_other_kp]))
-        .await?;
+//     let cancel_ix_bytes = Instruction::new_with_bytes(
+//         tt.program_id,
+//         &cancel_ix.try_to_vec()?,
+//         vec![
+//             AccountMeta::new(some_other_kp.pubkey(), true), // RANDOM KEY
+//             AccountMeta::new(alice.pubkey(), false),
+//             AccountMeta::new(alice_ass_token, false),
+//             AccountMeta::new(bob.pubkey(), false),
+//             AccountMeta::new(bob_ass_token, false),
+//             AccountMeta::new(metadata_kp.pubkey(), false),
+//             AccountMeta::new(escrow_tokens_pubkey, false),
+//             AccountMeta::new_readonly(strm_token_mint.pubkey(), false),
+//             AccountMeta::new_readonly(spl_token::id(), false),
+//         ],
+//     );
 
+//     // Now stream should be cancelled
+//     tt
+//         .bench
+//         .process_transaction(&[cancel_ix_bytes], Some(&[&some_other_kp]))
+//         .await?;
 
-    Ok(())
-}
+//     Ok(())
+// }
 
 #[tokio::test]
 async fn timelock_program_test_recurring() -> Result<()> {
@@ -555,7 +553,6 @@ async fn timelock_program_test_recurring() -> Result<()> {
 
     assert_eq!(metadata_acc.owner, tt.program_id);
     assert_eq!(metadata_data.closable_at, now + 10 + 2000 + 1); // 1 after, like in function
-
     assert_eq!(metadata_data.ix.start_time, now + 10);
     assert_eq!(metadata_data.ix.end_time, now + 1010);
     assert_eq!(
@@ -563,12 +560,39 @@ async fn timelock_program_test_recurring() -> Result<()> {
         spl_token::ui_amount_to_amount(10.0, 8)
     );
     assert_eq!(metadata_data.ix.stream_name, "Recurring".to_string());
+    assert_eq!(metadata_data.ix.release_rate, 100000000);
 
-    
+    // Top up account with 12 and see new amount in escrow account
+    let topup_ix = TopUpIx {
+        ix: 4,
+        amount: spl_token::ui_amount_to_amount(20.0, 8),
+    }; // 4 => topup_stream
+    let topupix_bytes = Instruction::new_with_bytes(
+        tt.program_id,
+        &topup_ix.try_to_vec()?,
+        vec![
+            AccountMeta::new(alice.pubkey(), true),
+            AccountMeta::new(alice_ass_token, false),
+            AccountMeta::new(metadata_kp.pubkey(), false),
+            AccountMeta::new(escrow_tokens_pubkey, false),
+            AccountMeta::new_readonly(strm_token_mint.pubkey(), false),
+            AccountMeta::new_readonly(spl_token::id(), false),
+        ],
+    );
+    tt.bench
+        .process_transaction(&[topupix_bytes], Some(&[&alice]))
+        .await?;
+    // let metadata_acc = tt.bench.get_account(&metadata_kp.pubkey()).await.unwrap();
+    let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
+    assert_eq!(
+        metadata_data.ix.deposited_amount,
+        spl_token::ui_amount_to_amount(30.0, 8)
+    );
+    // Closable to end_date, closable fn would return 1010 + 1
+    assert_eq!(metadata_data.closable_at, now + 10 + 6000 + 1);
+
     let some_other_kp = Keypair::new();
-    let cancel_ix = CancelIx {
-        ix: 2,
-    };
+    let cancel_ix = CancelIx { ix: 2 };
 
     let cancel_ix_bytes = Instruction::new_with_bytes(
         tt.program_id,
@@ -593,7 +617,7 @@ async fn timelock_program_test_recurring() -> Result<()> {
         .await
         .err()
         .unwrap();
-    
+
     match transaction_error {
         error => {
             assert_eq!(error, ProgramError::InvalidAccountData);
@@ -601,8 +625,79 @@ async fn timelock_program_test_recurring() -> Result<()> {
         _ => panic!("Wrong error occurs while try to to cancel open stream"),
     }
 
-        // Ahead with time, stream expired
-    tt.advance_clock_past_timestamp(now as i64 + 2000).await;
+    // Try to withdraw more then due
+    let withdraw_stream_ix = WithdrawStreamIx {
+        ix: 1,
+        amount: spl_token::ui_amount_to_amount(40.0, 8),
+    };
+
+    let withdraw_stream_ix_bytes = Instruction::new_with_bytes(
+        tt.program_id,
+        &withdraw_stream_ix.try_to_vec()?,
+        vec![
+            AccountMeta::new(bob.pubkey(), true),
+            AccountMeta::new(alice.pubkey(), false),
+            AccountMeta::new(bob.pubkey(), false),
+            AccountMeta::new(bob_ass_token, false),
+            AccountMeta::new(metadata_kp.pubkey(), false),
+            AccountMeta::new(escrow_tokens_pubkey, false),
+            AccountMeta::new_readonly(strm_token_mint.pubkey(), false),
+            AccountMeta::new_readonly(spl_token::id(), false),
+        ],
+    );
+
+    // It should be Invalid argument error, available < requested amount for withdrawal
+    let transaction_error = tt
+        .bench
+        .process_transaction(&[withdraw_stream_ix_bytes], Some(&[&bob]))
+        .await
+        .err()
+        .unwrap();
+
+    match transaction_error {
+        error => {
+            assert_eq!(error, ProgramError::InvalidArgument);
+        }
+        _ => panic!("Wrong error occurs while try to to withdraw more"),
+    }
+
+    // Ahead with time, stream expired
+    // Beware test clock is not deterministic (check fn)
+    // If clock warps too much in future, starts going back??
+    tt.advance_clock_past_timestamp(now as i64 + 6011).await;
+    // Best to read clock again
+    let new_now = tt.bench.get_clock().await.unix_timestamp as u64;
+
+    let withdraw_stream_ix = WithdrawStreamIx {
+        ix: 1,
+        amount: spl_token::ui_amount_to_amount(25.0, 8),
+    };
+
+    let withdraw_stream_ix_bytes = Instruction::new_with_bytes(
+        tt.program_id,
+        &withdraw_stream_ix.try_to_vec()?,
+        vec![
+            AccountMeta::new(bob.pubkey(), true),
+            AccountMeta::new(alice.pubkey(), false),
+            AccountMeta::new(bob.pubkey(), false),
+            AccountMeta::new(bob_ass_token, false),
+            AccountMeta::new(metadata_kp.pubkey(), false),
+            AccountMeta::new(escrow_tokens_pubkey, false),
+            AccountMeta::new_readonly(strm_token_mint.pubkey(), false),
+            AccountMeta::new_readonly(spl_token::id(), false),
+        ],
+    );
+
+    tt.bench
+        .process_transaction(&[withdraw_stream_ix_bytes], Some(&[&bob]))
+        .await?;
+
+    let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
+    assert_eq!(
+        metadata_data.withdrawn_amount,
+        spl_token::ui_amount_to_amount(25.0, 8)
+    );
+    assert_eq!(metadata_data.last_withdrawn_at, new_now);
 
     let cancel_ix_bytes = Instruction::new_with_bytes(
         tt.program_id,
@@ -620,13 +715,9 @@ async fn timelock_program_test_recurring() -> Result<()> {
         ],
     );
 
-    // Now stream should be cancelled
-    tt
-        .bench
+    // Now stream should be cancelled, escrow closed
+    tt.bench
         .process_transaction(&[cancel_ix_bytes], Some(&[&some_other_kp]))
         .await?;
-
-
     Ok(())
 }
-

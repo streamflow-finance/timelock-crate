@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use borsh::{BorshDeserialize, BorshSerialize};
-use solana_program::{account_info::AccountInfo, pubkey::Pubkey, msg};
+use solana_program::{account_info::AccountInfo, msg, pubkey::Pubkey};
 
 /// The struct containing instructions for initializing a stream
 #[derive(BorshDeserialize, BorshSerialize, Clone, Debug)]
@@ -29,7 +29,7 @@ pub struct StreamInstruction {
     /// Total amount of the tokens in the escrow account if contract is fully vested
     pub total_amount: u64,
     /// Release rate of recurring payment
-    pub release_rate: u64, 
+    pub release_rate: u64,
     /// Time step (period) in seconds per which the vesting occurs
     pub period: u64,
     /// Vesting contract "cliff" timestamp
@@ -168,7 +168,7 @@ impl TokenStreamData {
         }
 
         // Ignore end date when recurring
-        if now >= self.ix.end_time && self.ix.release_rate == 0{
+        if now >= self.ix.end_time && self.ix.release_rate == 0 {
             return self.ix.deposited_amount - self.withdrawn_amount;
         }
 
@@ -220,12 +220,17 @@ impl TokenStreamData {
             self.ix.release_rate / self.ix.period
         } else {
             // stream per second
-             ((self.ix.total_amount - cliff_amount) / seconds_nr) as u64
+            ((self.ix.total_amount - cliff_amount) / seconds_nr) as u64
         };
         // Seconds till account runs out of available funds, +1 as ceil (integer)
         let seconds_left = ((self.ix.deposited_amount - cliff_amount) / amount_per_second) + 1;
 
-        msg!("Release {}, Period {}, seconds left {}", self.ix.release_rate, self.ix.period, seconds_left);
+        msg!(
+            "Release {}, Period {}, seconds left {}",
+            self.ix.release_rate,
+            self.ix.period,
+            seconds_left
+        );
         // closable_at time, ignore end time when recurring
         if cliff_time + seconds_left > self.ix.end_time && self.ix.release_rate == 0 {
             self.ix.end_time
