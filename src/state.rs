@@ -16,6 +16,9 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{account_info::AccountInfo, msg, pubkey::Pubkey};
 
+// Hardcoded program version
+pub const PROGRAM_VERSION: u64 = 2;
+
 /// The struct containing instructions for initializing a stream
 #[derive(BorshDeserialize, BorshSerialize, Clone, Debug)]
 #[repr(C)]
@@ -28,8 +31,6 @@ pub struct StreamInstruction {
     pub deposited_amount: u64,
     /// Total amount of the tokens in the escrow account if contract is fully vested
     pub total_amount: u64,
-    /// Release rate of recurring payment
-    pub release_rate: u64,
     /// Time step (period) in seconds per which the vesting occurs
     pub period: u64,
     /// Vesting contract "cliff" timestamp
@@ -44,6 +45,8 @@ pub struct StreamInstruction {
     pub withdrawal_public: bool,
     /// Whether or not a recipient can transfer the stream (currently not used, set to TRUE)
     pub transferable: bool,
+    /// Release rate of recurring payment
+    pub release_rate: u64,
     /// The name of this stream
     pub stream_name: String,
 }
@@ -55,7 +58,6 @@ impl Default for StreamInstruction {
             end_time: 0,
             deposited_amount: 0,
             total_amount: 0,
-            release_rate: 0,
             period: 1,
             cliff: 0,
             cliff_amount: 0,
@@ -63,6 +65,7 @@ impl Default for StreamInstruction {
             cancelable_by_recipient: false,
             withdrawal_public: false,
             transferable: true,
+            release_rate: 0,
             stream_name: "Stream".to_string(),
         }
     }
@@ -72,7 +75,7 @@ impl Default for StreamInstruction {
 #[derive(BorshSerialize, BorshDeserialize, Default, Debug)]
 #[repr(C)]
 pub struct TokenStreamData {
-    /// Magic bytes
+    /// Magic bytes, will be used for version of the contract
     pub magic: u64,
     /// Timestamp when stream was created
     pub created_at: u64,
@@ -117,7 +120,6 @@ impl TokenStreamData {
         end_time: u64,
         deposited_amount: u64,
         total_amount: u64,
-        release_rate: u64,
         period: u64,
         cliff: u64,
         cliff_amount: u64,
@@ -125,6 +127,7 @@ impl TokenStreamData {
         cancelable_by_recipient: bool,
         withdrawal_public: bool,
         transferable: bool,
+        release_rate: u64,
         stream_name: String,
     ) -> Self {
         let ix = StreamInstruction {
@@ -132,7 +135,6 @@ impl TokenStreamData {
             end_time,
             deposited_amount,
             total_amount,
-            release_rate,
             period,
             cliff,
             cliff_amount,
@@ -140,12 +142,13 @@ impl TokenStreamData {
             cancelable_by_recipient,
             withdrawal_public,
             transferable,
+            release_rate,
             stream_name,
         };
 
         // TODO: calculate cancel_time based on other parameters (incl. deposited_amount)
         Self {
-            magic: 0,
+            magic: PROGRAM_VERSION,
             created_at,
             withdrawn_amount: 0,
             canceled_at: 0,
