@@ -131,7 +131,6 @@ pub fn create(
         ix.end_time,
         ix.deposited_amount,
         ix.total_amount,
-        ix.release_rate,
         ix.period,
         ix.cliff,
         ix.cliff_amount,
@@ -139,6 +138,7 @@ pub fn create(
         ix.cancelable_by_recipient,
         ix.withdrawal_public,
         ix.transferable,
+        ix.release_rate,
         ix.stream_name,
     );
 

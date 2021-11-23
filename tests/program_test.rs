@@ -17,7 +17,7 @@ use spl_associated_token_account::get_associated_token_address;
 use test_sdk::{tools::clone_keypair, ProgramTestBench, TestBenchProgram};
 
 use streamflow_timelock::entrypoint::process_instruction;
-use streamflow_timelock::state::{StreamInstruction, TokenStreamData};
+use streamflow_timelock::state::{StreamInstruction, TokenStreamData, PROGRAM_VERSION};
 
 #[derive(BorshSerialize, BorshDeserialize, Clone)]
 struct CreateStreamIx {
@@ -170,7 +170,7 @@ async fn timelock_program_test() -> Result<()> {
     let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
 
     assert_eq!(metadata_acc.owner, tt.program_id);
-    assert_eq!(metadata_data.magic, 0);
+    assert_eq!(metadata_data.magic, PROGRAM_VERSION);
     assert_eq!(metadata_data.withdrawn_amount, 0);
     assert_eq!(metadata_data.canceled_at, 0);
     assert_eq!(metadata_data.closable_at, now + 605);
@@ -220,7 +220,6 @@ async fn timelock_program_test() -> Result<()> {
         .process_transaction(&[withdraw_stream_ix_bytes], Some(&[&bob]))
         .await?;
 
-    let metadata_acc = tt.bench.get_account(&metadata_kp.pubkey()).await.unwrap();
     let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
     assert_eq!(metadata_data.withdrawn_amount, 1180000000);
 
@@ -280,7 +279,6 @@ async fn timelock_program_test2() -> Result<()> {
             end_time: now + 1010,
             deposited_amount: spl_token::ui_amount_to_amount(10.0, 8),
             total_amount: spl_token::ui_amount_to_amount(20.0, 8),
-            release_rate: 0,
             period: 1,
             cliff: 0,
             cliff_amount: 0,
@@ -288,6 +286,7 @@ async fn timelock_program_test2() -> Result<()> {
             cancelable_by_recipient: false,
             withdrawal_public: false,
             transferable: false,
+            release_rate: 0, // Old contracts don't have it
             stream_name: "Test2".to_string(),
         },
     };
@@ -511,7 +510,6 @@ async fn timelock_program_test_recurring() -> Result<()> {
             end_time: now + 1010,
             deposited_amount: spl_token::ui_amount_to_amount(10.0, 8),
             total_amount: spl_token::ui_amount_to_amount(20.0, 8),
-            release_rate: spl_token::ui_amount_to_amount(1.0, 8),
             period: 200,
             cliff: 0,
             cliff_amount: 0,
@@ -519,6 +517,7 @@ async fn timelock_program_test_recurring() -> Result<()> {
             cancelable_by_recipient: false,
             withdrawal_public: false,
             transferable: false,
+            release_rate: spl_token::ui_amount_to_amount(1.0, 8),
             stream_name: "Recurring".to_string(),
         },
     };
