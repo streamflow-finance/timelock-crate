@@ -28,7 +28,7 @@ from subprocess import run
 files = ["src/state.rs"]
 skips = [
     "InitializeAccounts", "WithdrawAccounts", "CancelAccounts",
-    "TransferAccounts"
+    "TransferAccounts", "TopUpAccounts"
 ]
 structs = {}
 
