@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Ivan Jelincic <parazyd@dyne.org>
+// Copyright (c) 2021 Ivan Jelincic <parazyd@dyne.org>, imprfekt <imprfekt@icloud.com>
 //
 // This file is part of streamflow-finance/timelock-crate
 //
@@ -42,6 +42,9 @@ use crate::error::StreamFlowError::{AccountsNotWritable, InvalidMetaData, MintMi
 /// and the stream's metadata. Both accounts will be funded to be
 /// rent-exempt if necessary. When the stream is finished, these
 /// shall be returned to the stream initializer.
+
+const MAX_STRING_SIZE: usize = 200;
+
 pub fn create(
     program_id: &Pubkey,
     acc: InitializeAccounts,
@@ -94,8 +97,17 @@ pub fn create(
         return Err(ProgramError::InvalidArgument);
     }
 
+    if ix.stream_name.len() > MAX_STRING_SIZE {
+        msg!("Error: Stream name too long!");
+        return Err(ProgramError::InvalidArgument);
+    }
+
     // We also transfer enough to be rent-exempt on the metadata account.
-    let metadata_struct_size = std::mem::size_of::<TokenStreamData>();
+    let stream_name_size = ix.stream_name.len();
+    let default_string_size = std::mem::size_of::<String>();
+    let metadata_struct_size =
+        std::mem::size_of::<TokenStreamData>() - default_string_size + stream_name_size;
+
     let tokens_struct_size = spl_token::state::Account::LEN;
     let cluster_rent = Rent::get()?;
     let metadata_rent = cluster_rent.minimum_balance(metadata_struct_size);
