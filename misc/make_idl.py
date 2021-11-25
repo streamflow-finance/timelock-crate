@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# This will generate a js lib to worh with struct serialization.
+# This will generate a js lib to work with struct serialization.
 # It can be used as follows:
 #
 # const value = new Struct({
