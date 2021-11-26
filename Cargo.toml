@@ -6,6 +6,7 @@ description = "Timelock crate for Solana programs"
 authors = [
     "Ivan Jelincic <parazyd@dyne.org>",
     "imprfekt <imprfekt@icloud.com>",
+    "Ivan Britvic <ivbritvic@gmail.com>",
     "Stefan Dragisic <91stefan@gmail.com>",
 ]
 repository = "https://github.com/streamflow-finance/timelock-crate"

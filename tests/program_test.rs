@@ -1,7 +1,6 @@
 use anyhow::Result;
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::program_error::ProgramError;
-use solana_program::system_instruction;
 use solana_program_test::{processor, tokio};
 use solana_sdk::{
     clock::UnixTimestamp,
