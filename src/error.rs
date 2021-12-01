@@ -4,7 +4,6 @@ use thiserror::Error;
 
 #[derive(Error, Debug, Copy, Clone)]
 pub enum StreamFlowError {
-
     #[error("Accounts not writable!")]
     AccountsNotWritable,
 

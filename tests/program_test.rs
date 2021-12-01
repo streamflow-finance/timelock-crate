@@ -16,8 +16,8 @@ use spl_associated_token_account::get_associated_token_address;
 use test_sdk::{tools::clone_keypair, ProgramTestBench, TestBenchProgram};
 
 use streamflow_timelock::entrypoint::process_instruction;
+use streamflow_timelock::error::StreamFlowError::TransferNotAllowed;
 use streamflow_timelock::state::{StreamInstruction, TokenStreamData, PROGRAM_VERSION};
-use streamflow_timelock::error::StreamFlowError::{TransferNotAllowed};
 
 #[derive(BorshSerialize, BorshDeserialize, Clone)]
 struct CreateStreamIx {
@@ -201,8 +201,6 @@ async fn timelock_program_test() -> Result<()> {
         "TheTestoooooooooor".to_string()
     );
 
-
-
     // Let's warp ahead and try withdrawing some of the stream.
     tt.advance_clock_past_timestamp(now as i64 + 300).await;
 
@@ -339,9 +337,7 @@ async fn timelock_program_test2() -> Result<()> {
     assert_eq!(metadata_data.ix.stream_name, "Test2".to_string());
 
     // Test if recipient can be transfered, should return error
-    let transfer_ix = TransferIx {
-        ix:3,
-    }; // 3 => entrypoint transfer recipient
+    let transfer_ix = TransferIx { ix: 3 }; // 3 => entrypoint transfer recipient
     let transfer_ix_bytes = Instruction::new_with_bytes(
         tt.program_id,
         &transfer_ix.try_to_vec()?,
@@ -358,17 +354,17 @@ async fn timelock_program_test2() -> Result<()> {
             AccountMeta::new_readonly(system_program::id(), false),
         ],
     );
-    let transaction_error = 
-    tt.bench
+    let transaction_error = tt
+        .bench
         .process_transaction(&[transfer_ix_bytes], Some(&[&bob]))
         .await
         .err()
         .unwrap();
 
-    match transaction_error {      
+    match transaction_error {
         error => {
             // To change assert_eq!(error, ProgramError::from(TransferNotAllowed));
-            assert_eq!(error,ProgramError::Custom(3));
+            assert_eq!(error, ProgramError::Custom(3));
         }
         _ => panic!("Wrong error occurs while trying to transfer non transferable account"),
     }
@@ -501,6 +497,127 @@ async fn timelock_program_test2() -> Result<()> {
 }
 
 #[tokio::test]
+async fn timelock_program_test_transfer() -> Result<()> {
+    let mut tt = TimelockProgramTest::start_new().await;
+
+    let alice = clone_keypair(&tt.bench.alice);
+    let bob = clone_keypair(&tt.bench.bob);
+    let payer = clone_keypair(&tt.bench.payer);
+
+    let strm_token_mint = Keypair::new();
+    let alice_ass_token = get_associated_token_address(&alice.pubkey(), &strm_token_mint.pubkey());
+    let bob_ass_token = get_associated_token_address(&bob.pubkey(), &strm_token_mint.pubkey());
+
+    tt.bench
+        .create_mint(&strm_token_mint, &tt.bench.payer.pubkey())
+        .await;
+
+    tt.bench
+        .create_associated_token_account(&strm_token_mint.pubkey(), &alice.pubkey())
+        .await;
+
+    tt.bench
+        .mint_tokens(
+            &strm_token_mint.pubkey(),
+            &payer,
+            &alice_ass_token,
+            spl_token::ui_amount_to_amount(100.0, 8),
+        )
+        .await;
+
+    let alice_ass_account = tt.bench.get_account(&alice_ass_token).await.unwrap();
+    let alice_token_data = spl_token::state::Account::unpack_from_slice(&alice_ass_account.data)?;
+    assert_eq!(
+        alice_token_data.amount,
+        spl_token::ui_amount_to_amount(100.0, 8)
+    );
+    assert_eq!(alice_token_data.mint, strm_token_mint.pubkey());
+    assert_eq!(alice_token_data.owner, alice.pubkey());
+
+    let metadata_kp = Keypair::new();
+    let (escrow_tokens_pubkey, _) =
+        Pubkey::find_program_address(&[metadata_kp.pubkey().as_ref()], &tt.program_id);
+
+    let clock = tt.bench.get_clock().await;
+    let now = clock.unix_timestamp as u64;
+
+    let create_stream_ix = CreateStreamIx {
+        ix: 0,
+        metadata: StreamInstruction {
+            start_time: now + 10,
+            end_time: now + 1010,
+            deposited_amount: spl_token::ui_amount_to_amount(10.0, 8),
+            total_amount: spl_token::ui_amount_to_amount(20.0, 8),
+            period: 1,
+            cliff: 0,
+            cliff_amount: 0,
+            cancelable_by_sender: false,
+            cancelable_by_recipient: false,
+            withdrawal_public: false,
+            transferable: true, // Should be possible to transfer stream
+            release_rate: 0,    // Old contracts don't have it
+            stream_name: "TransferStream".to_string(),
+        },
+    };
+
+    let create_stream_ix_bytes = Instruction::new_with_bytes(
+        tt.program_id,
+        &create_stream_ix.try_to_vec()?,
+        vec![
+            AccountMeta::new(alice.pubkey(), true),
+            AccountMeta::new(alice_ass_token, false),
+            AccountMeta::new(bob.pubkey(), false),
+            AccountMeta::new(bob_ass_token, false),
+            AccountMeta::new(metadata_kp.pubkey(), true),
+            AccountMeta::new(escrow_tokens_pubkey, false),
+            AccountMeta::new_readonly(strm_token_mint.pubkey(), false),
+            AccountMeta::new_readonly(rent::id(), false),
+            AccountMeta::new_readonly(spl_token::id(), false),
+            AccountMeta::new_readonly(spl_associated_token_account::id(), false),
+            AccountMeta::new_readonly(system_program::id(), false),
+        ],
+    );
+
+    tt.bench
+        .process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp]))
+        .await?;
+
+    let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
+
+    assert_eq!(metadata_data.ix.stream_name, "TransferStream".to_string());
+    assert_eq!(metadata_data.ix.transferable, true);
+
+    // Test if recipient can be transfered
+    let transfer_ix = TransferIx { ix: 3 }; // 3 => entrypoint transfer recipient
+    let transfer_ix_bytes = Instruction::new_with_bytes(
+        tt.program_id,
+        &transfer_ix.try_to_vec()?,
+        vec![
+            AccountMeta::new(bob.pubkey(), true), // Existing recipient as signer
+            AccountMeta::new(alice.pubkey(), false), // New recipient
+            AccountMeta::new(alice_ass_token, false), // New recipient token account
+            AccountMeta::new(metadata_kp.pubkey(), false),
+            AccountMeta::new(escrow_tokens_pubkey, false),
+            AccountMeta::new_readonly(strm_token_mint.pubkey(), false),
+            AccountMeta::new_readonly(rent::id(), false),
+            AccountMeta::new_readonly(spl_token::id(), false),
+            AccountMeta::new_readonly(spl_associated_token_account::id(), false),
+            AccountMeta::new_readonly(system_program::id(), false),
+        ],
+    );
+    tt.bench
+        .process_transaction(&[transfer_ix_bytes], Some(&[&bob]))
+        .await?;
+    let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
+    // Check new recipient
+    assert_eq!(metadata_data.recipient, alice.pubkey());
+    // Check new recipient token account
+    assert_eq!(metadata_data.recipient_tokens, alice_ass_token);
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn timelock_program_test_recurring() -> Result<()> {
     let mut tt = TimelockProgramTest::start_new().await;
 
@@ -558,7 +675,7 @@ async fn timelock_program_test_recurring() -> Result<()> {
             cancelable_by_sender: false,
             cancelable_by_recipient: false,
             withdrawal_public: false,
-            transferable: true,
+            transferable: false,
             release_rate: spl_token::ui_amount_to_amount(1.0, 8),
             stream_name: "Recurring".to_string(),
         },
