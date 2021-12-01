@@ -17,6 +17,7 @@ use test_sdk::{tools::clone_keypair, ProgramTestBench, TestBenchProgram};
 
 use streamflow_timelock::entrypoint::process_instruction;
 use streamflow_timelock::state::{StreamInstruction, TokenStreamData, PROGRAM_VERSION};
+use streamflow_timelock::error::StreamFlowError::{TransferNotAllowed};
 
 #[derive(BorshSerialize, BorshDeserialize, Clone)]
 struct CreateStreamIx {
@@ -38,6 +39,11 @@ struct TopUpIx {
 
 #[derive(BorshSerialize, BorshDeserialize, Clone)]
 struct CancelIx {
+    ix: u8,
+}
+
+#[derive(BorshSerialize, BorshDeserialize, Clone)]
+struct TransferIx {
     ix: u8,
 }
 
@@ -195,6 +201,8 @@ async fn timelock_program_test() -> Result<()> {
         "TheTestoooooooooor".to_string()
     );
 
+
+
     // Let's warp ahead and try withdrawing some of the stream.
     tt.advance_clock_past_timestamp(now as i64 + 300).await;
 
@@ -329,6 +337,41 @@ async fn timelock_program_test2() -> Result<()> {
         spl_token::ui_amount_to_amount(20.0, 8)
     );
     assert_eq!(metadata_data.ix.stream_name, "Test2".to_string());
+
+    // Test if recipient can be transfered, should return error
+    let transfer_ix = TransferIx {
+        ix:3,
+    }; // 3 => entrypoint transfer recipient
+    let transfer_ix_bytes = Instruction::new_with_bytes(
+        tt.program_id,
+        &transfer_ix.try_to_vec()?,
+        vec![
+            AccountMeta::new(bob.pubkey(), true), // Existing recipient as signer
+            AccountMeta::new(alice.pubkey(), false), // New recipient
+            AccountMeta::new(alice_ass_token, false),
+            AccountMeta::new(metadata_kp.pubkey(), false),
+            AccountMeta::new(escrow_tokens_pubkey, false),
+            AccountMeta::new_readonly(strm_token_mint.pubkey(), false),
+            AccountMeta::new_readonly(rent::id(), false),
+            AccountMeta::new_readonly(spl_token::id(), false),
+            AccountMeta::new_readonly(spl_associated_token_account::id(), false),
+            AccountMeta::new_readonly(system_program::id(), false),
+        ],
+    );
+    let transaction_error = 
+    tt.bench
+        .process_transaction(&[transfer_ix_bytes], Some(&[&bob]))
+        .await
+        .err()
+        .unwrap();
+
+    match transaction_error {      
+        error => {
+            // To change assert_eq!(error, ProgramError::from(TransferNotAllowed));
+            assert_eq!(error,ProgramError::Custom(3));
+        }
+        _ => panic!("Wrong error occurs while trying to transfer non transferable account"),
+    }
 
     // Top up account with 12 and see new amount in escrow account
     let topup_ix = TopUpIx {
@@ -515,7 +558,7 @@ async fn timelock_program_test_recurring() -> Result<()> {
             cancelable_by_sender: false,
             cancelable_by_recipient: false,
             withdrawal_public: false,
-            transferable: false,
+            transferable: true,
             release_rate: spl_token::ui_amount_to_amount(1.0, 8),
             stream_name: "Recurring".to_string(),
         },
