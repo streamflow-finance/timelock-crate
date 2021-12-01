@@ -27,7 +27,9 @@ use solana_program::{
 };
 use spl_associated_token_account::{create_associated_token_account, get_associated_token_address};
 
-use crate::error::StreamFlowError::{AccountsNotWritable, InvalidMetaData, MintMismatch};
+use crate::error::StreamFlowError::{
+    AccountsNotWritable, InvalidMetaData, MintMismatch, TransferNotAllowed,
+};
 use crate::state::{
     CancelAccounts, InitializeAccounts, StreamInstruction, TokenStreamData, TopUpAccounts,
     TransferAccounts, WithdrawAccounts,
@@ -619,6 +621,10 @@ pub fn transfer_recipient(program_id: &Pubkey, acc: TransferAccounts) -> Program
         Ok(v) => v,
         Err(_) => return Err(InvalidMetaData.into()),
     };
+
+    if !metadata.ix.transferable {
+        return Err(TransferNotAllowed.into());
+    }
 
     let (escrow_tokens_pubkey, _) =
         Pubkey::find_program_address(&[acc.metadata.key.as_ref()], program_id);
