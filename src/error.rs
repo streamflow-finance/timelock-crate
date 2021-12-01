@@ -12,6 +12,9 @@ pub enum StreamFlowError {
 
     #[error("Sender mint does not match accounts mint!")]
     MintMismatch,
+
+    #[error("Recipient not transferable for account")]
+    TransferNotAllowed,
 }
 
 impl From<StreamFlowError> for ProgramError {
