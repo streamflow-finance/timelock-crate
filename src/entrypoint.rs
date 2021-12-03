@@ -87,7 +87,7 @@ pub fn process_instruction(pid: &Pubkey, acc: &[AccountInfo], ix: &[u8]) -> Prog
         }
         3 => {
             let ta = TransferAccounts {
-                existing_recipient: next_account_info(ai)?.clone(),
+                authorized_wallet: next_account_info(ai)?.clone(),
                 new_recipient: next_account_info(ai)?.clone(),
                 new_recipient_tokens: next_account_info(ai)?.clone(),
                 metadata: next_account_info(ai)?.clone(),

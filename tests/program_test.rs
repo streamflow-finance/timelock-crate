@@ -142,7 +142,8 @@ async fn timelock_program_test() -> Result<()> {
             cancelable_by_sender: false,
             cancelable_by_recipient: false,
             withdrawal_public: false,
-            transferable: false,
+            transferable_by_sender: false,
+            transferable_by_recipient: false,
             release_rate: 0,
             stream_name: "TheTestoooooooooor".to_string(),
         },
@@ -289,7 +290,8 @@ async fn timelock_program_test2() -> Result<()> {
             cancelable_by_sender: false,
             cancelable_by_recipient: false,
             withdrawal_public: false,
-            transferable: false,
+            transferable_by_sender: false,
+            transferable_by_recipient: false,
             release_rate: 0, // Old contracts don't have it
             stream_name: "Test2".to_string(),
         },
@@ -536,8 +538,9 @@ async fn timelock_program_test_transfer() -> Result<()> {
             cancelable_by_sender: false,
             cancelable_by_recipient: false,
             withdrawal_public: false,
-            transferable: true, // Should be possible to transfer stream
-            release_rate: 0,    // Old contracts don't have it
+            transferable_by_sender: false,
+            transferable_by_recipient: true, // Should be possible to transfer stream
+            release_rate: 0,                 // Old contracts don't have it
             stream_name: "TransferStream".to_string(),
         },
     };
@@ -567,7 +570,7 @@ async fn timelock_program_test_transfer() -> Result<()> {
     let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
 
     assert_eq!(metadata_data.ix.stream_name, "TransferStream".to_string());
-    assert!(metadata_data.ix.transferable);
+    assert!(metadata_data.ix.transferable_by_recipient);
 
     // Test if recipient can be transfered
     let transfer_ix = TransferIx { ix: 3 }; // 3 => entrypoint transfer recipient
@@ -657,7 +660,8 @@ async fn timelock_program_test_recurring() -> Result<()> {
             cancelable_by_sender: false,
             cancelable_by_recipient: false,
             withdrawal_public: false,
-            transferable: false,
+            transferable_by_sender: false,
+            transferable_by_recipient: false,
             release_rate: spl_token::ui_amount_to_amount(1.0, 8),
             stream_name: "Recurring".to_string(),
         },

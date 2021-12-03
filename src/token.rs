@@ -125,7 +125,8 @@ pub fn create(
         ix.cancelable_by_sender,
         ix.cancelable_by_recipient,
         ix.withdrawal_public,
-        ix.transferable,
+        ix.transferable_by_sender,
+        ix.transferable_by_recipient,
         ix.release_rate,
         ix.stream_name,
     );
@@ -607,12 +608,12 @@ pub fn transfer_recipient(program_id: &Pubkey, acc: TransferAccounts) -> Program
         return Err(ProgramError::UninitializedAccount);
     }
 
-    if !acc.existing_recipient.is_signer {
+    if !acc.authorized_wallet.is_signer {
         return Err(ProgramError::MissingRequiredSignature);
     }
 
     if !acc.metadata.is_writable
-        || !acc.existing_recipient.is_writable
+        || !acc.authorized_wallet.is_writable
         || !acc.new_recipient_tokens.is_writable
     {
         return Err(ProgramError::InvalidAccountData);
@@ -624,7 +625,20 @@ pub fn transfer_recipient(program_id: &Pubkey, acc: TransferAccounts) -> Program
         Err(_) => return Err(InvalidMetadata.into()),
     };
 
-    if !metadata.ix.transferable {
+    if !metadata.ix.transferable_by_recipient && !metadata.ix.transferable_by_sender {
+        return Err(TransferNotAllowed.into());
+    }
+
+    // See if the caller is authorized
+    let mut authorized = false;
+    if metadata.ix.transferable_by_recipient && &metadata.recipient == acc.authorized_wallet.key {
+        authorized = true;
+    }
+    if metadata.ix.transferable_by_sender && &metadata.sender == acc.authorized_wallet.key {
+        authorized = true;
+    }
+    if !authorized {
+        msg!("Error: Unauthorized wallet");
         return Err(TransferNotAllowed.into());
     }
 
@@ -635,7 +649,7 @@ pub fn transfer_recipient(program_id: &Pubkey, acc: TransferAccounts) -> Program
 
     if acc.new_recipient_tokens.key != &new_recipient_tokens_key
         || acc.mint.key != &metadata.mint
-        || acc.existing_recipient.key != &metadata.recipient
+        || acc.authorized_wallet.key != &metadata.recipient
         || acc.escrow_tokens.key != &metadata.escrow_tokens
         || acc.escrow_tokens.key != &escrow_tokens_pubkey
         || acc.token_program.key != &spl_token::id()
@@ -654,23 +668,20 @@ pub fn transfer_recipient(program_id: &Pubkey, acc: TransferAccounts) -> Program
         let lps = fees.fee_calculator.lamports_per_signature;
 
         // TODO: Check if wrapped SOL
-        if acc.existing_recipient.lamports() < tokens_rent + lps {
-            msg!(
-                "Error: Insufficient funds in {}",
-                acc.existing_recipient.key
-            );
+        if acc.authorized_wallet.lamports() < tokens_rent + lps {
+            msg!("Error: Insufficient funds in {}", acc.authorized_wallet.key);
             return Err(ProgramError::InsufficientFunds);
         }
 
         msg!("Initializing new recipient's associated token account");
         invoke(
             &create_associated_token_account(
-                acc.existing_recipient.key,
+                acc.authorized_wallet.key,
                 acc.new_recipient.key,
                 acc.mint.key,
             ),
             &[
-                acc.existing_recipient.clone(),   // Funding
+                acc.authorized_wallet.clone(),    // Funding
                 acc.new_recipient_tokens.clone(), // Associated token account's address
                 acc.new_recipient.clone(),        // Wallet address
                 acc.mint.clone(),

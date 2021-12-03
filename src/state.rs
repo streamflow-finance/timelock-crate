@@ -49,9 +49,10 @@ pub struct StreamInstruction {
     /// Whether or not a 3rd party can initiate withdraw in the name
     /// of recipient (currently not used, set to FALSE)
     pub withdrawal_public: bool,
-    /// Whether or not a recipient can transfer the stream
-    /// (currently not used, set to TRUE)
-    pub transferable: bool,
+    /// Whether or not the sender can transfer the stream
+    pub transferable_by_sender: bool,
+    /// Whether or not the recipient can transfer the stream
+    pub transferable_by_recipient: bool,
     /// Release rate of recurring payment
     pub release_rate: u64,
     /// The name of this stream
@@ -71,7 +72,8 @@ impl Default for StreamInstruction {
             cancelable_by_sender: true,
             cancelable_by_recipient: false,
             withdrawal_public: false,
-            transferable: true,
+            transferable_by_sender: false,
+            transferable_by_recipient: true,
             release_rate: 0,
             stream_name: "Stream".to_string(),
         }
@@ -133,7 +135,8 @@ impl TokenStreamData {
         cancelable_by_sender: bool,
         cancelable_by_recipient: bool,
         withdrawal_public: bool,
-        transferable: bool,
+        transferable_by_sender: bool,
+        transferable_by_recipient: bool,
         release_rate: u64,
         stream_name: String,
     ) -> Self {
@@ -148,7 +151,8 @@ impl TokenStreamData {
             cancelable_by_sender,
             cancelable_by_recipient,
             withdrawal_public,
-            transferable,
+            transferable_by_sender,
+            transferable_by_recipient,
             release_rate,
             stream_name,
         };
@@ -332,8 +336,8 @@ pub struct CancelAccounts<'a> {
 
 /// Accounts needed for updating stream recipient
 pub struct TransferAccounts<'a> {
-    /// Wallet address of the existing recipient
-    pub existing_recipient: AccountInfo<'a>,
+    /// Wallet address of sender or recipient
+    pub authorized_wallet: AccountInfo<'a>,
     /// New stream beneficiary
     pub new_recipient: AccountInfo<'a>,
     /// New stream beneficiary's token account.
