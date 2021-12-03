@@ -15,7 +15,7 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
-use borsh::{BorshDeserialize, BorshSerialize};
+use borsh::BorshSerialize;
 use solana_program::{
     borsh as solana_borsh,
     entrypoint::ProgramResult,
@@ -619,7 +619,7 @@ pub fn transfer_recipient(program_id: &Pubkey, acc: TransferAccounts) -> Program
     }
 
     let mut data = acc.metadata.try_borrow_mut_data()?;
-    let mut metadata = match TokenStreamData::try_from_slice(&data) {
+    let mut metadata: TokenStreamData = match solana_borsh::try_from_slice_unchecked(&data) {
         Ok(v) => v,
         Err(_) => return Err(InvalidMetadata.into()),
     };
