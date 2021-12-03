@@ -8,7 +8,7 @@ pub enum StreamFlowError {
     AccountsNotWritable,
 
     #[error("Invalid Metadata!")]
-    InvalidMetaData,
+    InvalidMetadata,
 
     #[error("Sender mint does not match accounts mint!")]
     MintMismatch,

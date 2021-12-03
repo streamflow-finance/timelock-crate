@@ -28,7 +28,7 @@ use solana_program::{
 use spl_associated_token_account::{create_associated_token_account, get_associated_token_address};
 
 use crate::error::StreamFlowError::{
-    AccountsNotWritable, InvalidMetaData, MintMismatch, TransferNotAllowed,
+    AccountsNotWritable, InvalidMetadata, MintMismatch, TransferNotAllowed,
 };
 use crate::state::{
     CancelAccounts, InitializeAccounts, StreamInstruction, TokenStreamData, TopUpAccounts,
@@ -320,7 +320,7 @@ pub fn withdraw(program_id: &Pubkey, acc: WithdrawAccounts, amount: u64) -> Prog
     // This thing is nasty lol
     let mut metadata: TokenStreamData = match solana_borsh::try_from_slice_unchecked(&data) {
         Ok(v) => v,
-        Err(_) => return Err(InvalidMetaData.into()),
+        Err(_) => return Err(InvalidMetadata.into()),
     };
 
     let mint_info = unpack_mint_account(&acc.mint)?;
@@ -467,7 +467,7 @@ pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
     // let mut metadata = match TokenStreamData::try_from_slice(&data) {
     let mut metadata: TokenStreamData = match solana_borsh::try_from_slice_unchecked(&data) {
         Ok(v) => v,
-        Err(_) => return Err(InvalidMetaData.into()),
+        Err(_) => return Err(InvalidMetadata.into()),
     };
     let mint_info = unpack_mint_account(&acc.mint)?;
 
@@ -618,7 +618,7 @@ pub fn transfer_recipient(program_id: &Pubkey, acc: TransferAccounts) -> Program
     let mut data = acc.metadata.try_borrow_mut_data()?;
     let mut metadata = match TokenStreamData::try_from_slice(&data) {
         Ok(v) => v,
-        Err(_) => return Err(InvalidMetaData.into()),
+        Err(_) => return Err(InvalidMetadata.into()),
     };
 
     if !metadata.ix.transferable {
