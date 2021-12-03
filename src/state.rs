@@ -31,7 +31,8 @@ pub struct StreamInstruction {
     pub end_time: u64,
     /// Deposited amount of tokens (should be <= total_amount)
     pub deposited_amount: u64,
-    /// Total amount of the tokens in the escrow account if contract is fully vested
+    /// Total amount of the tokens in the escrow account if
+    /// contract is fully vested
     pub total_amount: u64,
     /// Time step (period) in seconds per which the vesting occurs
     pub period: u64,
@@ -39,13 +40,17 @@ pub struct StreamInstruction {
     pub cliff: u64,
     /// Amount unlocked at the "cliff" timestamp
     pub cliff_amount: u64,
-    /// Whether or not a stream can be canceled by a sender (currently not used, set to TRUE)
+    /// Whether or not a stream can be canceled by a sender
+    /// (currently not used, set to TRUE)
     pub cancelable_by_sender: bool,
-    /// Whether or not a stream can be canceled by a recipient (currently not used, set to FALSE)
+    /// Whether or not a stream can be canceled by a recipient
+    /// (currently not used, set to FALSE)
     pub cancelable_by_recipient: bool,
-    /// Whether or not a 3rd party can initiate withdraw in the name of recipient (currently not used, set to FALSE)
+    /// Whether or not a 3rd party can initiate withdraw in the name
+    /// of recipient (currently not used, set to FALSE)
     pub withdrawal_public: bool,
-    /// Whether or not a recipient can transfer the stream (currently not used, set to TRUE)
+    /// Whether or not a recipient can transfer the stream
+    /// (currently not used, set to TRUE)
     pub transferable: bool,
     /// Release rate of recurring payment
     pub release_rate: u64,
@@ -280,9 +285,11 @@ pub struct InitializeAccounts<'a> {
 /// The account-holding struct for the stream withdraw instruction
 pub struct WithdrawAccounts<'a> {
     /// Account invoking transaction. Must match `recipient`
-    // Same as `recipient` if `withdrawal_public == true`, can be any other account otherwise.
+    // Same as `recipient` if `withdrawal_public == true`, otherwise
+    // any other account.
     pub withdraw_authority: AccountInfo<'a>,
-    /// Sender account is needed to collect the rent for escrow token account after the last withdrawal
+    /// Sender account is needed to collect the rent for escrow token
+    /// account after the last withdrawal
     pub sender: AccountInfo<'a>,
     /// Recipient's wallet address
     pub recipient: AccountInfo<'a>,
@@ -301,8 +308,9 @@ pub struct WithdrawAccounts<'a> {
 /// The account-holding struct for the stream cancel instruction
 pub struct CancelAccounts<'a> {
     /// Account invoking cancel. Must match `sender`.
-    /// Can be either `sender` or `recipient` depending on the value of `cancelable_by_sender` and `cancelable_by_recipient`
-    /// But when stztream expires anyone can cancel
+    /// Can be either `sender` or `recipient` depending on the value
+    /// of `cancelable_by_sender` and `cancelable_by_recipient`
+    /// But when stream expires anyone can cancel
     pub cancel_authority: AccountInfo<'a>,
     /// The main wallet address of the initializer
     pub sender: AccountInfo<'a>,
