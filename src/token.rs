@@ -106,34 +106,6 @@ pub fn create(
         return Err(ProgramError::InvalidArgument);
     }
 
-    // We also transfer enough to be rent-exempt on the metadata account.
-    let stream_name_size = ix.stream_name.len();
-    let default_string_size = std::mem::size_of::<String>();
-    let metadata_struct_size =
-        std::mem::size_of::<TokenStreamData>() - default_string_size + stream_name_size;
-
-    let tokens_struct_size = spl_token::state::Account::LEN;
-    let cluster_rent = Rent::get()?;
-    let metadata_rent = cluster_rent.minimum_balance(metadata_struct_size);
-    let mut tokens_rent = cluster_rent.minimum_balance(tokens_struct_size);
-    if acc.recipient_tokens.data_is_empty() {
-        tokens_rent += cluster_rent.minimum_balance(tokens_struct_size);
-    }
-
-    let fees = Fees::get()?;
-    let lps = fees.fee_calculator.lamports_per_signature;
-
-    // TODO: Check if wrapped SOL
-    if acc.sender.lamports() < metadata_rent + tokens_rent + (2 * lps) {
-        msg!("Error: Insufficient funds in {}", acc.sender.key);
-        return Err(ProgramError::InsufficientFunds);
-    }
-
-    if sender_token_info.amount < ix.deposited_amount {
-        msg!("Error: Insufficient tokens in sender's wallet");
-        return Err(ProgramError::InsufficientFunds);
-    }
-
     // TODO: Calculate cancel_data once continuous streams are ready
     let mut metadata = TokenStreamData::new(
         now,
@@ -164,7 +136,35 @@ pub fn create(
         msg!("Closable at: {}", metadata.closable_at);
     }
 
-    let bytes = metadata.try_to_vec()?;
+    // We also transfer enough to be rent-exempt on the metadata account.
+    let metadata_bytes = metadata.try_to_vec()?;
+    // We pad % 8 for size , since that's what has to be allocated.
+    let mut metadata_struct_size = metadata_bytes.len();
+    while metadata_struct_size % 8 > 0 {
+        metadata_struct_size += 1;
+    }
+    let tokens_struct_size = spl_token::state::Account::LEN;
+
+    let cluster_rent = Rent::get()?;
+    let metadata_rent = cluster_rent.minimum_balance(metadata_struct_size);
+    let mut tokens_rent = cluster_rent.minimum_balance(tokens_struct_size);
+    if acc.recipient_tokens.data_is_empty() {
+        tokens_rent += cluster_rent.minimum_balance(tokens_struct_size);
+    }
+
+    let fees = Fees::get()?;
+    let lps = fees.fee_calculator.lamports_per_signature;
+
+    // TODO: Check if wrapped SOL
+    if acc.sender.lamports() < metadata_rent + tokens_rent + (2 * lps) {
+        msg!("Error: Insufficient funds in {}", acc.sender.key);
+        return Err(ProgramError::InsufficientFunds);
+    }
+
+    if sender_token_info.amount < ix.deposited_amount {
+        msg!("Error: Insufficient tokens in sender's wallet");
+        return Err(ProgramError::InsufficientFunds);
+    }
 
     if acc.recipient_tokens.data_is_empty() {
         msg!("Initializing recipient's associated token account");
@@ -200,7 +200,7 @@ pub fn create(
 
     // Write the metadata to the account
     let mut data = acc.metadata.try_borrow_mut_data()?;
-    data[0..bytes.len()].clone_from_slice(&bytes);
+    data[0..metadata_bytes.len()].clone_from_slice(&metadata_bytes);
 
     let seeds = [acc.metadata.key.as_ref(), &[nonce]];
     msg!("Creating account for holding tokens");
