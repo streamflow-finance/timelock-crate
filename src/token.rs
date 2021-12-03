@@ -38,7 +38,6 @@ use crate::utils::{
     duration_sanity, encode_base10, pretty_time, unpack_mint_account, unpack_token_account,
 };
 
-use crate::error::StreamFlowError::{AccountsNotWritable, InvalidMetaData, MintMismatch};
 /// Initialize an SPL token stream
 ///
 /// The function shall initialize new accounts to hold the tokens,
@@ -693,8 +692,8 @@ pub fn transfer_recipient(program_id: &Pubkey, acc: TransferAccounts) -> Program
 ///
 /// The function will add the amount to the metadata SPL account
 pub fn topup_stream(acc: TopUpAccounts, amount: u64) -> ProgramResult {
-    // Negative amount would be a problem (public function) and 0 doesn't change anything
-    if amount <= 0 {
+    // Don't run when amount is 0 as there is no legitimate change.
+    if amount == 0 {
         return Err(ProgramError::InvalidArgument);
     }
 

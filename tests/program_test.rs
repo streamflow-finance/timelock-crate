@@ -16,7 +16,7 @@ use spl_associated_token_account::get_associated_token_address;
 use test_sdk::{tools::clone_keypair, ProgramTestBench, TestBenchProgram};
 
 use streamflow_timelock::entrypoint::process_instruction;
-use streamflow_timelock::error::StreamFlowError::TransferNotAllowed;
+//use streamflow_timelock::error::StreamFlowError::TransferNotAllowed;
 use streamflow_timelock::state::{StreamInstruction, TokenStreamData, PROGRAM_VERSION};
 
 #[derive(BorshSerialize, BorshDeserialize, Clone)]
@@ -361,13 +361,8 @@ async fn timelock_program_test2() -> Result<()> {
         .err()
         .unwrap();
 
-    match transaction_error {
-        error => {
-            // To change assert_eq!(error, ProgramError::from(TransferNotAllowed));
-            assert_eq!(error, ProgramError::Custom(3));
-        }
-        _ => panic!("Wrong error occurs while trying to transfer non transferable account"),
-    }
+    //assert_eq!(transaction_error, ProgramError::from(TransferNotAllowed));
+    assert_eq!(transaction_error, ProgramError::Custom(3));
 
     // Top up account with 12 and see new amount in escrow account
     let topup_ix = TopUpIx {
@@ -428,12 +423,7 @@ async fn timelock_program_test2() -> Result<()> {
         .err()
         .unwrap();
 
-    match transaction_error {
-        error => {
-            assert_eq!(error, ProgramError::InvalidArgument);
-        }
-        _ => panic!("Wrong error occurs while try to withdraw more then due"),
-    }
+    assert_eq!(transaction_error, ProgramError::InvalidArgument);
 
     let some_other_kp = Keypair::new();
     let cancel_ix = CancelIx { ix: 2 };
@@ -462,12 +452,7 @@ async fn timelock_program_test2() -> Result<()> {
         .err()
         .unwrap();
 
-    match transaction_error {
-        error => {
-            assert_eq!(error, ProgramError::InvalidAccountData);
-        }
-        _ => panic!("Wrong error occurs while try to to cancel open stream"),
-    }
+    assert_eq!(transaction_error, ProgramError::InvalidAccountData);
 
     // Ahead with time, stream expired
     tt.advance_clock_past_timestamp(now as i64 + 2000).await;
@@ -585,7 +570,7 @@ async fn timelock_program_test_transfer() -> Result<()> {
     let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
 
     assert_eq!(metadata_data.ix.stream_name, "TransferStream".to_string());
-    assert_eq!(metadata_data.ix.transferable, true);
+    assert!(metadata_data.ix.transferable);
 
     // Test if recipient can be transfered
     let transfer_ix = TransferIx { ix: 3 }; // 3 => entrypoint transfer recipient
@@ -773,12 +758,7 @@ async fn timelock_program_test_recurring() -> Result<()> {
         .err()
         .unwrap();
 
-    match transaction_error {
-        error => {
-            assert_eq!(error, ProgramError::InvalidAccountData);
-        }
-        _ => panic!("Wrong error occurs while try to to cancel open stream"),
-    }
+    assert_eq!(transaction_error, ProgramError::InvalidAccountData);
 
     // Try to withdraw more then due
     let withdraw_stream_ix = WithdrawStreamIx {
@@ -809,12 +789,7 @@ async fn timelock_program_test_recurring() -> Result<()> {
         .err()
         .unwrap();
 
-    match transaction_error {
-        error => {
-            assert_eq!(error, ProgramError::InvalidArgument);
-        }
-        _ => panic!("Wrong error occurs while try to to withdraw more"),
-    }
+    assert_eq!(transaction_error, ProgramError::InvalidArgument);
 
     // Ahead with time, stream expired
     // Beware test clock is not deterministic (check fn)
