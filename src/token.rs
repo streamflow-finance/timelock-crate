@@ -1,4 +1,6 @@
-// Copyright (c) 2021 Ivan Jelincic <parazyd@dyne.org>, imprfekt <imprfekt@icloud.com>, Ivan Britvic <ivbritvic@gmail.com>
+// Copyright (c) 2021 Ivan Jelincic <parazyd@dyne.org>
+//               2021 imprfekt <imprfekt@icloud.com>
+//               2021 Ivan Britvic <ivbritvic@gmail.com>
 //
 // This file is part of streamflow-finance/timelock-crate
 //
