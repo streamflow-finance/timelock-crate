@@ -79,11 +79,11 @@ mod tests {
     #[test]
     fn test_duration_sanity() {
         // now, start, end, cliff
-        assert_eq!(true, duration_sanity(100, 110, 130, 120));
-        assert_eq!(true, duration_sanity(100, 110, 130, 0));
-        assert_eq!(false, duration_sanity(100, 140, 130, 130));
-        assert_eq!(false, duration_sanity(100, 130, 130, 130));
-        assert_eq!(false, duration_sanity(130, 130, 130, 130));
-        assert_eq!(false, duration_sanity(100, 110, 130, 140));
+        assert!(duration_sanity(100, 110, 130, 120));
+        assert!(duration_sanity(100, 110, 130, 0));
+        assert!(!duration_sanity(100, 140, 130, 130));
+        assert!(!duration_sanity(100, 130, 130, 130));
+        assert!(!duration_sanity(130, 130, 130, 130));
+        assert!(!duration_sanity(100, 110, 130, 140));
     }
 }
