@@ -112,7 +112,7 @@ pub fn process_instruction(pid: &Pubkey, acc: &[AccountInfo], ix: &[u8]) -> Prog
             };
             let amount = u64::from_le_bytes(ix[1..].try_into().unwrap());
 
-            return topup_stream(ta, amount);
+            return topup_stream(pid, ta, amount);
         }
         _ => {}
     }

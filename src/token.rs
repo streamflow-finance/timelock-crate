@@ -598,6 +598,7 @@ pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
 
 pub fn transfer_recipient(program_id: &Pubkey, acc: TransferAccounts) -> ProgramResult {
     msg!("Transferring stream recipient");
+
     if acc.metadata.data_is_empty()
         || acc.metadata.owner != program_id
         || acc.escrow_tokens.data_is_empty()
@@ -693,24 +694,53 @@ pub fn transfer_recipient(program_id: &Pubkey, acc: TransferAccounts) -> Program
 /// Top up the SPL Token stream
 ///
 /// The function will add the amount to the metadata SPL account
-pub fn topup_stream(acc: TopUpAccounts, amount: u64) -> ProgramResult {
-    // Don't run when amount is 0 as there is no legitimate change.
-    if amount == 0 {
-        return Err(ProgramError::InvalidArgument);
-    }
-
+pub fn topup_stream(program_id: &Pubkey, acc: TopUpAccounts, amount: u64) -> ProgramResult {
     msg!("Topping up the escrow account");
+
     if acc.metadata.data_is_empty() || acc.escrow_tokens.owner != &spl_token::id() {
         return Err(ProgramError::UninitializedAccount);
     }
 
+    if !acc.sender.is_writable
+        || !acc.sender_tokens.is_writable
+        || !acc.metadata.is_writable
+        || !acc.escrow_tokens.is_writable
+    {
+        return Err(AccountsNotWritable.into());
+    }
+
+    let (escrow_tokens_pubkey, _) =
+        Pubkey::find_program_address(&[acc.metadata.key.as_ref()], program_id);
+
+    if acc.token_program.key != &spl_token::id() || acc.escrow_tokens.key != &escrow_tokens_pubkey {
+        return Err(ProgramError::InvalidAccountData);
+    }
+
+    if !acc.sender.is_signer {
+        return Err(ProgramError::MissingRequiredSignature);
+    }
+
+    let sender_token_info = unpack_token_account(&acc.sender_tokens)?;
+
+    if &sender_token_info.mint != acc.mint.key {
+        return Err(MintMismatch.into());
+    }
+
+    if amount == 0 {
+        msg!("Error: Amount can't be zero.");
+        return Err(ProgramError::InvalidArgument);
+    }
+
     let mut data = acc.metadata.try_borrow_mut_data()?;
-    // Take metadata
     let mut metadata: TokenStreamData = match solana_borsh::try_from_slice_unchecked(&data) {
         Ok(v) => v,
-        // TODO: Add "Invalid Metadata" as error
-        Err(_) => return Err(ProgramError::Custom(2)),
+        Err(_) => return Err(InvalidMetadata.into()),
     };
+
+    if acc.mint.key != &metadata.mint || acc.escrow_tokens.key != &metadata.escrow_tokens {
+        msg!("Error: Metadata does not match given accounts");
+        return Err(ProgramError::InvalidAccountData);
+    }
 
     msg!("Transferring to the escrow account");
     invoke(
@@ -729,15 +759,15 @@ pub fn topup_stream(acc: TopUpAccounts, amount: u64) -> ProgramResult {
             acc.token_program.clone(),
         ],
     )?;
-    // Update metadata deposited amount
+
     metadata.ix.deposited_amount += amount;
-    // Update closable_at
     metadata.closable_at = metadata.closable();
-    // Write the metadata to the account
+
     let bytes = metadata.try_to_vec().unwrap();
     data[0..bytes.len()].clone_from_slice(&bytes);
 
     let mint_info = unpack_mint_account(&acc.mint)?;
+
     msg!(
         "Successfully topped up {} to token stream {} on behalf of {}",
         encode_base10(amount, mint_info.decimals.into()),
