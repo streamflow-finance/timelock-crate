@@ -15,6 +15,9 @@ pub enum StreamFlowError {
 
     #[error("Recipient not transferable for account")]
     TransferNotAllowed,
+
+    #[error("Stream closed")]
+    StreamClosed,
 }
 
 impl From<StreamFlowError> for ProgramError {

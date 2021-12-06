@@ -30,7 +30,7 @@ use solana_program::{
 use spl_associated_token_account::{create_associated_token_account, get_associated_token_address};
 
 use crate::error::StreamFlowError::{
-    AccountsNotWritable, InvalidMetadata, MintMismatch, TransferNotAllowed,
+    AccountsNotWritable, InvalidMetadata, MintMismatch, TransferNotAllowed, StreamClosed
 };
 use crate::state::{
     CancelAccounts, InitializeAccounts, StreamInstruction, TokenStreamData, TopUpAccounts,
@@ -751,6 +751,12 @@ pub fn topup_stream(program_id: &Pubkey, acc: TopUpAccounts, amount: u64) -> Pro
     if acc.mint.key != &metadata.mint || acc.escrow_tokens.key != &metadata.escrow_tokens {
         msg!("Error: Metadata does not match given accounts");
         return Err(ProgramError::InvalidAccountData);
+    }
+
+    let now = Clock::get()?.unix_timestamp as u64;
+    if metadata.closable() < now {
+        msg!("Error: Topup after the stream is closed");
+        return Err(StreamClosed.into());
     }
 
     msg!("Transferring to the escrow account");
