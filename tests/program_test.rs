@@ -829,6 +829,30 @@ async fn timelock_program_test_recurring() -> Result<()> {
     );
     assert_eq!(metadata_data.last_withdrawn_at, new_now);
 
+    // Try to topup, stream expired, shouldn't succeed
+    let topup_ix = TopUpIx {
+        ix: 4,
+        amount: spl_token::ui_amount_to_amount(10.0, 8),
+    }; // 4 => topup_stream
+    let topupix_bytes = Instruction::new_with_bytes(
+        tt.program_id,
+        &topup_ix.try_to_vec()?,
+        vec![
+            AccountMeta::new(alice.pubkey(), true),
+            AccountMeta::new(alice_ass_token, false),
+            AccountMeta::new(metadata_kp.pubkey(), false),
+            AccountMeta::new(escrow_tokens_pubkey, false),
+            AccountMeta::new_readonly(strm_token_mint.pubkey(), false),
+            AccountMeta::new_readonly(spl_token::id(), false),
+        ],
+    );
+
+    let transaction_error = tt.bench
+        .process_transaction(&[topupix_bytes], Some(&[&alice]))
+        .await;
+    // Stream closed, no topup
+    assert!(transaction_error.is_err());
+
     let cancel_ix_bytes = Instruction::new_with_bytes(
         tt.program_id,
         &cancel_ix.try_to_vec()?,
