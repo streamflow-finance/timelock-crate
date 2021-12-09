@@ -21,5 +21,8 @@ Run `python3 misc/make_idl.py > OUTPUT_FILE.js` to generate JS IDL to be used fo
 
 License
 -------
+`timelock-crate` is licensed under [Business Source License](LICENSE).
+The [Business Source License](LICENSE) is not a Free and Open-source license. However, the Licensed Work will eventually be made available
+under an Open Source License, as stated in this License.
 
-`timelock-crate` is licensed [AGPL-3](LICENSE).
+For the community (free and open-source) version, please see [this release](https://github.com/StreamFlow-Finance/timelock-crate/releases/tag/v0.3.0).
