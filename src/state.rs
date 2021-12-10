@@ -41,13 +41,10 @@ pub struct StreamInstruction {
     /// Amount unlocked at the "cliff" timestamp
     pub cliff_amount: u64,
     /// Whether or not a stream can be canceled by a sender
-    /// (currently not used, set to TRUE)
     pub cancelable_by_sender: bool,
     /// Whether or not a stream can be canceled by a recipient
-    /// (currently not used, set to FALSE)
     pub cancelable_by_recipient: bool,
-    /// Whether or not a 3rd party can initiate withdraw in the name
-    /// of recipient (currently not used, set to FALSE)
+    /// Whether or not a 3rd party can initiate withdraw in the name of recipient
     pub withdrawal_public: bool,
     /// Whether or not the sender can transfer the stream
     pub transferable_by_sender: bool,
@@ -60,6 +57,7 @@ pub struct StreamInstruction {
 }
 
 impl Default for StreamInstruction {
+    //these values are overridden.
     fn default() -> Self {
         StreamInstruction {
             start_time: 0,
@@ -160,7 +158,7 @@ impl TokenStreamData {
         // TODO: calculate cancel_time based on other parameters (incl. deposited_amount)
         Self {
             magic: PROGRAM_VERSION,
-            created_at,
+            created_at, //TODO: calculate
             withdrawn_amount: 0,
             canceled_at: 0,
             closable_at: end_time,
