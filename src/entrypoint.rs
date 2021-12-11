@@ -27,7 +27,7 @@ use crate::state::{
     CancelAccounts, InitializeAccounts, StreamInstruction, TopUpAccounts, TransferAccounts,
     WithdrawAccounts,
 };
-use crate::token::{cancel, create, topup_stream, transfer_recipient, withdraw};
+use crate::token::{cancel, create, topup, transfer_recipient, withdraw};
 
 entrypoint!(process_instruction);
 pub fn process_instruction(pid: &Pubkey, acc: &[AccountInfo], ix: &[u8]) -> ProgramResult {
@@ -112,7 +112,7 @@ pub fn process_instruction(pid: &Pubkey, acc: &[AccountInfo], ix: &[u8]) -> Prog
             };
             let amount = u64::from_le_bytes(ix[1..].try_into().unwrap());
 
-            return topup_stream(pid, ta, amount);
+            return topup(pid, ta, amount);
         }
         _ => {}
     }

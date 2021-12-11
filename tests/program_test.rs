@@ -367,7 +367,7 @@ async fn timelock_program_test2() -> Result<()> {
     let topup_ix = TopUpIx {
         ix: 4,
         amount: spl_token::ui_amount_to_amount(10.0, 8),
-    }; // 4 => topup_stream
+    }; // 4 => topup
     let topupix_bytes = Instruction::new_with_bytes(
         tt.program_id,
         &topup_ix.try_to_vec()?,
@@ -707,7 +707,7 @@ async fn timelock_program_test_recurring() -> Result<()> {
     let topup_ix = TopUpIx {
         ix: 4,
         amount: spl_token::ui_amount_to_amount(20.0, 8),
-    }; // 4 => topup_stream
+    }; // 4 => topup
     let topupix_bytes = Instruction::new_with_bytes(
         tt.program_id,
         &topup_ix.try_to_vec()?,
@@ -833,7 +833,7 @@ async fn timelock_program_test_recurring() -> Result<()> {
     let topup_ix = TopUpIx {
         ix: 4,
         amount: spl_token::ui_amount_to_amount(10.0, 8),
-    }; // 4 => topup_stream
+    }; // 4 => topup
     let topupix_bytes = Instruction::new_with_bytes(
         tt.program_id,
         &topup_ix.try_to_vec()?,
@@ -847,7 +847,8 @@ async fn timelock_program_test_recurring() -> Result<()> {
         ],
     );
 
-    let transaction_error = tt.bench
+    let transaction_error = tt
+        .bench
         .process_transaction(&[topupix_bytes], Some(&[&alice]))
         .await;
     // Stream closed, no topup

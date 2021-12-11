@@ -106,8 +106,16 @@ pub struct TokenStreamData {
     pub recipient_tokens: Pubkey,
     /// Pubkey of the token mint
     pub mint: Pubkey,
-    /// Pubkey of the account holding the locked tokens
+    /// Escrow account holding the locked tokens for recipient
     pub escrow_tokens: Pubkey,
+    /// Streamflow treasury authority
+    pub streamflow_treasury: Pubkey,
+    /// Escrow account holding the locked tokens for Streamflow (fee account)
+    pub streamflow_treasury_escrow_tokens: Pubkey,
+    /// Streamflow partner authority
+    pub partner: Pubkey,
+    /// Escrow account holding the locked tokens for Streamflow partner (fee account)
+    pub partner_escrow_tokens: Pubkey,
     /// The stream instruction
     pub ix: StreamInstruction,
 }
@@ -136,6 +144,10 @@ impl TokenStreamData {
         transferable_by_sender: bool,
         transferable_by_recipient: bool,
         release_rate: u64,
+        streamflow_treasury: Pubkey,
+        streamflow_treasury_escrow_tokens: Pubkey,
+        partner: Pubkey,
+        partner_escrow_tokens: Pubkey,
         stream_name: String,
     ) -> Self {
         let ix = StreamInstruction {
@@ -169,12 +181,16 @@ impl TokenStreamData {
             recipient_tokens,
             mint,
             escrow_tokens,
+            streamflow_treasury,
+            streamflow_treasury_escrow_tokens,
+            partner,
+            partner_escrow_tokens,
             ix,
         }
     }
 
     /// Calculate amount available for withdrawal with given timestamp.
-    pub fn available(&self, now: u64) -> u64 {
+    pub fn available(&self, now: u64, streamflow: bool, partner: bool) -> u64 {
         if self.ix.start_time > now || self.ix.cliff > now {
             return 0;
         }
@@ -207,8 +223,8 @@ impl TokenStreamData {
         (periods_passed as f64 * period_amount) as u64 + cliff_amount - self.withdrawn_amount
     }
 
-    /// Calculate timestamp when stream is cancellable
-    /// end_time when deposit=total else time when funds run out
+    /// Calculate timestamp when stream is closable
+    /// end_time when deposit == total else time when funds run out
     pub fn closable(&self) -> u64 {
         let cliff_time = if self.ix.cliff > 0 {
             self.ix.cliff
@@ -243,7 +259,7 @@ impl TokenStreamData {
             self.ix.period,
             seconds_left
         );
-        // closable_at time, ignore end time when recurring
+        // closable_at time, ignore end_time when recurring
         if cliff_time + seconds_left > self.ix.end_time && self.ix.release_rate == 0 {
             self.ix.end_time
         } else {
@@ -270,6 +286,14 @@ pub struct InitializeAccounts<'a> {
     /// The escrow account holding the stream funds.
     /// Expects empty (non-initialized) account.
     pub escrow_tokens: AccountInfo<'a>,
+    /// Streamflow treasury authority
+    pub streamflow_treasury: Pubkey,
+    /// Escrow account holding the locked tokens for Streamflow (fee account)
+    pub streamflow_treasury_escrow_tokens: Pubkey,
+    /// Streamflow partner authority
+    pub partner: Pubkey,
+    /// Escrow account holding the locked tokens for Streamflow partner (fee account)
+    pub partner_escrow_tokens: Pubkey,
     /// The SPL token mint account
     pub mint: AccountInfo<'a>,
     /// The Rent Sysvar account
@@ -286,9 +310,7 @@ pub struct InitializeAccounts<'a> {
 
 /// The account-holding struct for the stream withdraw instruction
 pub struct WithdrawAccounts<'a> {
-    /// Account invoking transaction. Must match `recipient`
-    // Same as `recipient` if `withdrawal_public == true`, otherwise
-    // any other account.
+    /// Account invoking transaction. If `withdraw_public != true`, can be either `recipient`, `streamflow_treasury` or `partner`
     pub withdraw_authority: AccountInfo<'a>,
     /// Sender account is needed to collect the rent for escrow token
     /// account after the last withdrawal
@@ -309,10 +331,9 @@ pub struct WithdrawAccounts<'a> {
 
 /// The account-holding struct for the stream cancel instruction
 pub struct CancelAccounts<'a> {
-    /// Account invoking cancel. Must match `sender`.
-    /// Can be either `sender` or `recipient` depending on the value
+    /// While the stream is active, can be either `sender` or `recipient` depending on the value
     /// of `cancelable_by_sender` and `cancelable_by_recipient`
-    /// But when stream expires anyone can cancel
+    /// After `closable_at` has passed, any address is able to cancel.
     pub cancel_authority: AccountInfo<'a>,
     /// The main wallet address of the initializer
     pub sender: AccountInfo<'a>,
@@ -364,9 +385,9 @@ pub struct TransferAccounts<'a> {
 /// The account-holding struct for the stream topup instruction
 #[derive(Debug)]
 pub struct TopUpAccounts<'a> {
-    /// The main wallet address of the initializer.
+    /// Wallet adding funds to the stream.
     pub sender: AccountInfo<'a>,
-    /// The associated token account address of `sender`.
+    /// Associated token account address of `sender`.
     pub sender_tokens: AccountInfo<'a>,
     /// The account holding the stream metadata.
     /// Expects existing account.

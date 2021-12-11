@@ -18,6 +18,9 @@ pub enum StreamFlowError {
 
     #[error("Stream closed")]
     StreamClosed,
+
+    #[error("Invalid partner specified")]
+    PartnerMismatch,
 }
 
 impl From<StreamFlowError> for ProgramError {

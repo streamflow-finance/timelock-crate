@@ -30,7 +30,8 @@ use solana_program::{
 use spl_associated_token_account::{create_associated_token_account, get_associated_token_address};
 
 use crate::error::StreamFlowError::{
-    AccountsNotWritable, InvalidMetadata, MintMismatch, TransferNotAllowed, StreamClosed
+    AccountsNotWritable, InvalidMetadata, MintMismatch, PartnerMismatch, StreamClosed,
+    TransferNotAllowed,
 };
 use crate::state::{
     CancelAccounts, InitializeAccounts, StreamInstruction, TokenStreamData, TopUpAccounts,
@@ -40,6 +41,9 @@ use crate::utils::{
     duration_sanity, encode_base10, pretty_time, unpack_mint_account, unpack_token_account,
 };
 
+use crate::consts::FEE_PERCENTAGE;
+use crate::error::StreamFlowError;
+
 /// Initialize an SPL token stream
 ///
 /// The function shall initialize new accounts to hold the tokens,
@@ -47,7 +51,7 @@ use crate::utils::{
 /// rent-exempt if necessary. When the stream is finished, these
 /// shall be returned to the stream initializer.
 
-const MAX_STRING_SIZE: usize = 200;
+const MAX_STRING_SIZE: usize = 200; //todo: revisit this limitation
 
 pub fn create(
     program_id: &Pubkey,
@@ -66,12 +70,17 @@ pub fn create(
         || !acc.recipient_tokens.is_writable
         || !acc.metadata.is_writable
         || !acc.escrow_tokens.is_writable
+    //todo: new accounts checks
     {
         return Err(AccountsNotWritable.into());
     }
 
     let (escrow_tokens_pubkey, nonce) =
         Pubkey::find_program_address(&[acc.metadata.key.as_ref()], program_id);
+    let (streamflow_escrow_tokens, nonce) =
+        Pubkey::find_program_address(&[b"some-unique-but-deterministic-seed"], program_id);
+    let (partner_escrow_tokens, nonce) =
+        Pubkey::find_program_address(&[b"some-unique-but-deterministic-seed-2"], program_id);
     let recipient_tokens_key = get_associated_token_address(acc.recipient.key, acc.mint.key);
 
     if acc.system_program.key != &system_program::id()
@@ -79,6 +88,9 @@ pub fn create(
         || acc.rent.key != &sysvar::rent::id()
         || acc.escrow_tokens.key != &escrow_tokens_pubkey
         || acc.recipient_tokens.key != &recipient_tokens_key
+    //todo: new accounts checks
+        || acc.streamflow_treasury != "SOME_PREDEFINED_VALUE"
+    // ...
     {
         return Err(ProgramError::InvalidAccountData);
     }
@@ -86,6 +98,12 @@ pub fn create(
     if !acc.sender.is_signer || !acc.metadata.is_signer {
         return Err(ProgramError::MissingRequiredSignature);
     }
+
+    //todo: this is the crucial part we're missing.
+    let fees: StreamFlowFees = match CustomOracle::fetch(acc.partner) {
+        Ok(v) => v,
+        Err(_) => return Err(PartnerMismatch.into()),
+    };
 
     let sender_token_info = unpack_token_account(&acc.sender_tokens)?;
     let mint_info = unpack_mint_account(&acc.mint)?;
@@ -106,7 +124,7 @@ pub fn create(
         return Err(ProgramError::InvalidArgument);
     }
 
-    // TODO: Calculate cancel_data once continuous streams are ready
+    // TODO: Calculate closable_at
     let mut metadata = TokenStreamData::new(
         now,
         *acc.sender.key,
@@ -128,10 +146,14 @@ pub fn create(
         ix.transferable_by_sender,
         ix.transferable_by_recipient,
         ix.release_rate,
+        *acc.streamflow_treasury,
+        *acc.streamflow_treasury_escrow_tokens,
+        *acc.partner,
+        *acc.partner_escrow_tokens,
         ix.stream_name,
     );
 
-    // Move closable_at (from third party), when reccuring ignore end_date
+    // Move closable_at (from third party), when recurring ignore end_date
     if ix.deposited_amount < ix.total_amount || ix.release_rate > 0 {
         metadata.closable_at = metadata.closable();
         msg!("Closable at: {}", metadata.closable_at);
@@ -148,7 +170,8 @@ pub fn create(
 
     let cluster_rent = Rent::get()?;
     let metadata_rent = cluster_rent.minimum_balance(metadata_struct_size);
-    let mut tokens_rent = cluster_rent.minimum_balance(tokens_struct_size);
+    // escrow_tokens, streamflow_treasury_escrow_tokens, partner_escrow_tokens
+    let mut tokens_rent = 3 * cluster_rent.minimum_balance(tokens_struct_size);
     if acc.recipient_tokens.data_is_empty() {
         tokens_rent += cluster_rent.minimum_balance(tokens_struct_size);
     }
@@ -157,6 +180,8 @@ pub fn create(
     let lps = fees.fee_calculator.lamports_per_signature;
 
     // TODO: Check if wrapped SOL
+    // ...
+
     if acc.sender.lamports() < metadata_rent + tokens_rent + (2 * lps) {
         msg!("Error: Insufficient funds in {}", acc.sender.key);
         return Err(ProgramError::InsufficientFunds);
@@ -203,8 +228,9 @@ pub fn create(
     let mut data = acc.metadata.try_borrow_mut_data()?;
     data[0..metadata_bytes.len()].clone_from_slice(&metadata_bytes);
 
+    //escrow_tokens
     let seeds = [acc.metadata.key.as_ref(), &[nonce]];
-    msg!("Creating account for holding tokens");
+    msg!("Creating escrow account for holding tokens");
     invoke_signed(
         &system_instruction::create_account(
             acc.sender.key,
@@ -233,7 +259,7 @@ pub fn create(
             acc.token_program.clone(),
             acc.escrow_tokens.clone(),
             acc.mint.clone(),
-            acc.escrow_tokens.clone(),
+            acc.escrow_tokens.clone(), //owner
             acc.rent.clone(),
         ],
     )?;
@@ -255,6 +281,130 @@ pub fn create(
             acc.token_program.clone(),
         ],
     )?;
+
+    //streamflow_treasury_escrow_tokens
+    //escrow_tokens
+    //todo: find appropriate seed
+    let seeds = [b"some unique deterministic seed".as_ref(), &[nonce]];
+    msg!("Creating escrow account for holding Streamflow fee tokens");
+    invoke_signed(
+        &system_instruction::create_account(
+            acc.sender.key,
+            acc.streamflow_treasury_escrow_tokens.key,
+            cluster_rent.minimum_balance(tokens_struct_size),
+            tokens_struct_size as u64,
+            &spl_token::id(),
+        ),
+        &[
+            acc.sender.clone(),
+            acc.streamflow_treasury_escrow_tokens.clone(),
+            acc.system_program.clone(),
+        ],
+        &[&seeds],
+    )?;
+
+    msg!(
+        "Initializing Streamflow fee escrow account for {} token",
+        acc.mint.key
+    );
+    invoke(
+        &spl_token::instruction::initialize_account(
+            acc.token_program.key,
+            acc.streamflow_treasury_escrow_tokens.key,
+            acc.mint.key,
+            acc.streamflow_treasury_escrow_tokens.key,
+        )?,
+        &[
+            acc.token_program.clone(),
+            acc.streamflow_treasury_escrow_tokens.clone(),
+            acc.mint.clone(),
+            acc.streamflow_treasury_escrow_tokens.clone(), //owner
+            acc.rent.clone(),
+        ],
+    )?;
+
+    let real_fee_percentage = if (fees.override_fee_percentage) {
+        fees.override_fee_percentage
+    } else {
+        FEE_PERCENTAGE
+    };
+    msg!("Moving funds into escrow account for Streamflow fee");
+    invoke(
+        &spl_token::instruction::transfer(
+            acc.token_program.key,
+            acc.sender_tokens.key,
+            acc.streamflow_treasury_escrow_tokens.key,
+            acc.sender.key,
+            &[],
+            real_fee_percentage / 100 * metadata.ix.deposited_amount, //todo: would prefer u64 instead of float
+        )?,
+        &[
+            acc.sender_tokens.clone(),
+            acc.streamflow_treasury_escrow_tokens.clone(),
+            acc.sender.clone(),
+            acc.token_program.clone(),
+        ],
+    )?;
+
+    if (fees.partner_fee > 0) {
+        //partner_escrow_tokens
+        //todo: find appropriate seed
+        let seeds = [b"some unique deterministic seed 2".as_ref(), &[nonce]];
+        msg!("Creating escrow account for holding partner fee tokens");
+        invoke_signed(
+            &system_instruction::create_account(
+                acc.sender.key,
+                acc.partner_escrow_tokens.key,
+                cluster_rent.minimum_balance(tokens_struct_size),
+                tokens_struct_size as u64,
+                &spl_token::id(),
+            ),
+            &[
+                acc.sender.clone(),
+                acc.partner_escrow_tokens.clone(),
+                acc.system_program.clone(),
+            ],
+            &[&seeds],
+        )?;
+
+        msg!(
+            "Initializing partner fee escrow account for {} token",
+            acc.mint.key
+        );
+        invoke(
+            &spl_token::instruction::initialize_account(
+                acc.token_program.key,
+                acc.partner_escrow_tokens.key,
+                acc.mint.key,
+                acc.partner_escrow_tokens.key,
+            )?,
+            &[
+                acc.token_program.clone(),
+                acc.partner_escrow_tokens.clone(),
+                acc.mint.clone(),
+                acc.partner_escrow_tokens.clone(), //owner
+                acc.rent.clone(),
+            ],
+        )?;
+
+        msg!("Moving funds into escrow account for partner fee");
+        invoke(
+            &spl_token::instruction::transfer(
+                acc.token_program.key,
+                acc.sender_tokens.key,
+                acc.partner_escrow_tokens.key,
+                acc.sender.key,
+                &[],
+                fees.partner_fee / 100 * metadata.ix.deposited_amount, //todo: would prefer u64 instead of float
+            )?,
+            &[
+                acc.sender_tokens.clone(),
+                acc.partner_escrow_tokens.clone(),
+                acc.sender.clone(),
+                acc.token_program.clone(),
+            ],
+        )?;
+    }
 
     msg!(
         "Successfully initialized {} {} token stream for {}",
@@ -298,6 +448,7 @@ pub fn withdraw(program_id: &Pubkey, acc: WithdrawAccounts, amount: u64) -> Prog
         || !acc.recipient_tokens.is_writable
         || !acc.metadata.is_writable
         || !acc.escrow_tokens.is_writable
+    //todo: additional accounts checks
     {
         return Err(ProgramError::InvalidAccountData);
     }
@@ -308,8 +459,9 @@ pub fn withdraw(program_id: &Pubkey, acc: WithdrawAccounts, amount: u64) -> Prog
 
     if acc.token_program.key != &spl_token::id()
         || acc.escrow_tokens.key != &escrow_tokens_pubkey
+        //todo: this check needs an update if streamflow or partner invokes withdrawal (beneficiary token address is different in that case)
         || acc.recipient_tokens.key != &recipient_tokens_key
-        //TODO: Update in future releases based on `is_withdrawal_public`
+        //TODO: Update based on `is_withdrawal_public`
         || acc.withdraw_authority.key != acc.recipient.key
     {
         return Err(ProgramError::InvalidAccountData);
@@ -320,7 +472,7 @@ pub fn withdraw(program_id: &Pubkey, acc: WithdrawAccounts, amount: u64) -> Prog
     }
 
     let mut data = acc.metadata.try_borrow_mut_data()?;
-    // This thing is nasty lol
+    // This thing is nasty lol todo: what do you mean by this? because of unchecked?
     let mut metadata: TokenStreamData = match solana_borsh::try_from_slice_unchecked(&data) {
         Ok(v) => v,
         Err(_) => return Err(InvalidMetadata.into()),
@@ -338,7 +490,9 @@ pub fn withdraw(program_id: &Pubkey, acc: WithdrawAccounts, amount: u64) -> Prog
     }
 
     let now = Clock::get()?.unix_timestamp as u64;
-    let available = metadata.available(now);
+    let available = metadata.available(now, false, false);
+    let available_streamflow = metadata.available(now, true, false);
+    let available_partner = metadata.available(now, false, true);
     let requested: u64;
 
     if amount > available {
@@ -353,6 +507,15 @@ pub fn withdraw(program_id: &Pubkey, acc: WithdrawAccounts, amount: u64) -> Prog
         requested = amount;
     }
 
+    //todo: since streamflow_token_account and partner_token_account
+    // are not known at the time of stream creation,
+    // it is possible that those accounts are not initialized at the time of withdrawal.
+    // One viable solution, although imprfekt, is to have `withdraw_authority` pay for their creation.
+    // The other would be to have a web2 service which would subscribe to the chain events
+    // and (if needed) create those accounts for us and our partners.
+    //...
+
+    //transfer to the streamflow_token
     let seeds = [acc.metadata.key.as_ref(), &[nonce]];
     invoke_signed(
         &spl_token::instruction::transfer(
@@ -377,7 +540,7 @@ pub fn withdraw(program_id: &Pubkey, acc: WithdrawAccounts, amount: u64) -> Prog
     let bytes = metadata.try_to_vec()?;
     data[0..bytes.len()].clone_from_slice(&bytes);
 
-    // Return rent when everything is withdrawn
+    // We collect the rent as well ;)
     if metadata.withdrawn_amount == metadata.ix.deposited_amount {
         // Do we need this?
         if !acc.sender.is_writable || acc.sender.key != &metadata.sender {
@@ -388,18 +551,19 @@ pub fn withdraw(program_id: &Pubkey, acc: WithdrawAccounts, amount: u64) -> Prog
         // **acc.metadata.try_borrow_mut_lamports()? -= rent;
         // **acc.sender.try_borrow_mut_lamports()? += rent;
 
+        //todo: do this 3 times, for each escrow_tokens account
         let escrow_tokens_rent = acc.escrow_tokens.lamports();
         //Close escrow token account
         msg!(
-            "Returning {} lamports (rent) to {}",
+            "Collecting {} lamports (rent) to {}",
             escrow_tokens_rent,
-            acc.sender.key
+            acc.streamflow_treasury.key
         );
         invoke_signed(
             &spl_token::instruction::close_account(
                 acc.token_program.key,
                 acc.escrow_tokens.key,
-                acc.sender.key,
+                acc.streamflow_treasury.key,
                 acc.escrow_tokens.key,
                 &[],
             )?,
@@ -436,7 +600,7 @@ pub fn withdraw(program_id: &Pubkey, acc: WithdrawAccounts, amount: u64) -> Prog
 /// stream recipient.
 pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
     msg!("Cancelling SPL token stream");
-
+    //todo: do the similar as with withdraw (regarding the fee updates)
     if acc.escrow_tokens.data_is_empty()
         || acc.escrow_tokens.owner != &spl_token::id()
         || acc.metadata.data_is_empty()
@@ -478,7 +642,7 @@ pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
     // if stream expired anyone can close it, if not check cancel authority
     msg!("Now: {}, closable at {}", now, metadata.closable_at);
     if now < metadata.closable_at {
-        //TODO: Update in future releases based on `cancelable_by_sender/recipient`
+        //TODO: Update based on `cancelable_by_sender/recipient`
         if acc.cancel_authority.key != acc.sender.key {
             return Err(ProgramError::InvalidAccountData);
         }
@@ -705,7 +869,7 @@ pub fn transfer_recipient(program_id: &Pubkey, acc: TransferAccounts) -> Program
 /// Top up the SPL Token stream
 ///
 /// The function will add the amount to the metadata SPL account
-pub fn topup_stream(program_id: &Pubkey, acc: TopUpAccounts, amount: u64) -> ProgramResult {
+pub fn topup(program_id: &Pubkey, acc: TopUpAccounts, amount: u64) -> ProgramResult {
     msg!("Topping up the escrow account");
 
     if acc.metadata.data_is_empty() || acc.escrow_tokens.owner != &spl_token::id() {
@@ -759,6 +923,7 @@ pub fn topup_stream(program_id: &Pubkey, acc: TopUpAccounts, amount: u64) -> Pro
         return Err(StreamClosed.into());
     }
 
+    //todo: transfer to all the 3 escrow accounts
     msg!("Transferring to the escrow account");
     invoke(
         &spl_token::instruction::transfer(
@@ -776,6 +941,18 @@ pub fn topup_stream(program_id: &Pubkey, acc: TopUpAccounts, amount: u64) -> Pro
             acc.token_program.clone(),
         ],
     )?;
+
+    //todo: transfer to streamflow_treasury_escrow_tokens
+    let real_fee_percentage = if (fees.override_fee_percentage) {
+        fees.override_fee_percentage
+    } else {
+        FEE_PERCENTAGE
+    };
+    //invoke(transfer(...), &[...]);
+
+    if (fees.partner_fee > 0) {
+        //invoke(transfer(...), &[...]);
+    }
 
     metadata.ix.deposited_amount += amount;
     metadata.closable_at = metadata.closable();

@@ -17,6 +17,8 @@
 //! The code providing timelock primitives
 //! used by [streamflow.finance](https://streamflow.finance).
 
+/// Constants
+pub mod consts;
 /// Entrypoint
 #[cfg(not(feature = "no-entrypoint"))]
 pub mod entrypoint;
