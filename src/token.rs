@@ -37,7 +37,7 @@ use crate::state::{
     TransferAccounts, WithdrawAccounts,
 };
 use crate::utils::{
-    duration_sanity, encode_base10, pretty_time, unpack_mint_account, unpack_token_account,
+    duration_sanity, encode_base10, pretty_time, unpack_mint_account, unpack_token_account, Participant
 };
 
 /// Initialize an SPL token stream
@@ -55,6 +55,8 @@ pub fn create(
     ix: StreamInstruction,
 ) -> ProgramResult {
     msg!("Initializing SPL token stream");
+
+    msg!("Testing my own logs!");
 
     if !acc.escrow_tokens.data_is_empty() || !acc.metadata.data_is_empty() {
         return Err(ProgramError::AccountAlreadyInitialized);
@@ -478,12 +480,12 @@ pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
     // if stream expired anyone can close it, if not check cancel authority
     msg!("Now: {}, closable at {}", now, metadata.closable_at);
     if now < metadata.closable_at {
-        //TODO: Update in future releases based on `cancelable_by_sender/recipient`
-        if acc.cancel_authority.key != acc.sender.key {
-            return Err(ProgramError::InvalidAccountData);
-        }
         if !acc.cancel_authority.is_signer {
             return Err(ProgramError::MissingRequiredSignature);
+        }
+        let cancel_authority = Participant::new(&acc.cancel_authority.key, &acc.sender.key, &acc.recipient.key);
+        if !cancel_authority.can_cancle(&metadata.ix) {
+            return Err(ProgramError::InvalidAccountData);
         }
     }
 
@@ -625,22 +627,11 @@ pub fn transfer_recipient(program_id: &Pubkey, acc: TransferAccounts) -> Program
         Err(_) => return Err(InvalidMetadata.into()),
     };
 
-    if !metadata.ix.transferable_by_recipient && !metadata.ix.transferable_by_sender {
-        return Err(TransferNotAllowed.into());
-    }
-
     // See if the caller is authorized
-    let mut authorized = false;
-    if metadata.ix.transferable_by_recipient && &metadata.recipient == acc.authorized_wallet.key {
-        authorized = true;
-    }
-    if metadata.ix.transferable_by_sender && &metadata.sender == acc.authorized_wallet.key {
-        authorized = true;
-    }
-    if !authorized {
-        msg!("Error: Unauthorized wallet");
-        return Err(TransferNotAllowed.into());
-    }
+    let cancel_authority = Participant::new(&acc.authorized_wallet.key, &metadata.sender, &metadata.recipient);
+        if !cancel_authority.can_transfer(&metadata.ix) {
+            return Err(TransferNotAllowed.into());
+        }
 
     let (escrow_tokens_pubkey, _) =
         Pubkey::find_program_address(&[acc.metadata.key.as_ref()], program_id);

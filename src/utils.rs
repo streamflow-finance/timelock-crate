@@ -15,7 +15,12 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use std::iter::FromIterator;
 
-use solana_program::{account_info::AccountInfo, program_error::ProgramError, program_pack::Pack};
+use solana_program::{account_info::AccountInfo, program_error::ProgramError, program_pack::Pack, pubkey::Pubkey,};
+
+use crate::state::{
+    CancelAccounts, InitializeAccounts, StreamInstruction, TokenStreamData, TopUpAccounts,
+    TransferAccounts, WithdrawAccounts,
+};
 
 /// Do a sanity check with given Unix timestamps.
 pub fn duration_sanity(now: u64, start: u64, end: u64, cliff: u64) -> bool {
@@ -71,6 +76,51 @@ pub fn encode_base10(amount: u64, decimal_places: usize) -> String {
         .trim_end_matches('.')
         .to_string()
 }
+
+
+pub enum Participant {
+    Sender,
+    Recipient,
+    None
+}
+
+impl Participant {
+
+    pub fn new(
+        authority: &Pubkey, 
+        sender: &Pubkey, 
+        recipient: &Pubkey
+    ) -> Self {
+        if authority == sender {
+            Self::Sender
+        } else if authority == recipient {
+            Self::Recipient
+        } else {
+           Self::None
+        }
+    }
+
+    pub fn can_cancle(&self, ix: &StreamInstruction) -> bool {
+        match self {
+            Self::Sender => {ix.cancelable_by_sender},
+            Self::Recipient => {ix.cancelable_by_recipient},
+            Self::None => {false},
+
+        }
+    }
+
+    pub fn can_transfer(&self, ix: &StreamInstruction) -> bool {
+        match self {
+            Self::Sender => {ix.transferable_by_sender},
+            Self::Recipient => {ix.transferable_by_recipient},
+            Self::None => {false},
+
+        }
+    }
+
+}
+
+
 
 #[allow(unused_imports)]
 mod tests {
