@@ -56,8 +56,6 @@ pub fn create(
 ) -> ProgramResult {
     msg!("Initializing SPL token stream");
 
-    msg!("Testing my own logs!");
-
     if !acc.escrow_tokens.data_is_empty() || !acc.metadata.data_is_empty() {
         return Err(ProgramError::AccountAlreadyInitialized);
     }
@@ -484,7 +482,7 @@ pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
             return Err(ProgramError::MissingRequiredSignature);
         }
         let cancel_authority = Participant::new(&acc.cancel_authority.key, &acc.sender.key, &acc.recipient.key);
-        if !cancel_authority.can_cancle(&metadata.ix) {
+        if !cancel_authority.can_cancel(&metadata.ix) {
             return Err(ProgramError::InvalidAccountData);
         }
     }

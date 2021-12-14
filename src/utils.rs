@@ -100,7 +100,7 @@ impl Participant {
         }
     }
 
-    pub fn can_cancle(&self, ix: &StreamInstruction) -> bool {
+    pub fn can_cancel(&self, ix: &StreamInstruction) -> bool {
         match self {
             Self::Sender => {ix.cancelable_by_sender},
             Self::Recipient => {ix.cancelable_by_recipient},
