@@ -15,8 +15,10 @@ use solana_sdk::{
 use spl_associated_token_account::get_associated_token_address;
 use test_sdk::{tools::clone_keypair, ProgramTestBench, TestBenchProgram};
 
-use streamflow_timelock::entrypoint::process_instruction;
-use streamflow_timelock::state::{StreamInstruction, TokenStreamData, PROGRAM_VERSION};
+use streamflow_timelock::{
+    entrypoint::process_instruction,
+    state::{StreamInstruction, TokenStreamData, PROGRAM_VERSION},
+};
 
 #[derive(BorshSerialize, BorshDeserialize, Clone)]
 struct CreateStreamIx {
@@ -73,10 +75,7 @@ impl TimelockProgramTest {
         while clock.unix_timestamp <= unix_timestamp {
             // Since the exact time is not deterministic, keep wrapping by
             // arbitrary 400 slots until we pass the requested timestamp.
-            self.bench
-                .context
-                .warp_to_slot(clock.slot + n * 400)
-                .unwrap();
+            self.bench.context.warp_to_slot(clock.slot + n * 400).unwrap();
 
             n += 1;
             clock = self.bench.get_clock().await;
@@ -96,13 +95,9 @@ async fn timelock_program_test() -> Result<()> {
     let alice_ass_token = get_associated_token_address(&alice.pubkey(), &strm_token_mint.pubkey());
     let bob_ass_token = get_associated_token_address(&bob.pubkey(), &strm_token_mint.pubkey());
 
-    tt.bench
-        .create_mint(&strm_token_mint, &tt.bench.payer.pubkey())
-        .await;
+    tt.bench.create_mint(&strm_token_mint, &tt.bench.payer.pubkey()).await;
 
-    tt.bench
-        .create_associated_token_account(&strm_token_mint.pubkey(), &alice.pubkey())
-        .await;
+    tt.bench.create_associated_token_account(&strm_token_mint.pubkey(), &alice.pubkey()).await;
 
     tt.bench
         .mint_tokens(
@@ -115,10 +110,7 @@ async fn timelock_program_test() -> Result<()> {
 
     let alice_ass_account = tt.bench.get_account(&alice_ass_token).await.unwrap();
     let alice_token_data = spl_token::state::Account::unpack_from_slice(&alice_ass_account.data)?;
-    assert_eq!(
-        alice_token_data.amount,
-        spl_token::ui_amount_to_amount(100.0, 8)
-    );
+    assert_eq!(alice_token_data.amount, spl_token::ui_amount_to_amount(100.0, 8));
     assert_eq!(alice_token_data.mint, strm_token_mint.pubkey());
     assert_eq!(alice_token_data.owner, alice.pubkey());
 
@@ -167,9 +159,7 @@ async fn timelock_program_test() -> Result<()> {
         ],
     );
 
-    tt.bench
-        .process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp]))
-        .await?;
+    tt.bench.process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp])).await?;
 
     let metadata_acc = tt.bench.get_account(&metadata_kp.pubkey()).await.unwrap();
     let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
@@ -188,18 +178,9 @@ async fn timelock_program_test() -> Result<()> {
     assert_eq!(metadata_data.escrow_tokens, escrow_tokens_pubkey);
     assert_eq!(metadata_data.ix.start_time, now + 5);
     assert_eq!(metadata_data.ix.end_time, now + 605);
-    assert_eq!(
-        metadata_data.ix.deposited_amount,
-        spl_token::ui_amount_to_amount(20.0, 8)
-    );
-    assert_eq!(
-        metadata_data.ix.total_amount,
-        spl_token::ui_amount_to_amount(20.0, 8)
-    );
-    assert_eq!(
-        metadata_data.ix.stream_name,
-        "TheTestoooooooooor".to_string()
-    );
+    assert_eq!(metadata_data.ix.deposited_amount, spl_token::ui_amount_to_amount(20.0, 8));
+    assert_eq!(metadata_data.ix.total_amount, spl_token::ui_amount_to_amount(20.0, 8));
+    assert_eq!(metadata_data.ix.stream_name, "TheTestoooooooooor".to_string());
 
     // Let's warp ahead and try withdrawing some of the stream.
     tt.advance_clock_past_timestamp(now as i64 + 300).await;
@@ -221,9 +202,7 @@ async fn timelock_program_test() -> Result<()> {
         ],
     );
 
-    tt.bench
-        .process_transaction(&[withdraw_stream_ix_bytes], Some(&[&bob]))
-        .await?;
+    tt.bench.process_transaction(&[withdraw_stream_ix_bytes], Some(&[&bob])).await?;
 
     let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
     assert_eq!(metadata_data.withdrawn_amount, 1180000000);
@@ -244,13 +223,9 @@ async fn timelock_program_test2() -> Result<()> {
     let alice_ass_token = get_associated_token_address(&alice.pubkey(), &strm_token_mint.pubkey());
     let bob_ass_token = get_associated_token_address(&bob.pubkey(), &strm_token_mint.pubkey());
 
-    tt.bench
-        .create_mint(&strm_token_mint, &tt.bench.payer.pubkey())
-        .await;
+    tt.bench.create_mint(&strm_token_mint, &tt.bench.payer.pubkey()).await;
 
-    tt.bench
-        .create_associated_token_account(&strm_token_mint.pubkey(), &alice.pubkey())
-        .await;
+    tt.bench.create_associated_token_account(&strm_token_mint.pubkey(), &alice.pubkey()).await;
 
     tt.bench
         .mint_tokens(
@@ -263,10 +238,7 @@ async fn timelock_program_test2() -> Result<()> {
 
     let alice_ass_account = tt.bench.get_account(&alice_ass_token).await.unwrap();
     let alice_token_data = spl_token::state::Account::unpack_from_slice(&alice_ass_account.data)?;
-    assert_eq!(
-        alice_token_data.amount,
-        spl_token::ui_amount_to_amount(100.0, 8)
-    );
+    assert_eq!(alice_token_data.amount, spl_token::ui_amount_to_amount(100.0, 8));
     assert_eq!(alice_token_data.mint, strm_token_mint.pubkey());
     assert_eq!(alice_token_data.owner, alice.pubkey());
 
@@ -315,9 +287,7 @@ async fn timelock_program_test2() -> Result<()> {
         ],
     );
 
-    tt.bench
-        .process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp]))
-        .await?;
+    tt.bench.process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp])).await?;
 
     let metadata_acc = tt.bench.get_account(&metadata_kp.pubkey()).await.unwrap();
     let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
@@ -327,14 +297,8 @@ async fn timelock_program_test2() -> Result<()> {
 
     assert_eq!(metadata_data.ix.start_time, now + 10);
     assert_eq!(metadata_data.ix.end_time, now + 1010);
-    assert_eq!(
-        metadata_data.ix.deposited_amount,
-        spl_token::ui_amount_to_amount(10.0, 8)
-    );
-    assert_eq!(
-        metadata_data.ix.total_amount,
-        spl_token::ui_amount_to_amount(20.0, 8)
-    );
+    assert_eq!(metadata_data.ix.deposited_amount, spl_token::ui_amount_to_amount(10.0, 8));
+    assert_eq!(metadata_data.ix.total_amount, spl_token::ui_amount_to_amount(20.0, 8));
     assert_eq!(metadata_data.ix.stream_name, "Test2".to_string());
 
     // Test if recipient can be transfered, should return error
@@ -356,18 +320,12 @@ async fn timelock_program_test2() -> Result<()> {
         ],
     );
 
-    let transaction_error = tt
-        .bench
-        .process_transaction(&[transfer_ix_bytes], Some(&[&bob]))
-        .await;
+    let transaction_error = tt.bench.process_transaction(&[transfer_ix_bytes], Some(&[&bob])).await;
 
     assert!(transaction_error.is_err());
 
     // Top up account with 12 and see new amount in escrow account
-    let topup_ix = TopUpIx {
-        ix: 4,
-        amount: spl_token::ui_amount_to_amount(10.0, 8),
-    }; // 4 => topup
+    let topup_ix = TopUpIx { ix: 4, amount: spl_token::ui_amount_to_amount(10.0, 8) }; // 4 => topup
     let topupix_bytes = Instruction::new_with_bytes(
         tt.program_id,
         &topup_ix.try_to_vec()?,
@@ -380,25 +338,18 @@ async fn timelock_program_test2() -> Result<()> {
             AccountMeta::new_readonly(spl_token::id(), false),
         ],
     );
-    tt.bench
-        .process_transaction(&[topupix_bytes], Some(&[&alice]))
-        .await?;
+    tt.bench.process_transaction(&[topupix_bytes], Some(&[&alice])).await?;
     // let metadata_acc = tt.bench.get_account(&metadata_kp.pubkey()).await.unwrap();
     let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
-    assert_eq!(
-        metadata_data.ix.deposited_amount,
-        spl_token::ui_amount_to_amount(20.0, 8)
-    );
+    assert_eq!(metadata_data.ix.deposited_amount, spl_token::ui_amount_to_amount(20.0, 8));
     // Closable to end_date, closable fn would return 1010 + 1
     assert_eq!(metadata_data.closable_at, now + 1010);
 
     // Warp ahead
     tt.advance_clock_past_timestamp(now as i64 + 200).await;
 
-    let withdraw_stream_ix = WithdrawStreamIx {
-        ix: 1,
-        amount: spl_token::ui_amount_to_amount(30.0, 8),
-    };
+    let withdraw_stream_ix =
+        WithdrawStreamIx { ix: 1, amount: spl_token::ui_amount_to_amount(30.0, 8) };
 
     let withdraw_stream_ix_bytes = Instruction::new_with_bytes(
         tt.program_id,
@@ -473,9 +424,7 @@ async fn timelock_program_test2() -> Result<()> {
     );
 
     // Now stream should be cancelled
-    tt.bench
-        .process_transaction(&[cancel_ix_bytes], Some(&[&some_other_kp]))
-        .await?;
+    tt.bench.process_transaction(&[cancel_ix_bytes], Some(&[&some_other_kp])).await?;
 
     Ok(())
 }
@@ -492,13 +441,9 @@ async fn timelock_program_test_transfer() -> Result<()> {
     let alice_ass_token = get_associated_token_address(&alice.pubkey(), &strm_token_mint.pubkey());
     let bob_ass_token = get_associated_token_address(&bob.pubkey(), &strm_token_mint.pubkey());
 
-    tt.bench
-        .create_mint(&strm_token_mint, &tt.bench.payer.pubkey())
-        .await;
+    tt.bench.create_mint(&strm_token_mint, &tt.bench.payer.pubkey()).await;
 
-    tt.bench
-        .create_associated_token_account(&strm_token_mint.pubkey(), &alice.pubkey())
-        .await;
+    tt.bench.create_associated_token_account(&strm_token_mint.pubkey(), &alice.pubkey()).await;
 
     tt.bench
         .mint_tokens(
@@ -511,10 +456,7 @@ async fn timelock_program_test_transfer() -> Result<()> {
 
     let alice_ass_account = tt.bench.get_account(&alice_ass_token).await.unwrap();
     let alice_token_data = spl_token::state::Account::unpack_from_slice(&alice_ass_account.data)?;
-    assert_eq!(
-        alice_token_data.amount,
-        spl_token::ui_amount_to_amount(100.0, 8)
-    );
+    assert_eq!(alice_token_data.amount, spl_token::ui_amount_to_amount(100.0, 8));
     assert_eq!(alice_token_data.mint, strm_token_mint.pubkey());
     assert_eq!(alice_token_data.owner, alice.pubkey());
 
@@ -563,9 +505,7 @@ async fn timelock_program_test_transfer() -> Result<()> {
         ],
     );
 
-    tt.bench
-        .process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp]))
-        .await?;
+    tt.bench.process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp])).await?;
 
     let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
 
@@ -590,9 +530,7 @@ async fn timelock_program_test_transfer() -> Result<()> {
             AccountMeta::new_readonly(system_program::id(), false),
         ],
     );
-    tt.bench
-        .process_transaction(&[transfer_ix_bytes], Some(&[&bob]))
-        .await?;
+    tt.bench.process_transaction(&[transfer_ix_bytes], Some(&[&bob])).await?;
     let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
     // Check new recipient
     assert_eq!(metadata_data.recipient, alice.pubkey());
@@ -614,13 +552,9 @@ async fn timelock_program_test_recurring() -> Result<()> {
     let alice_ass_token = get_associated_token_address(&alice.pubkey(), &strm_token_mint.pubkey());
     let bob_ass_token = get_associated_token_address(&bob.pubkey(), &strm_token_mint.pubkey());
 
-    tt.bench
-        .create_mint(&strm_token_mint, &tt.bench.payer.pubkey())
-        .await;
+    tt.bench.create_mint(&strm_token_mint, &tt.bench.payer.pubkey()).await;
 
-    tt.bench
-        .create_associated_token_account(&strm_token_mint.pubkey(), &alice.pubkey())
-        .await;
+    tt.bench.create_associated_token_account(&strm_token_mint.pubkey(), &alice.pubkey()).await;
 
     tt.bench
         .mint_tokens(
@@ -633,10 +567,7 @@ async fn timelock_program_test_recurring() -> Result<()> {
 
     let alice_ass_account = tt.bench.get_account(&alice_ass_token).await.unwrap();
     let alice_token_data = spl_token::state::Account::unpack_from_slice(&alice_ass_account.data)?;
-    assert_eq!(
-        alice_token_data.amount,
-        spl_token::ui_amount_to_amount(100.0, 8)
-    );
+    assert_eq!(alice_token_data.amount, spl_token::ui_amount_to_amount(100.0, 8));
     assert_eq!(alice_token_data.mint, strm_token_mint.pubkey());
     assert_eq!(alice_token_data.owner, alice.pubkey());
 
@@ -685,9 +616,7 @@ async fn timelock_program_test_recurring() -> Result<()> {
         ],
     );
 
-    tt.bench
-        .process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp]))
-        .await?;
+    tt.bench.process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp])).await?;
 
     let metadata_acc = tt.bench.get_account(&metadata_kp.pubkey()).await.unwrap();
     let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
@@ -696,18 +625,12 @@ async fn timelock_program_test_recurring() -> Result<()> {
     assert_eq!(metadata_data.closable_at, now + 10 + 2000 + 1); // 1 after, like in function
     assert_eq!(metadata_data.ix.start_time, now + 10);
     assert_eq!(metadata_data.ix.end_time, now + 1010);
-    assert_eq!(
-        metadata_data.ix.deposited_amount,
-        spl_token::ui_amount_to_amount(10.0, 8)
-    );
+    assert_eq!(metadata_data.ix.deposited_amount, spl_token::ui_amount_to_amount(10.0, 8));
     assert_eq!(metadata_data.ix.stream_name, "Recurring".to_string());
     assert_eq!(metadata_data.ix.release_rate, 100000000);
 
     // Top up account with 12 and see new amount in escrow account
-    let topup_ix = TopUpIx {
-        ix: 4,
-        amount: spl_token::ui_amount_to_amount(20.0, 8),
-    }; // 4 => topup
+    let topup_ix = TopUpIx { ix: 4, amount: spl_token::ui_amount_to_amount(20.0, 8) }; // 4 => topup
     let topupix_bytes = Instruction::new_with_bytes(
         tt.program_id,
         &topup_ix.try_to_vec()?,
@@ -720,15 +643,10 @@ async fn timelock_program_test_recurring() -> Result<()> {
             AccountMeta::new_readonly(spl_token::id(), false),
         ],
     );
-    tt.bench
-        .process_transaction(&[topupix_bytes], Some(&[&alice]))
-        .await?;
+    tt.bench.process_transaction(&[topupix_bytes], Some(&[&alice])).await?;
     // let metadata_acc = tt.bench.get_account(&metadata_kp.pubkey()).await.unwrap();
     let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
-    assert_eq!(
-        metadata_data.ix.deposited_amount,
-        spl_token::ui_amount_to_amount(30.0, 8)
-    );
+    assert_eq!(metadata_data.ix.deposited_amount, spl_token::ui_amount_to_amount(30.0, 8));
     // Closable to end_date, closable fn would return 1010 + 1
     assert_eq!(metadata_data.closable_at, now + 10 + 6000 + 1);
 
@@ -761,10 +679,8 @@ async fn timelock_program_test_recurring() -> Result<()> {
     assert_eq!(transaction_error, ProgramError::InvalidAccountData);
 
     // Try to withdraw more then due
-    let withdraw_stream_ix = WithdrawStreamIx {
-        ix: 1,
-        amount: spl_token::ui_amount_to_amount(40.0, 8),
-    };
+    let withdraw_stream_ix =
+        WithdrawStreamIx { ix: 1, amount: spl_token::ui_amount_to_amount(40.0, 8) };
 
     let withdraw_stream_ix_bytes = Instruction::new_with_bytes(
         tt.program_id,
@@ -798,10 +714,8 @@ async fn timelock_program_test_recurring() -> Result<()> {
     // Best to read clock again
     let new_now = tt.bench.get_clock().await.unix_timestamp as u64;
 
-    let withdraw_stream_ix = WithdrawStreamIx {
-        ix: 1,
-        amount: spl_token::ui_amount_to_amount(25.0, 8),
-    };
+    let withdraw_stream_ix =
+        WithdrawStreamIx { ix: 1, amount: spl_token::ui_amount_to_amount(25.0, 8) };
 
     let withdraw_stream_ix_bytes = Instruction::new_with_bytes(
         tt.program_id,
@@ -818,22 +732,14 @@ async fn timelock_program_test_recurring() -> Result<()> {
         ],
     );
 
-    tt.bench
-        .process_transaction(&[withdraw_stream_ix_bytes], Some(&[&bob]))
-        .await?;
+    tt.bench.process_transaction(&[withdraw_stream_ix_bytes], Some(&[&bob])).await?;
 
     let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
-    assert_eq!(
-        metadata_data.withdrawn_amount,
-        spl_token::ui_amount_to_amount(25.0, 8)
-    );
+    assert_eq!(metadata_data.withdrawn_amount, spl_token::ui_amount_to_amount(25.0, 8));
     assert_eq!(metadata_data.last_withdrawn_at, new_now);
 
     // Try to topup, stream expired, shouldn't succeed
-    let topup_ix = TopUpIx {
-        ix: 4,
-        amount: spl_token::ui_amount_to_amount(10.0, 8),
-    }; // 4 => topup
+    let topup_ix = TopUpIx { ix: 4, amount: spl_token::ui_amount_to_amount(10.0, 8) }; // 4 => topup
     let topupix_bytes = Instruction::new_with_bytes(
         tt.program_id,
         &topup_ix.try_to_vec()?,
@@ -847,10 +753,7 @@ async fn timelock_program_test_recurring() -> Result<()> {
         ],
     );
 
-    let transaction_error = tt
-        .bench
-        .process_transaction(&[topupix_bytes], Some(&[&alice]))
-        .await;
+    let transaction_error = tt.bench.process_transaction(&[topupix_bytes], Some(&[&alice])).await;
     // Stream closed, no topup
     assert!(transaction_error.is_err());
 
@@ -871,8 +774,6 @@ async fn timelock_program_test_recurring() -> Result<()> {
     );
 
     // Now stream should be cancelled, escrow closed
-    tt.bench
-        .process_transaction(&[cancel_ix_bytes], Some(&[&some_other_kp]))
-        .await?;
+    tt.bench.process_transaction(&[cancel_ix_bytes], Some(&[&some_other_kp])).await?;
     Ok(())
 }

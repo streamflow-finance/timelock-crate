@@ -192,25 +192,17 @@ impl TokenStreamData {
     /// Calculate amount available for withdrawal with given timestamp.
     pub fn available(&self, now: u64, streamflow: bool, partner: bool) -> u64 {
         if self.ix.start_time > now || self.ix.cliff > now {
-            return 0;
+            return 0
         }
 
         // Ignore end date when recurring
         if now >= self.ix.end_time && self.ix.release_rate == 0 {
-            return self.ix.deposited_amount - self.withdrawn_amount;
+            return self.ix.deposited_amount - self.withdrawn_amount
         }
 
-        let cliff = if self.ix.cliff > 0 {
-            self.ix.cliff
-        } else {
-            self.ix.start_time
-        };
+        let cliff = if self.ix.cliff > 0 { self.ix.cliff } else { self.ix.start_time };
 
-        let cliff_amount = if self.ix.cliff_amount > 0 {
-            self.ix.cliff_amount
-        } else {
-            0
-        };
+        let cliff_amount = if self.ix.cliff_amount > 0 { self.ix.cliff_amount } else { 0 };
 
         // TODO: Use uint arithmetics, floats are imprecise
         let num_periods = (self.ix.end_time - cliff) as f64 / self.ix.period as f64;
@@ -226,20 +218,12 @@ impl TokenStreamData {
     /// Calculate timestamp when stream is closable
     /// end_time when deposit == total else time when funds run out
     pub fn closable(&self) -> u64 {
-        let cliff_time = if self.ix.cliff > 0 {
-            self.ix.cliff
-        } else {
-            self.ix.start_time
-        };
+        let cliff_time = if self.ix.cliff > 0 { self.ix.cliff } else { self.ix.start_time };
 
-        let cliff_amount = if self.ix.cliff_amount > 0 {
-            self.ix.cliff_amount
-        } else {
-            0
-        };
+        let cliff_amount = if self.ix.cliff_amount > 0 { self.ix.cliff_amount } else { 0 };
         // Deposit smaller then cliff amount, cancelable at cliff
         if self.ix.deposited_amount < cliff_amount {
-            return cliff_time;
+            return cliff_time
         }
         // Nr of seconds after the cliff
         let seconds_nr = self.ix.end_time - cliff_time;
@@ -310,7 +294,8 @@ pub struct InitializeAccounts<'a> {
 
 /// The account-holding struct for the stream withdraw instruction
 pub struct WithdrawAccounts<'a> {
-    /// Account invoking transaction. If `withdraw_public != true`, can be either `recipient`, `streamflow_treasury` or `partner`
+    /// Account invoking transaction. If `withdraw_public != true`, can be either `recipient`,
+    /// `streamflow_treasury` or `partner`
     pub withdraw_authority: AccountInfo<'a>,
     /// Sender account is needed to collect the rent for escrow token
     /// account after the last withdrawal

@@ -13,6 +13,8 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
+use std::convert::TryInto;
+
 use borsh::BorshDeserialize;
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
@@ -21,13 +23,14 @@ use solana_program::{
     program_error::ProgramError,
     pubkey::Pubkey,
 };
-use std::convert::TryInto;
 
-use crate::state::{
-    CancelAccounts, InitializeAccounts, StreamInstruction, TopUpAccounts, TransferAccounts,
-    WithdrawAccounts,
+use crate::{
+    state::{
+        CancelAccounts, InitializeAccounts, StreamInstruction, TopUpAccounts, TransferAccounts,
+        WithdrawAccounts,
+    },
+    token::{cancel, create, topup, transfer_recipient, withdraw},
 };
-use crate::token::{cancel, create, topup, transfer_recipient, withdraw};
 
 entrypoint!(process_instruction);
 pub fn process_instruction(pid: &Pubkey, acc: &[AccountInfo], ix: &[u8]) -> ProgramResult {
@@ -51,7 +54,7 @@ pub fn process_instruction(pid: &Pubkey, acc: &[AccountInfo], ix: &[u8]) -> Prog
 
             let si = StreamInstruction::try_from_slice(&ix[1..])?;
 
-            return create(pid, ia, si);
+            return create(pid, ia, si)
         }
         1 => {
             let wa = WithdrawAccounts {
@@ -67,7 +70,7 @@ pub fn process_instruction(pid: &Pubkey, acc: &[AccountInfo], ix: &[u8]) -> Prog
 
             let amnt = u64::from_le_bytes(ix[1..].try_into().unwrap());
 
-            return withdraw(pid, wa, amnt);
+            return withdraw(pid, wa, amnt)
         }
 
         2 => {
@@ -83,7 +86,7 @@ pub fn process_instruction(pid: &Pubkey, acc: &[AccountInfo], ix: &[u8]) -> Prog
                 token_program: next_account_info(ai)?.clone(),
             };
 
-            return cancel(pid, ca);
+            return cancel(pid, ca)
         }
         3 => {
             let ta = TransferAccounts {
@@ -99,7 +102,7 @@ pub fn process_instruction(pid: &Pubkey, acc: &[AccountInfo], ix: &[u8]) -> Prog
                 system_program: next_account_info(ai)?.clone(),
             };
 
-            return transfer_recipient(pid, ta);
+            return transfer_recipient(pid, ta)
         }
         4 => {
             let ta = TopUpAccounts {
@@ -112,7 +115,7 @@ pub fn process_instruction(pid: &Pubkey, acc: &[AccountInfo], ix: &[u8]) -> Prog
             };
             let amount = u64::from_le_bytes(ix[1..].try_into().unwrap());
 
-            return topup(pid, ta, amount);
+            return topup(pid, ta, amount)
         }
         _ => {}
     }

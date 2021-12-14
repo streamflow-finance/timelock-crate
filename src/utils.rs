@@ -19,11 +19,7 @@ use solana_program::{account_info::AccountInfo, program_error::ProgramError, pro
 
 /// Do a sanity check with given Unix timestamps.
 pub fn duration_sanity(now: u64, start: u64, end: u64, cliff: u64) -> bool {
-    let cliff_cond = if cliff == 0 {
-        true
-    } else {
-        start <= cliff && cliff <= end
-    };
+    let cliff_cond = if cliff == 0 { true } else { start <= cliff && cliff <= end };
 
     now < start && start < end && cliff_cond
 }
@@ -33,7 +29,7 @@ pub fn unpack_token_account(
     account_info: &AccountInfo,
 ) -> Result<spl_token::state::Account, ProgramError> {
     if account_info.owner != &spl_token::id() {
-        return Err(ProgramError::InvalidAccountData);
+        return Err(ProgramError::InvalidAccountData)
     }
 
     spl_token::state::Account::unpack(&account_info.data.borrow())
@@ -53,23 +49,16 @@ pub fn pretty_time(t: u64) -> String {
     let hours = (t / (60 * 60)) % 24;
     let days = t / (60 * 60 * 24);
 
-    format!(
-        "{} days, {} hours, {} minutes, {} seconds",
-        days, hours, minutes, seconds
-    )
+    format!("{} days, {} hours, {} minutes, {} seconds", days, hours, minutes, seconds)
 }
 
 /// Encode given amount to a string with given decimal places.
 pub fn encode_base10(amount: u64, decimal_places: usize) -> String {
-    let mut s: Vec<char> = format!("{:0width$}", amount, width = 1 + decimal_places)
-        .chars()
-        .collect();
+    let mut s: Vec<char> =
+        format!("{:0width$}", amount, width = 1 + decimal_places).chars().collect();
     s.insert(s.len() - decimal_places, '.');
 
-    String::from_iter(&s)
-        .trim_end_matches('0')
-        .trim_end_matches('.')
-        .to_string()
+    String::from_iter(&s).trim_end_matches('0').trim_end_matches('.').to_string()
 }
 
 #[allow(unused_imports)]

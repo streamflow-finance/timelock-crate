@@ -1,5 +1,4 @@
-use solana_program::msg;
-use solana_program::program_error::ProgramError;
+use solana_program::{msg, program_error::ProgramError};
 use thiserror::Error;
 
 #[derive(Error, Debug, Copy, Clone)]
