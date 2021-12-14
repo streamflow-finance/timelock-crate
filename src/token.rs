@@ -37,8 +37,7 @@ use crate::state::{
     TransferAccounts, WithdrawAccounts,
 };
 use crate::utils::{
-    duration_sanity, encode_base10, pretty_time, unpack_mint_account, unpack_token_account,
-    Participant,
+    duration_sanity, encode_base10, pretty_time, unpack_mint_account, unpack_token_account, Invoker,
 };
 
 /// Initialize an SPL token stream
@@ -482,7 +481,7 @@ pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         if !acc.cancel_authority.is_signer {
             return Err(ProgramError::MissingRequiredSignature);
         }
-        let cancel_authority = Participant::new(
+        let cancel_authority = Invoker::new(
             &acc.cancel_authority.key,
             &acc.sender.key,
             &acc.recipient.key,
@@ -631,7 +630,7 @@ pub fn transfer_recipient(program_id: &Pubkey, acc: TransferAccounts) -> Program
     };
 
     // See if the caller is authorized
-    let cancel_authority = Participant::new(
+    let cancel_authority = Invoker::new(
         &acc.authorized_wallet.key,
         &metadata.sender,
         &metadata.recipient,

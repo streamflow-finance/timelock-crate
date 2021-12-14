@@ -79,13 +79,13 @@ pub fn encode_base10(amount: u64, decimal_places: usize) -> String {
         .to_string()
 }
 
-pub enum Participant {
+pub enum Invoker {
     Sender,
     Recipient,
     None,
 }
 
-impl Participant {
+impl Invoker {
     pub fn new(authority: &Pubkey, sender: &Pubkey, recipient: &Pubkey) -> Self {
         if authority == sender {
             Self::Sender
