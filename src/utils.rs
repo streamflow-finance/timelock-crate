@@ -15,13 +15,22 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use std::iter::FromIterator;
 
-use solana_program::{account_info::AccountInfo, program_error::ProgramError, program_pack::Pack};
+use solana_program::{
+    account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
+    program_pack::Pack,
+};
+
+use crate::{error::SfError, state::StreamInstruction};
 
 /// Do a sanity check with given Unix timestamps.
-pub fn duration_sanity(now: u64, start: u64, end: u64, cliff: u64) -> bool {
+pub fn duration_sanity(now: u64, start: u64, end: u64, cliff: u64) -> ProgramResult {
     let cliff_cond = if cliff == 0 { true } else { start <= cliff && cliff <= end };
 
-    now < start && start < end && cliff_cond
+    if now < start && start < end && cliff_cond {
+        return Ok(())
+    }
+
+    Err(SfError::InvalidTimestamps.into())
 }
 
 /// Unpack token account from `account_info`
@@ -61,6 +70,31 @@ pub fn encode_base10(amount: u64, decimal_places: usize) -> String {
     String::from_iter(&s).trim_end_matches('0').trim_end_matches('.').to_string()
 }
 
+pub fn calculate_available(now: u64, ix: StreamInstruction, total: u64, withdrawn: u64) -> u64 {
+    if ix.start_time > now || ix.cliff > now {
+        return 0
+    }
+
+    // Ignore end date when recurring
+    if now > ix.end_time && ix.release_rate == 0 {
+        return total - withdrawn
+    }
+
+    let cliff = if ix.cliff > 0 { ix.cliff } else { ix.start_time };
+    let cliff_amount = if ix.cliff_amount > 0 { ix.cliff_amount } else { 0 };
+
+    // TODO: Use uint arithmetics
+    let num_periods = (ix.end_time - cliff) as f64 / ix.period as f64;
+    let period_amount = if ix.release_rate > 0 {
+        ix.release_rate as f64
+    } else {
+        (ix.total_amount - cliff_amount) as f64 / num_periods
+    };
+
+    let periods_passed = (now - cliff) / ix.period;
+    (periods_passed as f64 * period_amount) as u64 + cliff_amount - withdrawn
+}
+
 #[allow(unused_imports)]
 mod tests {
     use crate::utils::duration_sanity;
@@ -68,11 +102,11 @@ mod tests {
     #[test]
     fn test_duration_sanity() {
         // now, start, end, cliff
-        assert!(duration_sanity(100, 110, 130, 120));
-        assert!(duration_sanity(100, 110, 130, 0));
-        assert!(!duration_sanity(100, 140, 130, 130));
-        assert!(!duration_sanity(100, 130, 130, 130));
-        assert!(!duration_sanity(130, 130, 130, 130));
-        assert!(!duration_sanity(100, 110, 130, 140));
+        assert!(duration_sanity(100, 110, 130, 120).is_ok());
+        assert!(duration_sanity(100, 110, 130, 0).is_ok());
+        assert!(duration_sanity(100, 140, 130, 130).is_err());
+        assert!(duration_sanity(100, 130, 130, 130).is_err());
+        assert!(duration_sanity(130, 130, 130, 130).is_err());
+        assert!(duration_sanity(100, 110, 130, 140).is_err());
     }
 }

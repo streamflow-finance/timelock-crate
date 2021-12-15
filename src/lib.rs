@@ -21,10 +21,21 @@
 #[cfg(not(feature = "no-entrypoint"))]
 pub mod entrypoint;
 /// Errors
-pub mod error;
+pub(crate) mod error;
 /// Structs and data
-pub mod state;
+pub(crate) mod state;
 /// Functions related to SPL tokens
-pub mod token;
+//pub mod token;
 /// Utility functions
-pub mod utils;
+pub(crate) mod utils;
+
+pub(crate) mod cancel_stream;
+pub(crate) mod create_stream;
+pub(crate) mod stream_safety;
+pub(crate) mod topup_stream;
+pub(crate) mod transfer_recipient;
+pub(crate) mod withdraw_stream;
+
+pub(crate) const STRM_TREASURY: &str = "Ht5G1RhkcKnpLVLMhqJc5aqZ4wYUEbxbtZwGCVbgU7DL";
+
+pub(crate) const MAX_STRING_SIZE: usize = 200;

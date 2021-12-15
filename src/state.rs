@@ -56,30 +56,8 @@ pub struct StreamInstruction {
     pub stream_name: String,
 }
 
-impl Default for StreamInstruction {
-    //these values are overridden.
-    fn default() -> Self {
-        StreamInstruction {
-            start_time: 0,
-            end_time: 0,
-            deposited_amount: 0,
-            total_amount: 0,
-            period: 1,
-            cliff: 0,
-            cliff_amount: 0,
-            cancelable_by_sender: true,
-            cancelable_by_recipient: false,
-            withdrawal_public: false,
-            transferable_by_sender: false,
-            transferable_by_recipient: true,
-            release_rate: 0,
-            stream_name: "Stream".to_string(),
-        }
-    }
-}
-
 /// TokenStreamData is the struct containing metadata for an SPL token stream.
-#[derive(BorshSerialize, BorshDeserialize, Default, Debug)]
+#[derive(BorshSerialize, BorshDeserialize, Debug)]
 #[repr(C)]
 pub struct TokenStreamData {
     /// Magic bytes, will be used for version of the contract
@@ -111,108 +89,56 @@ pub struct TokenStreamData {
     /// Streamflow treasury authority
     pub streamflow_treasury: Pubkey,
     /// Escrow account holding the locked tokens for Streamflow (fee account)
-    pub streamflow_treasury_escrow_tokens: Pubkey,
+    pub streamflow_treasury_tokens: Pubkey,
+    /// The total fee amount for streamflow
+    pub streamflow_fee_total: u64,
+    /// The withdrawn fee amount for streamflow
+    pub streamflow_fee_withdrawn: u64,
     /// Streamflow partner authority
     pub partner: Pubkey,
     /// Escrow account holding the locked tokens for Streamflow partner (fee account)
-    pub partner_escrow_tokens: Pubkey,
+    pub partner_tokens: Pubkey,
+    /// The total fee amount for the partner
+    pub partner_fee_total: u64,
+    /// The withdrawn fee amount for the partner
+    pub partner_fee_withdrawn: u64,
     /// The stream instruction
     pub ix: StreamInstruction,
 }
 
-#[allow(clippy::too_many_arguments)]
 impl TokenStreamData {
     /// Initialize a new `TokenStreamData` struct.
     pub fn new(
-        created_at: u64,
-        sender: Pubkey,
-        sender_tokens: Pubkey,
-        recipient: Pubkey,
-        recipient_tokens: Pubkey,
-        mint: Pubkey,
-        escrow_tokens: Pubkey,
-        start_time: u64,
-        end_time: u64,
-        deposited_amount: u64,
-        total_amount: u64,
-        period: u64,
-        cliff: u64,
-        cliff_amount: u64,
-        cancelable_by_sender: bool,
-        cancelable_by_recipient: bool,
-        withdrawal_public: bool,
-        transferable_by_sender: bool,
-        transferable_by_recipient: bool,
-        release_rate: u64,
-        streamflow_treasury: Pubkey,
-        streamflow_treasury_escrow_tokens: Pubkey,
-        partner: Pubkey,
-        partner_escrow_tokens: Pubkey,
-        stream_name: String,
+        now: u64,
+        acc: InstructionAccounts,
+        ix: StreamInstruction,
+        partner_fee: u64,
+        strm_fee: u64,
     ) -> Self {
-        let ix = StreamInstruction {
-            start_time,
-            end_time,
-            deposited_amount,
-            total_amount,
-            period,
-            cliff,
-            cliff_amount,
-            cancelable_by_sender,
-            cancelable_by_recipient,
-            withdrawal_public,
-            transferable_by_sender,
-            transferable_by_recipient,
-            release_rate,
-            stream_name,
-        };
-
         // TODO: calculate cancel_time based on other parameters (incl. deposited_amount)
         Self {
             magic: PROGRAM_VERSION,
-            created_at, //TODO: calculate
+            created_at: now, // TODO: is oke?
             withdrawn_amount: 0,
             canceled_at: 0,
-            closable_at: end_time,
+            closable_at: ix.end_time, // TODO: is oke?
             last_withdrawn_at: 0,
-            sender,
-            sender_tokens,
-            recipient,
-            recipient_tokens,
-            mint,
-            escrow_tokens,
-            streamflow_treasury,
-            streamflow_treasury_escrow_tokens,
-            partner,
-            partner_escrow_tokens,
+            sender: *acc.sender.key,
+            sender_tokens: *acc.sender_tokens.key,
+            recipient: *acc.recipient.key,
+            recipient_tokens: *acc.recipient_tokens.key,
+            mint: *acc.mint.key,
+            escrow_tokens: *acc.escrow_tokens.key,
+            streamflow_treasury: *acc.streamflow_treasury.key,
+            streamflow_treasury_tokens: *acc.streamflow_treasury_tokens.key,
+            streamflow_fee_total: strm_fee,
+            streamflow_fee_withdrawn: 0,
+            partner: *acc.partner.key,
+            partner_tokens: *acc.partner_tokens.key,
+            partner_fee_total: partner_fee,
+            partner_fee_withdrawn: 0,
             ix,
         }
-    }
-
-    /// Calculate amount available for withdrawal with given timestamp.
-    pub fn available(&self, now: u64, streamflow: bool, partner: bool) -> u64 {
-        if self.ix.start_time > now || self.ix.cliff > now {
-            return 0
-        }
-
-        // Ignore end date when recurring
-        if now >= self.ix.end_time && self.ix.release_rate == 0 {
-            return self.ix.deposited_amount - self.withdrawn_amount
-        }
-
-        let cliff = if self.ix.cliff > 0 { self.ix.cliff } else { self.ix.start_time };
-
-        let cliff_amount = if self.ix.cliff_amount > 0 { self.ix.cliff_amount } else { 0 };
-
-        // TODO: Use uint arithmetics, floats are imprecise
-        let num_periods = (self.ix.end_time - cliff) as f64 / self.ix.period as f64;
-        let period_amount = if self.ix.release_rate > 0 {
-            self.ix.release_rate as f64
-        } else {
-            (self.ix.total_amount - cliff_amount) as f64 / num_periods
-        };
-        let periods_passed = (now - cliff) / self.ix.period;
-        (periods_passed as f64 * period_amount) as u64 + cliff_amount - self.withdrawn_amount
     }
 
     /// Calculate timestamp when stream is closable
@@ -251,137 +177,22 @@ impl TokenStreamData {
         }
     }
 }
-
-/// The account-holding struct for the stream initialization instruction
-#[derive(Debug)]
-pub struct InitializeAccounts<'a> {
-    /// The main wallet address of the initializer.
+#[derive(Clone, Debug)]
+pub struct InstructionAccounts<'a> {
+    pub authority: AccountInfo<'a>,
     pub sender: AccountInfo<'a>,
-    /// The associated token account address of `sender`.
     pub sender_tokens: AccountInfo<'a>,
-    /// The main wallet address of the recipient.
     pub recipient: AccountInfo<'a>,
-    /// The associated token account address of `recipient`.
-    /// (Can be either empty or initialized).
     pub recipient_tokens: AccountInfo<'a>,
-    /// The account holding the stream metadata.
-    /// Expects empty (non-initialized) account.
     pub metadata: AccountInfo<'a>,
-    /// The escrow account holding the stream funds.
-    /// Expects empty (non-initialized) account.
     pub escrow_tokens: AccountInfo<'a>,
-    /// Streamflow treasury authority
-    pub streamflow_treasury: Pubkey,
-    /// Escrow account holding the locked tokens for Streamflow (fee account)
-    pub streamflow_treasury_escrow_tokens: Pubkey,
-    /// Streamflow partner authority
-    pub partner: Pubkey,
-    /// Escrow account holding the locked tokens for Streamflow partner (fee account)
-    pub partner_escrow_tokens: Pubkey,
-    /// The SPL token mint account
+    pub streamflow_treasury: AccountInfo<'a>,
+    pub streamflow_treasury_tokens: AccountInfo<'a>,
+    pub partner: AccountInfo<'a>,
+    pub partner_tokens: AccountInfo<'a>,
     pub mint: AccountInfo<'a>,
-    /// The Rent Sysvar account
     pub rent: AccountInfo<'a>,
-    /// The SPL program needed in case an associated account
-    /// for the new recipient is being created.
     pub token_program: AccountInfo<'a>,
-    /// The Associated Token program needed in case associated
-    /// account for the new recipient is being created.
     pub associated_token_program: AccountInfo<'a>,
-    /// The Solana system program
     pub system_program: AccountInfo<'a>,
-}
-
-/// The account-holding struct for the stream withdraw instruction
-pub struct WithdrawAccounts<'a> {
-    /// Account invoking transaction. If `withdraw_public != true`, can be either `recipient`,
-    /// `streamflow_treasury` or `partner`
-    pub withdraw_authority: AccountInfo<'a>,
-    /// Sender account is needed to collect the rent for escrow token
-    /// account after the last withdrawal
-    pub sender: AccountInfo<'a>,
-    /// Recipient's wallet address
-    pub recipient: AccountInfo<'a>,
-    /// The associated token account address of a stream `recipient`
-    pub recipient_tokens: AccountInfo<'a>,
-    /// The account holding the stream metadata
-    pub metadata: AccountInfo<'a>,
-    /// The escrow account holding the stream funds
-    pub escrow_tokens: AccountInfo<'a>,
-    /// The SPL token mint account
-    pub mint: AccountInfo<'a>,
-    /// The SPL token program
-    pub token_program: AccountInfo<'a>,
-}
-
-/// The account-holding struct for the stream cancel instruction
-pub struct CancelAccounts<'a> {
-    /// While the stream is active, can be either `sender` or `recipient` depending on the value
-    /// of `cancelable_by_sender` and `cancelable_by_recipient`
-    /// After `closable_at` has passed, any address is able to cancel.
-    pub cancel_authority: AccountInfo<'a>,
-    /// The main wallet address of the initializer
-    pub sender: AccountInfo<'a>,
-    /// The associated token account address of `sender`
-    pub sender_tokens: AccountInfo<'a>,
-    /// The main wallet address of the recipient
-    pub recipient: AccountInfo<'a>,
-    /// The associated token account address of `recipient`
-    pub recipient_tokens: AccountInfo<'a>,
-    /// The account holding the stream metadata
-    pub metadata: AccountInfo<'a>,
-    /// The escrow account holding the stream funds
-    pub escrow_tokens: AccountInfo<'a>,
-    /// The SPL token mint account
-    pub mint: AccountInfo<'a>,
-    /// The SPL token program
-    pub token_program: AccountInfo<'a>,
-}
-
-/// Accounts needed for updating stream recipient
-pub struct TransferAccounts<'a> {
-    /// Wallet address of sender or recipient
-    pub authorized_wallet: AccountInfo<'a>,
-    /// New stream beneficiary
-    pub new_recipient: AccountInfo<'a>,
-    /// New stream beneficiary's token account.
-    /// If not initialized, it will be created and
-    /// `existing_recipient` is the fee payer
-    pub new_recipient_tokens: AccountInfo<'a>,
-    /// The account holding the stream metadata
-    pub metadata: AccountInfo<'a>,
-    /// The escrow account holding the stream funds
-    pub escrow_tokens: AccountInfo<'a>,
-    /// The SPL token mint account
-    pub mint: AccountInfo<'a>,
-    /// Rent account
-    pub rent: AccountInfo<'a>,
-    /// The SPL program needed in case associated account
-    /// for the new recipients is being created.
-    pub token_program: AccountInfo<'a>,
-    /// The Associated Token program needed in case associated
-    /// account for the new recipients is being created.
-    pub associated_token_program: AccountInfo<'a>,
-    /// The Solana system program needed in case associated
-    /// account for the new recipients is being created.
-    pub system_program: AccountInfo<'a>,
-}
-
-/// The account-holding struct for the stream topup instruction
-#[derive(Debug)]
-pub struct TopUpAccounts<'a> {
-    /// Wallet adding funds to the stream.
-    pub sender: AccountInfo<'a>,
-    /// Associated token account address of `sender`.
-    pub sender_tokens: AccountInfo<'a>,
-    /// The account holding the stream metadata.
-    /// Expects existing account.
-    pub metadata: AccountInfo<'a>,
-    /// The escrow account holding the stream funds.
-    /// Expects empty (non-initialized) account.
-    pub escrow_tokens: AccountInfo<'a>,
-    /// The SPL token mint account
-    pub mint: AccountInfo<'a>,
-    /// The SPL program needed for transfer
-    pub token_program: AccountInfo<'a>,
 }
