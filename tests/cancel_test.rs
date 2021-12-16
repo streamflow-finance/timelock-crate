@@ -136,7 +136,6 @@ async fn test_sender_not_cancellable_should_not_be_cancelled() -> Result<()> {
 
     let transaction = tt.bench.process_transaction(&[cancel_ix_bytes], Some(&[&alice])).await;
 
-    // assert_eq!(transaction_error, ProgramError::InvalidAccountData);
     assert_eq!(transaction.is_err(), !cancelable_by_sender);
 
     Ok(())
