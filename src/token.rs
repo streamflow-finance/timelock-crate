@@ -638,7 +638,6 @@ pub fn transfer_recipient(program_id: &Pubkey, acc: TransferAccounts) -> Program
 
     if acc.new_recipient_tokens.key != &new_recipient_tokens_key
         || acc.mint.key != &metadata.mint
-        || acc.authorized_wallet.key != &metadata.recipient
         || acc.escrow_tokens.key != &metadata.escrow_tokens
         || acc.escrow_tokens.key != &escrow_tokens_pubkey
         || acc.token_program.key != &spl_token::id()
