@@ -30,14 +30,14 @@ use solana_program::{
 use spl_associated_token_account::{create_associated_token_account, get_associated_token_address};
 
 use crate::error::StreamFlowError::{
-    AccountsNotWritable, InvalidMetadata, MintMismatch, TransferNotAllowed, StreamClosed
+    AccountsNotWritable, InvalidMetadata, MintMismatch, StreamClosed, TransferNotAllowed,
 };
 use crate::state::{
     CancelAccounts, InitializeAccounts, StreamInstruction, TokenStreamData, TopUpAccounts,
     TransferAccounts, WithdrawAccounts,
 };
 use crate::utils::{
-    duration_sanity, encode_base10, pretty_time, unpack_mint_account, unpack_token_account, Participant
+    duration_sanity, encode_base10, pretty_time, unpack_mint_account, unpack_token_account, Invoker,
 };
 
 /// Initialize an SPL token stream
@@ -481,7 +481,11 @@ pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         if !acc.cancel_authority.is_signer {
             return Err(ProgramError::MissingRequiredSignature);
         }
-        let cancel_authority = Participant::new(&acc.cancel_authority.key, &acc.sender.key, &acc.recipient.key);
+        let cancel_authority = Invoker::new(
+            &acc.cancel_authority.key,
+            &acc.sender.key,
+            &acc.recipient.key,
+        );
         if !cancel_authority.can_cancel(&metadata.ix) {
             return Err(ProgramError::InvalidAccountData);
         }
@@ -626,10 +630,14 @@ pub fn transfer_recipient(program_id: &Pubkey, acc: TransferAccounts) -> Program
     };
 
     // See if the caller is authorized
-    let cancel_authority = Participant::new(&acc.authorized_wallet.key, &metadata.sender, &metadata.recipient);
-        if !cancel_authority.can_transfer(&metadata.ix) {
-            return Err(TransferNotAllowed.into());
-        }
+    let cancel_authority = Invoker::new(
+        &acc.authorized_wallet.key,
+        &metadata.sender,
+        &metadata.recipient,
+    );
+    if !cancel_authority.can_transfer(&metadata.ix) {
+        return Err(TransferNotAllowed.into());
+    }
 
     let (escrow_tokens_pubkey, _) =
         Pubkey::find_program_address(&[acc.metadata.key.as_ref()], program_id);

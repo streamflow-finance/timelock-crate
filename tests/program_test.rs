@@ -784,7 +784,8 @@ async fn timelock_program_test_recurring() -> Result<()> {
         ],
     );
 
-    let transaction_error = tt.bench
+    let transaction_error = tt
+        .bench
         .process_transaction(&[topupix_bytes], Some(&[&alice]))
         .await;
     // Stream closed, no topup
