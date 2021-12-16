@@ -17,6 +17,10 @@ pub(crate) fn uninitialized_account_sanity_check(
     a: InstructionAccounts,
 ) -> ProgramResult {
     msg!("Checking if all given accounts are correct");
+    if !acc.escrow_tokens.data_is_empty() || !acc.metadata.data_is_empty() {
+        return Err(ProgramError::AccountAlreadyInitialized)
+    }
+
     // We want these accounts to be writable
     if !a.sender.is_writable ||
         !a.sender_tokens.is_writable ||
