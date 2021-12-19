@@ -8,7 +8,7 @@ from subprocess import run
 files = ["src/state.rs"]
 skips = [
     "InitializeAccounts", "WithdrawAccounts", "CancelAccounts",
-    "TransferAccounts"
+    "TransferAccounts", "StreamInstruction"
 ]
 structs = {}
 
@@ -91,7 +91,7 @@ def generate_interface(struct_name):
     for i in structs[struct_name]:
         dl = lookup_interface(i[1], i[0])
         if dl:
-            print(f"  {dl}")
+            print(f"//   {dl}")
             continue
         if i[1] in structs:
             generate_interface(i[1])
@@ -127,7 +127,9 @@ def parse_structs(lines):
 def main():
     output = run(["git", "rev-parse", "--show-toplevel"], capture_output=True)
     toplevel = output.stdout.decode()[:-1]
+    struct_name = None
 
+    print("// Layout generated for JavaScript applications interacting with Streamflow's Timelock program.")
     print("const BufferLayout = require('buffer-layout');")
     print("const { PublicKey } = require('@solana/web3.js');")
     print("const anchor = require('@project-serum/anchor');")
@@ -148,15 +150,18 @@ def main():
         generate_buflayout(i)
         print(f"]);\n")
 
-        print(f"function decode_{camel_to_snake(i)}(buf) {{")
+        struct_name = struct_name if struct_name is not None else camel_to_snake(i)
+        print(f"function decode_{struct_name}(buf) {{")
         print(f"    let raw = {i}Layout.decode(buf);")
         print("    return {")
         generate_decoder(i)
         print("    };\n}\n")
 
-        print(f"interface {i} {{")
+        print(f"// interface {i} {{")
         generate_interface(i)
-        print("}\n")
+        print("// }\n")
+
+    print(f"exports.decode = decode_{struct_name};")
 
     return 0
 
