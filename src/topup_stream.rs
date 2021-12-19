@@ -1,4 +1,5 @@
 use borsh::BorshSerialize;
+use num_traits::FromPrimitive;
 use solana_program::{
     borsh as solana_borsh,
     entrypoint::ProgramResult,
@@ -42,8 +43,9 @@ pub fn topup(program_id: &Pubkey, acc: InstructionAccounts, amount: u64) -> Prog
         return Err(SfError::StreamClosed.into())
     }
 
+    // TODO: Do we request topup + fees, or take fees from the topup?
+
     msg!("Transferring funds into escrow account");
-    // TODO: Fees
     invoke(
         &spl_token::instruction::transfer(
             acc.token_program.key,
@@ -61,7 +63,29 @@ pub fn topup(program_id: &Pubkey, acc: InstructionAccounts, amount: u64) -> Prog
         ],
     )?;
 
-    metadata.ix.deposited_amount += amount;
+    let mint_info = unpack_mint_account(&acc.mint)?;
+
+    let mut uint_fee_for_partner: u64 = 0;
+    if metadata.partner_fee_percent > 0.0 {
+        // TODO: Test units, and generic function
+        let fee_for_partner = amount as f64 * (metadata.partner_fee_percent / 100.0) as f64;
+        msg!("Fee for partner: {}", fee_for_partner);
+        let r = fee_for_partner * f64::from_u8(mint_info.decimals).unwrap().floor();
+        uint_fee_for_partner = r as u64;
+    }
+
+    let mut uint_fee_for_strm: u64 = 0;
+    if metadata.streamflow_fee_percent > 0.0 {
+        // TODO: Test units, and generic function
+        let fee_for_strm = amount as f64 * (metadata.streamflow_fee_percent / 100.0) as f64;
+        msg!("Fee for Streamflow: {}", fee_for_strm);
+        let r = fee_for_strm * f64::from_u8(mint_info.decimals).unwrap().floor();
+        uint_fee_for_strm = r as u64;
+    }
+
+    metadata.streamflow_fee_total += uint_fee_for_strm;
+    metadata.partner_fee_total += uint_fee_for_partner;
+    metadata.ix.deposited_amount += amount - uint_fee_for_strm - uint_fee_for_partner;
     metadata.closable_at = metadata.closable();
 
     let bytes = metadata.try_to_vec()?;

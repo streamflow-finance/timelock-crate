@@ -96,6 +96,7 @@ pub fn create(
         uint_fee_for_strm,
         strm_fee,
     );
+
     // Move closable_at (from third party), when recurring ignore end_date
     if ix.deposited_amount < ix.total_amount || ix.release_rate > 0 {
         metadata.closable_at = metadata.closable();
