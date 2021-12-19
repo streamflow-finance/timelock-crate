@@ -87,8 +87,15 @@ pub fn create(
         uint_fee_for_strm = r as u64;
     }
 
-    let mut metadata =
-        TokenStreamData::new(now, acc.clone(), ix.clone(), uint_fee_for_partner, uint_fee_for_strm);
+    let mut metadata = TokenStreamData::new(
+        now,
+        acc.clone(),
+        ix.clone(),
+        uint_fee_for_partner,
+        partner_fee,
+        uint_fee_for_strm,
+        strm_fee,
+    );
     // Move closable_at (from third party), when recurring ignore end_date
     if ix.deposited_amount < ix.total_amount || ix.release_rate > 0 {
         metadata.closable_at = metadata.closable();

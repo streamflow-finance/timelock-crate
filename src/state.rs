@@ -94,6 +94,8 @@ pub struct TokenStreamData {
     pub streamflow_fee_total: u64,
     /// The withdrawn fee amount for streamflow
     pub streamflow_fee_withdrawn: u64,
+    /// Fee percentage for Streamflow
+    pub streamflow_fee_percent: f32,
     /// Streamflow partner authority
     pub partner: Pubkey,
     /// Escrow account holding the locked tokens for Streamflow partner (fee account)
@@ -102,6 +104,8 @@ pub struct TokenStreamData {
     pub partner_fee_total: u64,
     /// The withdrawn fee amount for the partner
     pub partner_fee_withdrawn: u64,
+    /// Fee percentage for partner
+    pub partner_fee_percent: f32,
     /// The stream instruction
     pub ix: StreamInstruction,
 }
@@ -113,7 +117,9 @@ impl TokenStreamData {
         acc: InstructionAccounts,
         ix: StreamInstruction,
         partner_fee: u64,
+        partner_pct: f32,
         strm_fee: u64,
+        strm_pct: f32,
     ) -> Self {
         // TODO: calculate cancel_time based on other parameters (incl. deposited_amount)
         Self {
@@ -133,10 +139,12 @@ impl TokenStreamData {
             streamflow_treasury_tokens: *acc.streamflow_treasury_tokens.key,
             streamflow_fee_total: strm_fee,
             streamflow_fee_withdrawn: 0,
+            streamflow_fee_percent: strm_pct,
             partner: *acc.partner.key,
             partner_tokens: *acc.partner_tokens.key,
             partner_fee_total: partner_fee,
             partner_fee_withdrawn: 0,
+            partner_fee_percent: partner_pct,
             ix,
         }
     }
