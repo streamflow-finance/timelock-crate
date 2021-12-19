@@ -2,13 +2,17 @@ streamflow-timelock
 ===================
 **Disclaimer: Security audit under way.**
 
+This is a free and open-source community version of [Streamflow Timelock](../../tree/master) protocol, that comes with certain limitations compared to the commercial version.
+
 This Rust crate provides SPL timelock functionalities that can be used "out of the box" and integrated in other Solana programs.
 
 Functionalities are:
 - `create` a vesting contract.
-- `withdraw` from a vesting contract.
-- `cancel` a vesting contract.
-- `transfer_recipient` of a vesting contract.
+- `withdraw` from a vesting contract. _Invoked by recipient (beneficiary)_
+- `cancel` a vesting contract. _Invoked by sender (creator)_
+- `transfer_recipient` of a vesting contract. _Invoked by recipient (beneficiary)_
+
+UI is available at https://app.streamflow.finance/vesting
 
 High level overview
 --
