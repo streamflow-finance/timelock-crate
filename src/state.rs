@@ -155,13 +155,13 @@ impl TokenStreamData {
             stream_name,
         };
 
-        // TODO: calculate cancel_time based on other parameters (incl. deposited_amount)
+        // TODO: calculate closable_at based on other parameters
         Self {
             magic: PROGRAM_VERSION,
             created_at, //TODO: calculate
             withdrawn_amount: 0,
             canceled_at: 0,
-            closable_at: end_time,
+            closable_at: end_time, //TODO: calculate
             last_withdrawn_at: 0,
             sender,
             sender_tokens,
@@ -207,9 +207,10 @@ impl TokenStreamData {
         (periods_passed as f64 * period_amount) as u64 + cliff_amount - self.withdrawn_amount
     }
 
-    /// Calculate timestamp when stream is cancellable
+    /// Calculate timestamp when stream is closeable
     /// end_time when deposit=total else time when funds run out
     pub fn closable(&self) -> u64 {
+        //TODO: rename closable_at
         let cliff_time = if self.ix.cliff > 0 {
             self.ix.cliff
         } else {
