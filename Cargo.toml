@@ -1,9 +1,9 @@
 [package]
 name = "streamflow-timelock"
-version = "0.3.0"
+version = "0.3.1"
 homepage = "https://streamflow.finance"
 description = "Timelock crate for Solana programs"
-authors = ["Ivan Jelincic <parazyd@dyne.org>, imprfekt <imprfekt@icloud.com>"]
+authors = ["Streamflow Labs Limited <legal@streamflowlabs.com>"]
 repository = "https://github.com/streamflow-finance/timelock-crate"
 readme = "README.md"
 license = "AGPL-3.0-only"
