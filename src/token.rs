@@ -106,7 +106,7 @@ pub fn create(
         return Err(ProgramError::InvalidArgument);
     }
 
-    // TODO: Calculate cancel_data once continuous streams are ready
+    // TODO: Calculate closable_at once continuous streams are ready
     let mut metadata = TokenStreamData::new(
         now,
         *acc.sender.key,
@@ -131,7 +131,7 @@ pub fn create(
         ix.stream_name,
     );
 
-    // Move closable_at (from third party), when reccuring ignore end_date
+    // Move closable_at (from third party), when recurring ignore end_date
     if ix.deposited_amount < ix.total_amount || ix.release_rate > 0 {
         metadata.closable_at = metadata.closable();
         msg!("Closable at: {}", metadata.closable_at);
@@ -283,6 +283,7 @@ pub fn create(
 /// if there are any unlocked funds. If so, they will be transferred from the
 /// escrow account to the stream recipient. If the entire amount has been
 /// withdrawn, the remaining rents shall be returned to the stream initializer.
+
 pub fn withdraw(program_id: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResult {
     msg!("Withdrawing from SPL token stream");
 
@@ -309,7 +310,7 @@ pub fn withdraw(program_id: &Pubkey, acc: WithdrawAccounts, amount: u64) -> Prog
     if acc.token_program.key != &spl_token::id()
         || acc.escrow_tokens.key != &escrow_tokens_pubkey
         || acc.recipient_tokens.key != &recipient_tokens_key
-        //TODO: Update in future releases based on `is_withdrawal_public`
+        //TODO: Update based on `is_withdrawal_public`
         || acc.withdraw_authority.key != acc.recipient.key
     {
         return Err(ProgramError::InvalidAccountData);
@@ -383,7 +384,7 @@ pub fn withdraw(program_id: &Pubkey, acc: WithdrawAccounts, amount: u64) -> Prog
         if !acc.sender.is_writable || acc.sender.key != &metadata.sender {
             return Err(ProgramError::InvalidAccountData);
         }
-        //TODO: Close metadata account once there is alternative storage solution for historic data.
+        //Close metadata account once there is alternative storage solution for historic data.
         // let rent = acc.metadata.lamports();
         // **acc.metadata.try_borrow_mut_lamports()? -= rent;
         // **acc.sender.try_borrow_mut_lamports()? += rent;
