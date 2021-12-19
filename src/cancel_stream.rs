@@ -22,7 +22,7 @@ use crate::{
 /// The function will read the instructions from the metadata account and see
 /// if there are any unlocked funds. If so, they will be transferred to the
 /// stream recipient.
-pub(crate) fn cancel(program_id: &Pubkey, acc: InstructionAccounts) -> ProgramResult {
+pub fn cancel(program_id: &Pubkey, acc: InstructionAccounts) -> ProgramResult {
     msg!("Cancelling SPL token stream");
 
     let now = Clock::get()?.unix_timestamp as u64;

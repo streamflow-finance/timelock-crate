@@ -16,7 +16,7 @@ use crate::{
     utils::{encode_base10, unpack_mint_account},
 };
 
-pub(crate) fn topup(program_id: &Pubkey, acc: InstructionAccounts, amount: u64) -> ProgramResult {
+pub fn topup(program_id: &Pubkey, acc: InstructionAccounts, amount: u64) -> ProgramResult {
     msg!("Topping up escrow account");
 
     if !acc.sender.is_signer {

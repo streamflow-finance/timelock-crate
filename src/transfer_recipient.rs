@@ -11,7 +11,7 @@ use crate::{
     stream_safety::{initialized_account_sanity_check, metadata_sanity_check},
 };
 
-pub(crate) fn transfer_recipient(
+pub fn transfer_recipient(
     program_id: &Pubkey,
     acc: InstructionAccounts,
     recipient: Pubkey,

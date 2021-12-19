@@ -21,11 +21,7 @@ use crate::{
 /// The function will read the instructions from the metadata account and see
 /// if there are any unlocked funds. If so, they will be transferred from the
 /// escrow account to the stream recipient.
-pub(crate) fn withdraw(
-    program_id: &Pubkey,
-    acc: InstructionAccounts,
-    amount: u64,
-) -> ProgramResult {
+pub fn withdraw(program_id: &Pubkey, acc: InstructionAccounts, amount: u64) -> ProgramResult {
     msg!("Withdrawing from SPL token stream");
 
     let now = Clock::get()?.unix_timestamp as u64;

@@ -40,7 +40,7 @@ fn instruction_sanity_check(ix: StreamInstruction, now: u64) -> ProgramResult {
     Ok(())
 }
 
-pub(crate) fn create(
+pub fn create(
     program_id: &Pubkey,
     acc: InstructionAccounts,
     ix: StreamInstruction,

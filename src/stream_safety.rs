@@ -17,7 +17,7 @@ pub(crate) fn uninitialized_account_sanity_check(
     a: InstructionAccounts,
 ) -> ProgramResult {
     msg!("Checking if all given accounts are correct");
-    if !acc.escrow_tokens.data_is_empty() || !acc.metadata.data_is_empty() {
+    if !a.escrow_tokens.data_is_empty() || !a.metadata.data_is_empty() {
         return Err(ProgramError::AccountAlreadyInitialized)
     }
 
