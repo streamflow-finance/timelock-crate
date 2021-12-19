@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Ivan Jelincic <parazyd@dyne.org>, imprfekt <imprfekt@icloud.com>
+// Copyright (c) 2021 Streamflow Labs Limited <legal@streamflowlabs.com>
 //
 // This file is part of streamflow-finance/timelock-crate
 //
@@ -24,7 +24,7 @@ pub struct StreamInstruction {
     pub start_time: u64,
     /// Timestamp when all tokens are fully vested
     pub end_time: u64,
-    /// Initially deposited amount of tokens (<= total_amount)
+    /// Initially deposited amount of tokens (currently not used, set to `total_amount` and left for extension in future)
     pub deposited_amount: u64,
     /// Total amount of the tokens in the escrow account if contract is fully vested
     pub total_amount: u64,
@@ -42,7 +42,7 @@ pub struct StreamInstruction {
     pub is_withdrawal_public: bool,
     /// Whether or not a recipient can transfer the stream (currently not used, set to TRUE)
     pub is_transferable: bool,
-    //4 bytes of padding to make the struct size multiple of 64bit (8 bytes)
+    //4 bytes of padding to make the struct size multiple of 64 bits (8 bytes), non-meaningful data.
     pub padding: u32,
 }
 
@@ -61,7 +61,32 @@ impl Default for StreamInstruction {
             is_withdrawal_public: false,
             is_transferable: true,
             padding: 0,
-            //title: "".to_string(),
+        }
+    }
+}
+
+impl StreamInstruction {
+    pub fn new(
+        start_time: u64,
+        end_time: u64,
+        total_amount: u64,
+        period: u64,
+        cliff: u64,
+        cliff_amount: u64,
+    ) -> Self {
+        Self {
+            start_time,
+            end_time,
+            total_amount,
+            deposited_amount: total_amount,
+            period,
+            cliff,
+            cliff_amount,
+            is_cancelable_by_sender: true,
+            is_cancelable_by_recipient: false,
+            is_withdrawal_public: false,
+            is_transferable: true,
+            padding: 0,
         }
     }
 }
@@ -113,33 +138,26 @@ impl TokenStreamData {
         escrow_tokens: Pubkey,
         start_time: u64,
         end_time: u64,
-        deposited_amount: u64,
         total_amount: u64,
         period: u64,
         cliff: u64,
         cliff_amount: u64,
-        is_cancelable_by_sender: bool,
-        is_cancelable_by_recipient: bool,
-        is_withdrawal_public: bool,
-        is_transferable: bool,
-        //title: String,
     ) -> Self {
         let ix = StreamInstruction {
             start_time,
             end_time,
-            deposited_amount,
+            deposited_amount: total_amount,
             total_amount,
             period,
             cliff,
             cliff_amount,
-            is_cancelable_by_sender,
-            is_cancelable_by_recipient,
-            is_withdrawal_public,
-            is_transferable,
-            // title,
+            is_cancelable_by_sender: true,
+            is_cancelable_by_recipient: false,
+            is_withdrawal_public: false,
+            is_transferable: true,
             padding: 0,
         };
-        // TODO: calculate cancel_time based on other parameters (incl. deposited_amount)
+
         Self {
             magic: 0,
             created_at,
@@ -179,7 +197,6 @@ impl TokenStreamData {
             0
         };
 
-        // TODO: Use uint arithmetics, floats are imprecise
         let num_periods = (self.ix.end_time - cliff) as f64 / self.ix.period as f64;
         let period_amount = (self.ix.total_amount - cliff_amount) as f64 / num_periods;
         let periods_passed = (now - cliff) / self.ix.period;
@@ -243,7 +260,7 @@ pub struct WithdrawAccounts<'a> {
 /// The account-holding struct for the stream cancel instruction
 pub struct CancelAccounts<'a> {
     /// Account invoking cancel. Must match `sender`.
-    //Can be either `sender` or `recipient` depending on the value of `is_cancelable_by_sender` and `is_cancelable_by_recipient`
+    //Can be either `sender` or `recipient` depending on the value of `is_cancelable_by_sender` and `is_cancelable_by_recipient`, respectively
     pub cancel_authority: AccountInfo<'a>,
     /// The main wallet address of the initializer
     pub sender: AccountInfo<'a>,

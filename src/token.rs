@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Ivan Jelincic <parazyd@dyne.org>
+// Copyright (c) 2021 Streamflow Labs Limited <legal@streamflowlabs.com>
 //
 // This file is part of streamflow-finance/timelock-crate
 //
@@ -53,13 +53,12 @@ pub fn create(
 
     if !acc.sender.is_writable
         || !acc.sender_tokens.is_writable
-        || !acc.recipient.is_writable // TODO: Could it be read-only?
+        || !acc.recipient.is_writable
         || !acc.recipient_tokens.is_writable
         || !acc.metadata.is_writable
         || !acc.escrow_tokens.is_writable
     {
-        // TODO: Add custom error "Accounts not writable"
-        return Err(ProgramError::Custom(1));
+        return Err(ProgramError::InvalidAccountData);
     }
 
     let (escrow_tokens_pubkey, nonce) =
@@ -106,7 +105,6 @@ pub fn create(
     let fees = Fees::get()?;
     let lps = fees.fee_calculator.lamports_per_signature;
 
-    // TODO: Check if wrapped SOL
     if acc.sender.lamports() < metadata_rent + tokens_rent + (2 * lps) {
         msg!("Error: Insufficient funds in {}", acc.sender.key);
         return Err(ProgramError::InsufficientFunds);
@@ -117,7 +115,6 @@ pub fn create(
         return Err(ProgramError::InsufficientFunds);
     }
 
-    // TODO: Calculate cancel_data once continuous streams are ready
     let metadata = TokenStreamData::new(
         now,
         *acc.sender.key,
@@ -129,14 +126,9 @@ pub fn create(
         ix.start_time,
         ix.end_time,
         ix.total_amount,
-        ix.total_amount,
         ix.period,
         ix.cliff,
         ix.cliff_amount,
-        ix.is_cancelable_by_sender,
-        ix.is_cancelable_by_recipient,
-        ix.is_withdrawal_public,
-        ix.is_transferable,
     );
     let bytes = metadata.try_to_vec()?;
 
@@ -282,7 +274,6 @@ pub fn withdraw(program_id: &Pubkey, acc: WithdrawAccounts, amount: u64) -> Prog
     if acc.token_program.key != &spl_token::id()
         || acc.escrow_tokens.key != &escrow_tokens_pubkey
         || acc.recipient_tokens.key != &recipient_tokens_key
-        //TODO: Update in future releases based on `is_withdrawal_public`
         || acc.withdraw_authority.key != acc.recipient.key
     {
         return Err(ProgramError::InvalidAccountData);
@@ -295,8 +286,7 @@ pub fn withdraw(program_id: &Pubkey, acc: WithdrawAccounts, amount: u64) -> Prog
     let mut data = acc.metadata.try_borrow_mut_data()?;
     let mut metadata = match TokenStreamData::try_from_slice(&data) {
         Ok(v) => v,
-        // TODO: Add "Invalid Metadata" as error
-        Err(_) => return Err(ProgramError::Custom(2)),
+        Err(_) => return Err(ProgramError::InvalidAccountData),
     };
 
     let mint_info = unpack_mint_account(&acc.mint)?;
@@ -419,7 +409,7 @@ pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
 
     if !acc.sender.is_writable
         || !acc.sender_tokens.is_writable
-        || !acc.recipient.is_writable // TODO: Might not be needed
+        || !acc.recipient.is_writable
         || !acc.recipient_tokens.is_writable
         || !acc.metadata.is_writable
         || !acc.escrow_tokens.is_writable
@@ -434,7 +424,6 @@ pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
     if acc.token_program.key != &spl_token::id()
         || acc.escrow_tokens.key != &escrow_tokens_pubkey
         || acc.recipient_tokens.key != &recipient_tokens_key
-        //TODO: Update in future releases based on `is_cancelable_by_sender/recipient`
         || acc.cancel_authority.key != acc.sender.key
     {
         return Err(ProgramError::InvalidAccountData);
@@ -447,8 +436,7 @@ pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
     let mut data = acc.metadata.try_borrow_mut_data()?;
     let mut metadata = match TokenStreamData::try_from_slice(&data) {
         Ok(v) => v,
-        // TODO: Invalid Metadata error
-        Err(_) => return Err(ProgramError::Custom(3)),
+        Err(_) => return Err(ProgramError::InvalidAccountData),
     };
 
     let mint_info = unpack_mint_account(&acc.mint)?;
@@ -509,7 +497,6 @@ pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         )?;
     }
 
-    // TODO: Check this for wrapped SOL
     let rent_escrow_tokens = acc.escrow_tokens.lamports();
     // let remains_meta = acc.metadata.lamports();
 
@@ -529,8 +516,6 @@ pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         ],
         &[&seeds],
     )?;
-
-    //TODO: Close metadata account once there is alternative storage solution for historic data.
 
     metadata.last_withdrawn_at = now;
     metadata.canceled_at = now;
@@ -580,8 +565,7 @@ pub fn transfer_recipient(program_id: &Pubkey, acc: TransferAccounts) -> Program
     let mut data = acc.metadata.try_borrow_mut_data()?;
     let mut metadata = match TokenStreamData::try_from_slice(&data) {
         Ok(v) => v,
-        // TODO: Add "Invalid Metadata" as an error
-        Err(_) => return Err(ProgramError::Custom(3)),
+        Err(_) => return Err(ProgramError::InvalidAccountData),
     };
 
     let (escrow_tokens_pubkey, _) =
@@ -609,7 +593,6 @@ pub fn transfer_recipient(program_id: &Pubkey, acc: TransferAccounts) -> Program
         let fees = Fees::get()?;
         let lps = fees.fee_calculator.lamports_per_signature;
 
-        // TODO: Check if wrapped SOL
         if acc.existing_recipient.lamports() < tokens_rent + lps {
             msg!(
                 "Error: Insufficient funds in {}",
