@@ -1,6 +1,6 @@
 [package]
 name = "streamflow-timelock"
-version = "0.3.1"
+version = "0.3.2"
 homepage = "https://streamflow.finance"
 description = "Timelock crate for Solana programs"
 authors = ["Streamflow Labs Limited <legal@streamflowlabs.com>"]
