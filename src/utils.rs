@@ -17,7 +17,7 @@ use std::iter::FromIterator;
 
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
-    program_pack::Pack,
+    program_pack::Pack, pubkey::Pubkey
 };
 
 use crate::{error::SfError, state::StreamInstruction};
@@ -93,6 +93,40 @@ pub fn calculate_available(now: u64, ix: StreamInstruction, total: u64, withdraw
 
     let periods_passed = (now - cliff) / ix.period;
     (periods_passed as f64 * period_amount) as u64 + cliff_amount - withdrawn
+}
+
+pub enum Invoker {
+    Sender,
+    Recipient,
+    None,
+}
+
+impl Invoker {
+    pub fn new(authority: &Pubkey, sender: &Pubkey, recipient: &Pubkey) -> Self {
+        if authority == sender {
+            Self::Sender
+        } else if authority == recipient {
+            Self::Recipient
+        } else {
+            Self::None
+        }
+    }
+
+    pub fn can_cancel(&self, ix: &StreamInstruction) -> bool {
+        match self {
+            Self::Sender => ix.cancelable_by_sender,
+            Self::Recipient => ix.cancelable_by_recipient,
+            Self::None => false,
+        }
+    }
+
+    pub fn can_transfer(&self, ix: &StreamInstruction) -> bool {
+        match self {
+            Self::Sender => ix.transferable_by_sender,
+            Self::Recipient => ix.transferable_by_recipient,
+            Self::None => false,
+        }
+    }
 }
 
 #[allow(unused_imports)]

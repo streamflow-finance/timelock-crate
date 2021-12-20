@@ -5,10 +5,12 @@ use solana_program::{
 };
 use spl_associated_token_account::get_associated_token_address;
 
+
 use crate::{
     error::SfError,
     state::{InstructionAccounts, TokenStreamData},
     stream_safety::{initialized_account_sanity_check, metadata_sanity_check},
+    utils::Invoker
 };
 
 pub fn transfer_recipient(
@@ -33,20 +35,13 @@ pub fn transfer_recipient(
         Err(_) => return Err(SfError::InvalidMetadata.into()),
     };
 
-    if !metadata.ix.transferable_by_recipient && !metadata.ix.transferable_by_sender {
-        return Err(SfError::TransferNotAllowed.into())
-    }
-
-    let mut authorized = false;
-    if metadata.ix.transferable_by_recipient && &metadata.recipient == acc.authority.key {
-        authorized = true;
-    }
-    if metadata.ix.transferable_by_sender && &metadata.sender == acc.authority.key {
-        authorized = true;
-    }
-
-    if !authorized {
-        return Err(SfError::TransferNotAllowed.into())
+    let cancel_authority = Invoker::new(
+        &acc.authorized_wallet.key,
+        &metadata.sender,
+        &metadata.recipient,
+    );
+    if !cancel_authority.can_transfer(&metadata.ix) {
+        return Err(SfError::TransferNotAllowed.into());
     }
 
     // Check if the passed arg is an associated token address

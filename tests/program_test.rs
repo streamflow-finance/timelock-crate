@@ -1,9 +1,8 @@
 use anyhow::Result;
-use borsh::{BorshDeserialize, BorshSerialize};
+use borsh::BorshSerialize;
 use solana_program::program_error::ProgramError;
-use solana_program_test::{processor, tokio};
+use solana_program_test::tokio;
 use solana_sdk::{
-    clock::UnixTimestamp,
     instruction::{AccountMeta, Instruction},
     program_pack::Pack,
     pubkey::Pubkey,
@@ -13,75 +12,14 @@ use solana_sdk::{
     sysvar::rent,
 };
 use spl_associated_token_account::get_associated_token_address;
-use test_sdk::{tools::clone_keypair, ProgramTestBench, TestBenchProgram};
+use test_sdk::tools::clone_keypair;
 
-use streamflow_timelock::{
-    entrypoint::process_instruction,
-    state::{StreamInstruction, TokenStreamData, PROGRAM_VERSION},
-};
+use streamflow_timelock::state::{StreamInstruction, TokenStreamData, PROGRAM_VERSION};
 
-#[derive(BorshSerialize, BorshDeserialize, Clone)]
-struct CreateStreamIx {
-    ix: u8,
-    metadata: StreamInstruction,
-}
+mod fascilities;
 
-#[derive(BorshSerialize, BorshDeserialize, Clone)]
-struct WithdrawStreamIx {
-    ix: u8,
-    amount: u64,
-}
+use fascilities::*;
 
-#[derive(BorshSerialize, BorshDeserialize, Clone)]
-struct TopUpIx {
-    ix: u8,
-    amount: u64,
-}
-
-#[derive(BorshSerialize, BorshDeserialize, Clone)]
-struct CancelIx {
-    ix: u8,
-}
-
-#[derive(BorshSerialize, BorshDeserialize, Clone)]
-struct TransferIx {
-    ix: u8,
-}
-
-pub struct TimelockProgramTest {
-    pub bench: ProgramTestBench,
-    pub program_id: Pubkey,
-}
-
-impl TimelockProgramTest {
-    pub async fn start_new() -> Self {
-        let program_id = Keypair::new().pubkey();
-
-        let program = TestBenchProgram {
-            program_name: "streamflow_timelock",
-            program_id,
-            process_instruction: processor!(process_instruction),
-        };
-
-        let bench = ProgramTestBench::start_new(&[program]).await;
-
-        Self { bench, program_id }
-    }
-
-    pub async fn advance_clock_past_timestamp(&mut self, unix_timestamp: UnixTimestamp) {
-        let mut clock = self.bench.get_clock().await;
-        let mut n = 1;
-
-        while clock.unix_timestamp <= unix_timestamp {
-            // Since the exact time is not deterministic, keep wrapping by
-            // arbitrary 400 slots until we pass the requested timestamp.
-            self.bench.context.warp_to_slot(clock.slot + n * 400).unwrap();
-
-            n += 1;
-            clock = self.bench.get_clock().await;
-        }
-    }
-}
 
 #[tokio::test]
 async fn timelock_program_test() -> Result<()> {

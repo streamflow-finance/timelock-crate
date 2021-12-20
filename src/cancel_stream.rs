@@ -14,7 +14,7 @@ use crate::{
     error::SfError,
     state::{InstructionAccounts, TokenStreamData},
     stream_safety::{initialized_account_sanity_check, metadata_sanity_check},
-    utils::{calculate_available, encode_base10, unpack_mint_account},
+    utils::{calculate_available, encode_base10, unpack_mint_account, Invoker},
 };
 
 /// Cancel an SPL Token stream
@@ -41,12 +41,16 @@ pub fn cancel(program_id: &Pubkey, acc: InstructionAccounts) -> ProgramResult {
     // If stream is expired, anyone can close it
     if now < metadata.closable_at {
         msg!("Stream not yet expired, checking authorization");
-        if acc.authority.key != acc.sender.key {
-            return Err(ProgramError::InvalidAccountData)
-        }
-
         if !acc.authority.is_signer {
             return Err(ProgramError::MissingRequiredSignature)
+        }
+        let cancel_authority = Invoker::new(
+            &acc.authority.key,
+            &acc.sender.key,
+            &acc.recipient.key,
+        );
+        if !cancel_authority.can_cancel(&metadata.ix) {
+            return Err(ProgramError::InvalidAccountData);
         }
     }
 
