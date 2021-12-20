@@ -26,7 +26,7 @@ use solana_program::{
 
 use crate::{
     cancel_stream::cancel,
-    create_stream::create,
+    create_stream::{create, CreateAccounts},
     state::{InstructionAccounts, StreamInstruction},
     topup_stream::topup,
     transfer_recipient::transfer_recipient,
@@ -58,6 +58,23 @@ pub fn process_instruction(pid: &Pubkey, acc: &[AccountInfo], ix: &[u8]) -> Prog
 
     match ix[0] {
         0 => {
+            let ia = CreateAccounts {
+                sender: next_account_info(ai)?.clone(),
+                sender_tokens: next_account_info(ai)?.clone(),
+                recipient: next_account_info(ai)?.clone(),
+                recipient_tokens: next_account_info(ai)?.clone(),
+                metadata: next_account_info(ai)?.clone(),
+                escrow_tokens: next_account_info(ai)?.clone(),
+                streamflow_treasury: next_account_info(ai)?.clone(),
+                streamflow_treasury_tokens: next_account_info(ai)?.clone(),
+                partner: next_account_info(ai)?.clone(),
+                partner_tokens: next_account_info(ai)?.clone(),
+                mint: next_account_info(ai)?.clone(),
+                rent: next_account_info(ai)?.clone(),
+                token_program: next_account_info(ai)?.clone(),
+                associated_token_program: next_account_info(ai)?.clone(),
+                system_program: next_account_info(ai)?.clone(),
+            };
             let si = StreamInstruction::try_from_slice(&ix[1..])?;
             return create(pid, ia, si)
         }

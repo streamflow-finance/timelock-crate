@@ -1,25 +1,46 @@
+use std::str::FromStr;
+
 use borsh::BorshSerialize;
 use num_traits::cast::FromPrimitive;
 use partner_oracle::fees::fetch_partner_fee_data;
 use solana_program::{
+    account_info::AccountInfo,
     entrypoint::ProgramResult,
     msg,
     program::{invoke, invoke_signed},
     program_error::ProgramError,
     program_pack::Pack,
     pubkey::Pubkey,
-    system_instruction,
+    system_instruction, system_program, sysvar,
     sysvar::{clock::Clock, rent::Rent, Sysvar},
 };
-use spl_associated_token_account::create_associated_token_account;
+use spl_associated_token_account::{create_associated_token_account, get_associated_token_address};
 
 use crate::{
     error::SfError,
-    state::{InstructionAccounts, StreamInstruction, TokenStreamData},
-    stream_safety::uninitialized_account_sanity_check,
+    state::{StreamInstruction, TokenStreamData},
     utils::{duration_sanity, encode_base10, pretty_time, unpack_mint_account},
-    MAX_STRING_SIZE,
+    MAX_STRING_SIZE, STRM_TREASURY,
 };
+
+#[derive(Clone, Debug)]
+pub struct CreateAccounts<'a> {
+    pub sender: AccountInfo<'a>,
+    pub sender_tokens: AccountInfo<'a>,
+    pub recipient: AccountInfo<'a>,
+    pub recipient_tokens: AccountInfo<'a>,
+    pub metadata: AccountInfo<'a>,
+    pub escrow_tokens: AccountInfo<'a>,
+    pub streamflow_treasury: AccountInfo<'a>,
+    pub streamflow_treasury_tokens: AccountInfo<'a>,
+    pub partner: AccountInfo<'a>,
+    pub partner_tokens: AccountInfo<'a>,
+    pub mint: AccountInfo<'a>,
+    pub rent: AccountInfo<'a>,
+    pub token_program: AccountInfo<'a>,
+    pub associated_token_program: AccountInfo<'a>,
+    pub system_program: AccountInfo<'a>,
+}
 
 fn instruction_sanity_check(ix: StreamInstruction, now: u64) -> ProgramResult {
     // We'll limit the stream name lenggth
@@ -40,11 +61,66 @@ fn instruction_sanity_check(ix: StreamInstruction, now: u64) -> ProgramResult {
     Ok(())
 }
 
-pub fn create(
-    program_id: &Pubkey,
-    acc: InstructionAccounts,
-    ix: StreamInstruction,
-) -> ProgramResult {
+fn account_sanity_check(program_id: &Pubkey, a: CreateAccounts) -> ProgramResult {
+    msg!("Checking if all given accounts are correct");
+    if !a.escrow_tokens.data_is_empty() || !a.metadata.data_is_empty() {
+        return Err(ProgramError::AccountAlreadyInitialized)
+    }
+
+    // We want these accounts to be writable
+    if !a.sender.is_writable ||
+        !a.sender_tokens.is_writable ||
+        !a.recipient_tokens.is_writable ||
+        !a.metadata.is_writable ||
+        !a.escrow_tokens.is_writable ||
+        !a.streamflow_treasury_tokens.is_writable ||
+        !a.partner_tokens.is_writable
+    {
+        return Err(SfError::AccountsNotWritable.into())
+    }
+
+    // Check if the associated token accounts are legit
+    let strm_treasury_pubkey = Pubkey::from_str(STRM_TREASURY).unwrap();
+    let strm_treasury_tokens = get_associated_token_address(&strm_treasury_pubkey, a.mint.key);
+    let sender_tokens = get_associated_token_address(a.sender.key, a.mint.key);
+    let recipient_tokens = get_associated_token_address(a.recipient.key, a.mint.key);
+    let partner_tokens = get_associated_token_address(a.partner.key, a.mint.key);
+
+    if a.streamflow_treasury.key != &strm_treasury_pubkey ||
+        a.streamflow_treasury_tokens.key != &strm_treasury_tokens
+    {
+        return Err(SfError::InvalidTreasury.into())
+    }
+
+    if a.sender_tokens.key != &sender_tokens ||
+        a.recipient_tokens.key != &recipient_tokens ||
+        a.partner_tokens.key != &partner_tokens
+    {
+        return Err(SfError::MintMismatch.into())
+    }
+
+    // Check escrow token account is legit
+    // TODO: Needs a deterministic seed and metadata should become a PDA
+    let escrow_tokens_pubkey =
+        Pubkey::find_program_address(&[a.metadata.key.as_ref()], program_id).0;
+    if &escrow_tokens_pubkey != a.escrow_tokens.key {
+        return Err(ProgramError::InvalidAccountData)
+    }
+
+    // On-chain program ID checks
+    if a.rent.key != &sysvar::rent::id() ||
+        a.token_program.key != &spl_token::id() ||
+        a.associated_token_program.key != &spl_associated_token_account::id() ||
+        a.system_program.key != &system_program::id()
+    {
+        return Err(ProgramError::InvalidAccountData)
+    }
+
+    // Passed without touching the lasers
+    Ok(())
+}
+
+pub fn create(program_id: &Pubkey, acc: CreateAccounts, ix: StreamInstruction) -> ProgramResult {
     msg!("Initializing SPL token stream");
 
     if !acc.sender.is_signer || !acc.metadata.is_signer {
@@ -56,7 +132,7 @@ pub fn create(
     let mint_info = unpack_mint_account(&acc.mint)?;
 
     // Sanity checks
-    uninitialized_account_sanity_check(program_id, acc.clone())?;
+    account_sanity_check(program_id, acc.clone())?;
     instruction_sanity_check(ix.clone(), now)?;
     // TODO: Check available balances?
 
