@@ -57,7 +57,7 @@ pub struct StreamInstruction {
 }
 
 /// TokenStreamData is the struct containing metadata for an SPL token stream.
-#[derive(BorshSerialize, BorshDeserialize, Debug)]
+#[derive(BorshSerialize, BorshDeserialize, Clone, Debug)]
 #[repr(C)]
 pub struct TokenStreamData {
     /// Magic bytes, will be used for version of the contract

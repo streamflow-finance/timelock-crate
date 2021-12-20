@@ -63,6 +63,8 @@ fn instruction_sanity_check(ix: StreamInstruction, now: u64) -> ProgramResult {
 
 fn account_sanity_check(program_id: &Pubkey, a: CreateAccounts) -> ProgramResult {
     msg!("Checking if all given accounts are correct");
+
+    // We want these to not be initialized
     if !a.escrow_tokens.data_is_empty() || !a.metadata.data_is_empty() {
         return Err(ProgramError::AccountAlreadyInitialized)
     }

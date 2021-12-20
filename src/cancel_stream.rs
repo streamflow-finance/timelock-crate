@@ -1,5 +1,6 @@
 use borsh::BorshSerialize;
 use solana_program::{
+    account_info::AccountInfo,
     borsh as solana_borsh,
     entrypoint::ProgramResult,
     msg,
@@ -13,24 +14,41 @@ use spl_associated_token_account::create_associated_token_account;
 use crate::{
     error::SfError,
     state::{InstructionAccounts, TokenStreamData},
-    stream_safety::{initialized_account_sanity_check, metadata_sanity_check},
     utils::{calculate_available, encode_base10, unpack_mint_account, Invoker},
 };
+
+#[derive(Clone, Debug)]
+pub struct CancelAccounts<'a> {
+    pub authority: AccountInfo<'a>,
+    pub sender: AccountInfo<'a>,
+    pub sender_tokens: AccountInfo<'a>,
+    pub recipient: AccountInfo<'a>,
+    pub recipient_tokens: AccountInfo<'a>,
+    pub metadata: AccountInfo<'a>,
+    pub escrow_tokens: AccountInfo<'a>,
+    pub streamflow_treasury: AccountInfo<'a>,
+    pub streamflow_treasury_tokens: AccountInfo<'a>,
+    pub partner: AccountInfo<'a>,
+    pub partner_tokens: AccountInfo<'a>,
+    pub mint: AccountInfo<'a>,
+    pub rent: AccountInfo<'a>,
+    pub token_program: AccountInfo<'a>,
+    pub system_program: AccountInfo<'a>,
+}
 
 /// Cancel an SPL Token stream
 ///
 /// The function will read the instructions from the metadata account and see
 /// if there are any unlocked funds. If so, they will be transferred to the
 /// stream recipient.
-pub fn cancel(program_id: &Pubkey, acc: InstructionAccounts) -> ProgramResult {
+pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
     msg!("Cancelling SPL token stream");
 
     let now = Clock::get()?.unix_timestamp as u64;
     let mint_info = unpack_mint_account(&acc.mint)?;
 
     // Sanity checks
-    initialized_account_sanity_check(program_id, acc.clone())?;
-    metadata_sanity_check(acc.clone())?;
+    account_sanity_check(program_id, acc.clone())?;
 
     let mut data = acc.metadata.try_borrow_mut_data()?;
     let mut metadata: TokenStreamData = match solana_borsh::try_from_slice_unchecked(&data) {
@@ -38,19 +56,18 @@ pub fn cancel(program_id: &Pubkey, acc: InstructionAccounts) -> ProgramResult {
         Err(_) => return Err(SfError::InvalidMetadata.into()),
     };
 
+    metadata_sanity_check(acc.clone(), metadata.clone())?;
+
     // If stream is expired, anyone can close it
     if now < metadata.closable_at {
         msg!("Stream not yet expired, checking authorization");
         if !acc.authority.is_signer {
             return Err(ProgramError::MissingRequiredSignature)
         }
-        let cancel_authority = Invoker::new(
-            &acc.authority.key,
-            &acc.sender.key,
-            &acc.recipient.key,
-        );
+        let cancel_authority =
+            Invoker::new(&acc.authority.key, &acc.sender.key, &acc.recipient.key);
         if !cancel_authority.can_cancel(&metadata.ix) {
-            return Err(ProgramError::InvalidAccountData);
+            return Err(ProgramError::InvalidAccountData)
         }
     }
 

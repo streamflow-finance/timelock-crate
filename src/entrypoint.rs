@@ -30,7 +30,7 @@ use crate::{
     state::{InstructionAccounts, StreamInstruction},
     topup_stream::topup,
     transfer_recipient::transfer_recipient,
-    withdraw_stream::withdraw,
+    withdraw_stream::{withdraw, WithdrawAccounts},
 };
 
 entrypoint!(process_instruction);
@@ -79,6 +79,24 @@ pub fn process_instruction(pid: &Pubkey, acc: &[AccountInfo], ix: &[u8]) -> Prog
             return create(pid, ia, si)
         }
         1 => {
+            let ia = WithdrawAccounts {
+                authority: next_account_info(ai)?.clone(),
+                sender: next_account_info(ai)?.clone(),
+                sender_tokens: next_account_info(ai)?.clone(),
+                recipient: next_account_info(ai)?.clone(),
+                recipient_tokens: next_account_info(ai)?.clone(),
+                metadata: next_account_info(ai)?.clone(),
+                escrow_tokens: next_account_info(ai)?.clone(),
+                streamflow_treasury: next_account_info(ai)?.clone(),
+                streamflow_treasury_tokens: next_account_info(ai)?.clone(),
+                partner: next_account_info(ai)?.clone(),
+                partner_tokens: next_account_info(ai)?.clone(),
+                mint: next_account_info(ai)?.clone(),
+                rent: next_account_info(ai)?.clone(),
+                token_program: next_account_info(ai)?.clone(),
+                associated_token_program: next_account_info(ai)?.clone(),
+                system_program: next_account_info(ai)?.clone(),
+            };
             let amount = u64::from_le_bytes(ix[1..].try_into().unwrap());
             return withdraw(pid, ia, amount)
         }
