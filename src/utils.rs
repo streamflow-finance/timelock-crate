@@ -13,11 +13,9 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
-use std::iter::FromIterator;
-
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
-    program_pack::Pack, pubkey::Pubkey
+    program_pack::Pack, pubkey::Pubkey,
 };
 
 use crate::{error::SfError, state::StreamInstruction};
@@ -61,17 +59,9 @@ pub fn pretty_time(t: u64) -> String {
     format!("{} days, {} hours, {} minutes, {} seconds", days, hours, minutes, seconds)
 }
 
-/// Encode given amount to a string with given decimal places.
-pub fn encode_base10(amount: u64, decimal_places: usize) -> String {
-    let mut s: Vec<char> =
-        format!("{:0width$}", amount, width = 1 + decimal_places).chars().collect();
-    s.insert(s.len() - decimal_places, '.');
-
-    String::from_iter(&s).trim_end_matches('0').trim_end_matches('.').to_string()
-}
-
+// TODO: Test units, be robust against possible overflows.
 pub fn calculate_available(now: u64, ix: StreamInstruction, total: u64, withdrawn: u64) -> u64 {
-    if ix.start_time > now || ix.cliff > now {
+    if ix.start_time > now || ix.cliff > now || total == 0 || total == withdrawn {
         return 0
     }
 
@@ -93,6 +83,16 @@ pub fn calculate_available(now: u64, ix: StreamInstruction, total: u64, withdraw
 
     let periods_passed = (now - cliff) / ix.period;
     (periods_passed as f64 * period_amount) as u64 + cliff_amount - withdrawn
+}
+
+/// Given amount and percentage, return the u64 of that percentage.
+pub fn calculate_fee_from_amount(amount: u64, percentage: f32) -> u64 {
+    if percentage <= 0.0 {
+        return 0
+    }
+
+    // TODO: Test units
+    (amount as f64 * (percentage / 100.0) as f64) as u64
 }
 
 pub enum Invoker {

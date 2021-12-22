@@ -29,12 +29,11 @@ pub mod state;
 /// Utility functions
 pub(crate) mod utils;
 
-pub(crate) mod cancel_stream;
-pub(crate) mod create_stream;
-pub(crate) mod stream_safety;
-pub(crate) mod topup_stream;
-pub(crate) mod transfer_recipient;
-pub(crate) mod withdraw_stream;
+pub mod cancel_stream;
+pub mod create_stream;
+pub mod topup_stream;
+pub mod transfer_recipient;
+pub mod withdraw_stream;
 
 pub(crate) const STRM_TREASURY: &str = "Ht5G1RhkcKnpLVLMhqJc5aqZ4wYUEbxbtZwGCVbgU7DL";
 

@@ -18,6 +18,8 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{account_info::AccountInfo, msg, pubkey::Pubkey};
 
+use crate::create_stream::CreateAccounts;
+
 // Hardcoded program version
 pub const PROGRAM_VERSION: u64 = 2;
 
@@ -114,7 +116,7 @@ impl TokenStreamData {
     /// Initialize a new `TokenStreamData` struct.
     pub fn new(
         now: u64,
-        acc: InstructionAccounts,
+        acc: CreateAccounts,
         ix: StreamInstruction,
         partner_fee: u64,
         partner_pct: f32,

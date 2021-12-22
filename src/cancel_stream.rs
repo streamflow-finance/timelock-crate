@@ -1,20 +1,24 @@
+use std::str::FromStr;
+
 use borsh::BorshSerialize;
 use solana_program::{
     account_info::AccountInfo,
     borsh as solana_borsh,
     entrypoint::ProgramResult,
     msg,
-    program::{invoke, invoke_signed},
+    program::invoke_signed,
     program_error::ProgramError,
     pubkey::Pubkey,
     sysvar::{clock::Clock, Sysvar},
 };
-use spl_associated_token_account::create_associated_token_account;
+use spl_associated_token_account::get_associated_token_address;
+use spl_token::amount_to_ui_amount;
 
 use crate::{
     error::SfError,
-    state::{InstructionAccounts, TokenStreamData},
-    utils::{calculate_available, encode_base10, unpack_mint_account, Invoker},
+    state::TokenStreamData,
+    utils::{calculate_available, unpack_mint_account, Invoker},
+    STRM_TREASURY,
 };
 
 #[derive(Clone, Debug)]
@@ -31,9 +35,86 @@ pub struct CancelAccounts<'a> {
     pub partner: AccountInfo<'a>,
     pub partner_tokens: AccountInfo<'a>,
     pub mint: AccountInfo<'a>,
-    pub rent: AccountInfo<'a>,
     pub token_program: AccountInfo<'a>,
-    pub system_program: AccountInfo<'a>,
+}
+
+fn account_sanity_check(pid: &Pubkey, a: CancelAccounts) -> ProgramResult {
+    msg!("Checking if all given accounts are correct");
+
+    // These accounts must not be empty, and need to have correct ownership
+    if a.escrow_tokens.data_is_empty() || a.escrow_tokens.owner != &spl_token::id() {
+        return Err(SfError::InvalidEscrowAccount.into())
+    }
+
+    if a.metadata.data_is_empty() || a.metadata.owner != pid {
+        return Err(SfError::InvalidMetadataAccount.into())
+    }
+
+    // We want these accounts to be writable
+    if !a.authority.is_writable ||
+        !a.recipient_tokens.is_writable ||
+        !a.metadata.is_writable ||
+        !a.escrow_tokens.is_writable ||
+        !a.streamflow_treasury_tokens.is_writable ||
+        !a.partner_tokens.is_writable
+    {
+        return Err(SfError::AccountsNotWritable.into())
+    }
+
+    // Check if the associated token accounts are legit
+    let strm_treasury_pubkey = Pubkey::from_str(STRM_TREASURY).unwrap();
+    let strm_treasury_tokens = get_associated_token_address(&strm_treasury_pubkey, a.mint.key);
+    let sender_tokens = get_associated_token_address(a.sender.key, a.mint.key);
+    let recipient_tokens = get_associated_token_address(a.recipient.key, a.mint.key);
+    let partner_tokens = get_associated_token_address(a.partner.key, a.mint.key);
+
+    if a.streamflow_treasury.key != &strm_treasury_pubkey ||
+        a.streamflow_treasury_tokens.key != &strm_treasury_tokens
+    {
+        return Err(SfError::InvalidTreasury.into())
+    }
+
+    if a.sender_tokens.key != &sender_tokens ||
+        a.recipient_tokens.key != &recipient_tokens ||
+        a.partner_tokens.key != &partner_tokens
+    {
+        return Err(SfError::MintMismatch.into())
+    }
+
+    // Check escrow token account is legit
+    // TODO: Needs a deterministic seed and metadata should become a PDA
+    let escrow_tokens_pubkey = Pubkey::find_program_address(&[a.metadata.key.as_ref()], pid).0;
+    if &escrow_tokens_pubkey != a.escrow_tokens.key {
+        return Err(ProgramError::InvalidAccountData)
+    }
+
+    // On-chain program ID checks
+    if a.token_program.key != &spl_token::id() {
+        return Err(ProgramError::InvalidAccountData)
+    }
+
+    // Passed without touching the lasers
+    Ok(())
+}
+
+fn metadata_sanity_check(acc: CancelAccounts, metadata: TokenStreamData) -> ProgramResult {
+    // Compare that all the given accounts match the ones inside our metadata.
+    if acc.recipient.key != &metadata.recipient ||
+        acc.recipient_tokens.key != &metadata.recipient_tokens ||
+        acc.mint.key != &metadata.mint ||
+        acc.escrow_tokens.key != &metadata.escrow_tokens ||
+        acc.streamflow_treasury.key != &metadata.streamflow_treasury ||
+        acc.streamflow_treasury_tokens.key != &metadata.streamflow_treasury_tokens ||
+        acc.partner.key != &metadata.partner ||
+        acc.partner_tokens.key != &metadata.partner_tokens
+    {
+        return Err(SfError::MetadataAccountMismatch.into())
+    }
+
+    // TODO: What else?
+
+    // Passed without touching the lasers
+    Ok(())
 }
 
 /// Cancel an SPL Token stream
@@ -41,14 +122,14 @@ pub struct CancelAccounts<'a> {
 /// The function will read the instructions from the metadata account and see
 /// if there are any unlocked funds. If so, they will be transferred to the
 /// stream recipient.
-pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
+pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
     msg!("Cancelling SPL token stream");
 
     let now = Clock::get()?.unix_timestamp as u64;
     let mint_info = unpack_mint_account(&acc.mint)?;
 
     // Sanity checks
-    account_sanity_check(program_id, acc.clone())?;
+    account_sanity_check(pid, acc.clone())?;
 
     let mut data = acc.metadata.try_borrow_mut_data()?;
     let mut metadata: TokenStreamData = match solana_borsh::try_from_slice_unchecked(&data) {
@@ -57,6 +138,8 @@ pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
     };
 
     metadata_sanity_check(acc.clone(), metadata.clone())?;
+
+    // TODO: Check signer(s)
 
     // If stream is expired, anyone can close it
     if now < metadata.closable_at {
@@ -98,28 +181,11 @@ pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
     let streamflow_remains = metadata.streamflow_fee_total - streamflow_available;
     let partner_remains = metadata.partner_fee_total - partner_available;
 
-    let escrow_tokens_bump =
-        Pubkey::find_program_address(&[acc.metadata.key.as_ref()], program_id).1;
+    let escrow_tokens_bump = Pubkey::find_program_address(&[acc.metadata.key.as_ref()], pid).1;
     let seeds = [acc.metadata.key.as_ref(), &[escrow_tokens_bump]];
 
     if recipient_available > 0 {
         msg!("Transferring unlocked tokens to recipient");
-        if acc.recipient_tokens.data_is_empty() {
-            msg!("Initializing recipient's associated token account");
-            invoke(
-                &create_associated_token_account(acc.sender.key, acc.recipient.key, acc.mint.key),
-                &[
-                    acc.sender.clone(),
-                    acc.recipient_tokens.clone(),
-                    acc.recipient.clone(),
-                    acc.mint.clone(),
-                    acc.system_program.clone(),
-                    acc.token_program.clone(),
-                    acc.rent.clone(),
-                ],
-            )?;
-        }
-
         invoke_signed(
             &spl_token::instruction::transfer(
                 acc.token_program.key,
@@ -127,7 +193,7 @@ pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
                 acc.recipient_tokens.key,
                 acc.escrow_tokens.key,
                 &[],
-                recipient_available, // TODO: FIXME
+                recipient_available,
             )?,
             &[
                 acc.escrow_tokens.clone(),    // src
@@ -138,18 +204,18 @@ pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
             &[&seeds],
         )?;
 
-        metadata.withdrawn_amount += recipient_available; // TODO: FIXME
+        metadata.withdrawn_amount += recipient_available;
         metadata.last_withdrawn_at = now;
         msg!(
             "Withdrawn: {} {} tokens",
-            encode_base10(recipient_available, mint_info.decimals.into()),
+            amount_to_ui_amount(recipient_available, mint_info.decimals),
             metadata.mint
         );
         msg!(
             "Remaining: {} {} tokens",
-            encode_base10(
+            amount_to_ui_amount(
                 metadata.ix.deposited_amount - metadata.withdrawn_amount,
-                mint_info.decimals.into()
+                mint_info.decimals
             ),
             metadata.mint
         );
@@ -157,26 +223,6 @@ pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
 
     if streamflow_available > 0 {
         msg!("Transferring unlocked tokens to Streamflow treasury");
-        if acc.streamflow_treasury_tokens.data_is_empty() {
-            msg!("Initializing Streamflow treasury associated token account");
-            invoke(
-                &create_associated_token_account(
-                    acc.sender.key,
-                    acc.streamflow_treasury.key,
-                    acc.mint.key,
-                ),
-                &[
-                    acc.sender.clone(),
-                    acc.streamflow_treasury_tokens.clone(),
-                    acc.streamflow_treasury.clone(),
-                    acc.mint.clone(),
-                    acc.system_program.clone(),
-                    acc.token_program.clone(),
-                    acc.rent.clone(),
-                ],
-            )?;
-        }
-
         invoke_signed(
             &spl_token::instruction::transfer(
                 acc.token_program.key,
@@ -184,7 +230,7 @@ pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
                 acc.streamflow_treasury_tokens.key,
                 acc.escrow_tokens.key,
                 &[],
-                streamflow_available, // TODO: FIXME
+                streamflow_available,
             )?,
             &[
                 acc.escrow_tokens.clone(),              // src
@@ -199,14 +245,14 @@ pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         metadata.last_withdrawn_at = now;
         msg!(
             "Withdrawn: {} {} tokens",
-            encode_base10(streamflow_available, mint_info.decimals.into()),
+            amount_to_ui_amount(streamflow_available, mint_info.decimals),
             metadata.mint
         );
         msg!(
             "Remaining: {} {} tokens",
-            encode_base10(
+            amount_to_ui_amount(
                 metadata.streamflow_fee_total - metadata.streamflow_fee_withdrawn,
-                mint_info.decimals.into()
+                mint_info.decimals
             ),
             metadata.mint
         );
@@ -214,22 +260,6 @@ pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
 
     if partner_available > 0 {
         msg!("Transferring unlocked tokens to partner");
-        if acc.partner_tokens.data_is_empty() {
-            msg!("Initializing parther's associated token account");
-            invoke(
-                &create_associated_token_account(acc.sender.key, acc.partner.key, acc.mint.key),
-                &[
-                    acc.sender.clone(),
-                    acc.partner_tokens.clone(),
-                    acc.partner.clone(),
-                    acc.mint.clone(),
-                    acc.system_program.clone(),
-                    acc.token_program.clone(),
-                    acc.rent.clone(),
-                ],
-            )?;
-        }
-
         invoke_signed(
             &spl_token::instruction::transfer(
                 acc.token_program.key,
@@ -237,7 +267,7 @@ pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
                 acc.partner_tokens.key,
                 acc.escrow_tokens.key,
                 &[],
-                partner_available, // TODO: FIXME
+                partner_available,
             )?,
             &[
                 acc.escrow_tokens.clone(),  // src
@@ -248,18 +278,18 @@ pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
             &[&seeds],
         )?;
 
-        metadata.partner_fee_withdrawn += partner_available; // TODO: FIXME
+        metadata.partner_fee_withdrawn += partner_available;
         metadata.last_withdrawn_at = now;
         msg!(
             "Withdrawn: {} {} tokens",
-            encode_base10(partner_available, mint_info.decimals.into()),
+            amount_to_ui_amount(partner_available, mint_info.decimals),
             metadata.mint
         );
         msg!(
             "Remaining: {} {} tokens",
-            encode_base10(
+            amount_to_ui_amount(
                 metadata.partner_fee_total - metadata.partner_fee_withdrawn,
-                mint_info.decimals.into()
+                mint_info.decimals
             ),
             metadata.mint
         );
@@ -301,6 +331,7 @@ pub fn cancel(program_id: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         &[&seeds],
     )?;
 
+    // TODO: What's with the if clause here?
     if now < metadata.closable_at {
         metadata.last_withdrawn_at = now;
         metadata.canceled_at = now;
