@@ -10,6 +10,8 @@ use solana_sdk::{
     signer::keypair::Keypair,
     system_program,
     sysvar::rent,
+    account::Account,
+    native_token::sol_to_lamports
 };
 use spl_associated_token_account::get_associated_token_address;
 use test_sdk::tools::clone_keypair;
@@ -23,10 +25,19 @@ use fascilities::*;
 
 #[tokio::test]
 async fn timelock_program_test() -> Result<()> {
-    let mut tt = TimelockProgramTest::start_new().await;
+    let alice = Account {
+        lamports: sol_to_lamports(1.0),
+        ..Account::default()
+    };
+    let bob = Account {
+        lamports: sol_to_lamports(1.0),
+        ..Account::default()
+    };
 
-    let alice = clone_keypair(&tt.bench.alice);
-    let bob = clone_keypair(&tt.bench.bob);
+    let mut tt = TimelockProgramTest::start_new(&[alice, bob]).await;
+
+    let alice = clone_keypair(&tt.bench.accounts[0]);
+    let bob = clone_keypair(&tt.bench.accounts[1]);
     let payer = clone_keypair(&tt.bench.payer);
 
     let strm_token_mint = Keypair::new();
@@ -151,10 +162,19 @@ async fn timelock_program_test() -> Result<()> {
 
 #[tokio::test]
 async fn timelock_program_test2() -> Result<()> {
-    let mut tt = TimelockProgramTest::start_new().await;
+    let alice = Account {
+        lamports: sol_to_lamports(1.0),
+        ..Account::default()
+    };
+    let bob = Account {
+        lamports: sol_to_lamports(1.0),
+        ..Account::default()
+    };
 
-    let alice = clone_keypair(&tt.bench.alice);
-    let bob = clone_keypair(&tt.bench.bob);
+    let mut tt = TimelockProgramTest::start_new(&[alice, bob]).await;
+
+    let alice = clone_keypair(&tt.bench.accounts[0]);
+    let bob = clone_keypair(&tt.bench.accounts[1]);
     let payer = clone_keypair(&tt.bench.payer);
 
     let strm_token_mint = Keypair::new();
@@ -369,10 +389,19 @@ async fn timelock_program_test2() -> Result<()> {
 
 #[tokio::test]
 async fn timelock_program_test_transfer() -> Result<()> {
-    let mut tt = TimelockProgramTest::start_new().await;
+    let alice = Account {
+        lamports: sol_to_lamports(1.0),
+        ..Account::default()
+    };
+    let bob = Account {
+        lamports: sol_to_lamports(1.0),
+        ..Account::default()
+    };
 
-    let alice = clone_keypair(&tt.bench.alice);
-    let bob = clone_keypair(&tt.bench.bob);
+    let mut tt = TimelockProgramTest::start_new(&[alice, bob]).await;
+
+    let alice = clone_keypair(&tt.bench.accounts[0]);
+    let bob = clone_keypair(&tt.bench.accounts[1]);
     let payer = clone_keypair(&tt.bench.payer);
 
     let strm_token_mint = Keypair::new();
@@ -480,10 +509,19 @@ async fn timelock_program_test_transfer() -> Result<()> {
 
 #[tokio::test]
 async fn timelock_program_test_recurring() -> Result<()> {
-    let mut tt = TimelockProgramTest::start_new().await;
+    let alice = Account {
+        lamports: sol_to_lamports(1.0),
+        ..Account::default()
+    };
+    let bob = Account {
+        lamports: sol_to_lamports(1.0),
+        ..Account::default()
+    };
 
-    let alice = clone_keypair(&tt.bench.alice);
-    let bob = clone_keypair(&tt.bench.bob);
+    let mut tt = TimelockProgramTest::start_new(&[alice, bob]).await;
+
+    let alice = clone_keypair(&tt.bench.accounts[0]);
+    let bob = clone_keypair(&tt.bench.accounts[1]);
     let payer = clone_keypair(&tt.bench.payer);
 
     let strm_token_mint = Keypair::new();
