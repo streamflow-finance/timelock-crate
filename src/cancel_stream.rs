@@ -147,8 +147,7 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         if !acc.authority.is_signer {
             return Err(ProgramError::MissingRequiredSignature)
         }
-        let cancel_authority =
-            Invoker::new(&acc.authority.key, &acc.sender.key, &acc.recipient.key);
+        let cancel_authority = Invoker::new(acc.authority.key, acc.sender.key, acc.recipient.key);
         if !cancel_authority.can_cancel(&metadata.ix) {
             return Err(ProgramError::InvalidAccountData)
         }
