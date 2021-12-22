@@ -1,7 +1,6 @@
 use std::str::FromStr;
 
 use borsh::BorshSerialize;
-use num_traits::cast::FromPrimitive;
 use partner_oracle::fees::fetch_partner_fee_data;
 use solana_program::{
     account_info::AccountInfo,
@@ -15,11 +14,12 @@ use solana_program::{
     sysvar::{clock::Clock, rent::Rent, Sysvar},
 };
 use spl_associated_token_account::{create_associated_token_account, get_associated_token_address};
+use spl_token::amount_to_ui_amount;
 
 use crate::{
     error::SfError,
     state::{StreamInstruction, TokenStreamData},
-    utils::{duration_sanity, encode_base10, pretty_time, unpack_mint_account},
+    utils::{calculate_fee_from_amount, duration_sanity, pretty_time, unpack_mint_account},
     MAX_STRING_SIZE, STRM_TREASURY,
 };
 
@@ -42,26 +42,7 @@ pub struct CreateAccounts<'a> {
     pub system_program: AccountInfo<'a>,
 }
 
-fn instruction_sanity_check(ix: StreamInstruction, now: u64) -> ProgramResult {
-    // We'll limit the stream name lenggth
-    if ix.stream_name.len() > MAX_STRING_SIZE {
-        return Err(SfError::StreamNameTooLong.into())
-    }
-
-    // Check if timestamps are all in order and valid
-    duration_sanity(now, ix.start_time, ix.end_time, ix.cliff)?;
-
-    if ix.deposited_amount > ix.total_amount {
-        return Err(SfError::InvalidDeposit.into())
-    }
-
-    // TODO: Anything else?
-
-    // Passed without touching the lasers.
-    Ok(())
-}
-
-fn account_sanity_check(program_id: &Pubkey, a: CreateAccounts) -> ProgramResult {
+fn account_sanity_check(pid: &Pubkey, a: CreateAccounts) -> ProgramResult {
     msg!("Checking if all given accounts are correct");
 
     // We want these to not be initialized
@@ -103,8 +84,7 @@ fn account_sanity_check(program_id: &Pubkey, a: CreateAccounts) -> ProgramResult
 
     // Check escrow token account is legit
     // TODO: Needs a deterministic seed and metadata should become a PDA
-    let escrow_tokens_pubkey =
-        Pubkey::find_program_address(&[a.metadata.key.as_ref()], program_id).0;
+    let escrow_tokens_pubkey = Pubkey::find_program_address(&[a.metadata.key.as_ref()], pid).0;
     if &escrow_tokens_pubkey != a.escrow_tokens.key {
         return Err(ProgramError::InvalidAccountData)
     }
@@ -122,9 +102,31 @@ fn account_sanity_check(program_id: &Pubkey, a: CreateAccounts) -> ProgramResult
     Ok(())
 }
 
-pub fn create(program_id: &Pubkey, acc: CreateAccounts, ix: StreamInstruction) -> ProgramResult {
+fn instruction_sanity_check(ix: StreamInstruction, now: u64) -> ProgramResult {
+    // We'll limit the stream name lenggth
+    if ix.stream_name.len() > MAX_STRING_SIZE {
+        return Err(SfError::StreamNameTooLong.into())
+    }
+
+    // Check if timestamps are all in order and valid
+    duration_sanity(now, ix.start_time, ix.end_time, ix.cliff)?;
+
+    if ix.deposited_amount > ix.total_amount {
+        return Err(SfError::InvalidDeposit.into())
+    }
+
+    // TODO: Anything else?
+
+    // Passed without touching the lasers.
+    Ok(())
+}
+
+pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: StreamInstruction) -> ProgramResult {
     msg!("Initializing SPL token stream");
 
+    // The stream initializer, and the keypair for creating the metadata
+    // account must sign this.
+    // TODO: Metadata should be a PDA
     if !acc.sender.is_signer || !acc.metadata.is_signer {
         return Err(ProgramError::MissingRequiredSignature)
     }
@@ -134,8 +136,9 @@ pub fn create(program_id: &Pubkey, acc: CreateAccounts, ix: StreamInstruction) -
     let mint_info = unpack_mint_account(&acc.mint)?;
 
     // Sanity checks
-    account_sanity_check(program_id, acc.clone())?;
+    account_sanity_check(pid, acc.clone())?;
     instruction_sanity_check(ix.clone(), now)?;
+
     // TODO: Check available balances?
 
     // Check partner accounts are legit
@@ -147,23 +150,10 @@ pub fn create(program_id: &Pubkey, acc: CreateAccounts, ix: StreamInstruction) -
     };
 
     // Calculate fees
-    let mut uint_fee_for_partner: u64 = 0;
-    if partner_fee > 0.0 {
-        // TODO: Test units
-        let fee_for_partner = ix.deposited_amount as f64 * (partner_fee / 100.0) as f64;
-        msg!("Fee for partner: {}", fee_for_partner);
-        let r = fee_for_partner * f64::from_u8(mint_info.decimals).unwrap().floor();
-        uint_fee_for_partner = r as u64;
-    }
-
-    let mut uint_fee_for_strm: u64 = 0;
-    if strm_fee > 0.0 {
-        // TODO: Test units
-        let fee_for_strm = ix.deposited_amount as f64 * (strm_fee / 100.0) as f64;
-        msg!("Fee for Streamflow: {}", fee_for_strm);
-        let r = fee_for_strm * f64::from_u8(mint_info.decimals).unwrap().floor();
-        uint_fee_for_strm = r as u64;
-    }
+    let uint_fee_for_partner = calculate_fee_from_amount(ix.deposited_amount, partner_fee);
+    let uint_fee_for_strm = calculate_fee_from_amount(ix.deposited_amount, strm_fee);
+    msg!("Fee for partner: {}", uint_fee_for_partner / mint_info.decimals as u64);
+    msg!("Fee for Streamflow: {}", uint_fee_for_strm / mint_info.decimals as u64);
 
     let mut metadata = TokenStreamData::new(
         now,
@@ -195,7 +185,7 @@ pub fn create(program_id: &Pubkey, acc: CreateAccounts, ix: StreamInstruction) -
             acc.metadata.key,
             cluster_rent.minimum_balance(metadata_struct_size),
             metadata_struct_size as u64,
-            program_id,
+            pid,
         ),
         &[acc.sender.clone(), acc.metadata.clone(), acc.system_program.clone()],
     )?;
@@ -206,9 +196,9 @@ pub fn create(program_id: &Pubkey, acc: CreateAccounts, ix: StreamInstruction) -
 
     msg!("Creating stream escrow account");
     // TODO: This seed should be deterministic and metadata should be PDA
-    let stream_escrow_bump =
-        Pubkey::find_program_address(&[acc.metadata.key.as_ref()], program_id).1;
+    let stream_escrow_bump = Pubkey::find_program_address(&[acc.metadata.key.as_ref()], pid).1;
     let seeds = [acc.metadata.key.as_ref(), &[stream_escrow_bump]];
+
     invoke_signed(
         &system_instruction::create_account(
             acc.sender.key,
@@ -256,6 +246,8 @@ pub fn create(program_id: &Pubkey, acc: CreateAccounts, ix: StreamInstruction) -
         ],
     )?;
 
+    // TODO: Check unpack_token_account for ATA if we decide they shouldn't be initialized
+    // (all around the codebase)
     if acc.recipient_tokens.data_is_empty() {
         msg!("Initializing recipient's associated token account");
         invoke(
@@ -310,7 +302,7 @@ pub fn create(program_id: &Pubkey, acc: CreateAccounts, ix: StreamInstruction) -
 
     msg!(
         "Success initializing {} {} token_stream for {}",
-        encode_base10(ix.deposited_amount, mint_info.decimals.into()),
+        amount_to_ui_amount(ix.deposited_amount, mint_info.decimals),
         acc.mint.key,
         acc.recipient.key
     );

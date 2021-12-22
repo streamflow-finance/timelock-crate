@@ -6,18 +6,18 @@ use solana_program::{
     borsh as solana_borsh,
     entrypoint::ProgramResult,
     msg,
-    program::{invoke, invoke_signed},
+    program::invoke_signed,
     program_error::ProgramError,
     pubkey::Pubkey,
-    system_program, sysvar,
     sysvar::{clock::Clock, Sysvar},
 };
-use spl_associated_token_account::{create_associated_token_account, get_associated_token_address};
+use spl_associated_token_account::get_associated_token_address;
+use spl_token::amount_to_ui_amount;
 
 use crate::{
     error::SfError,
-    state::{InstructionAccounts, TokenStreamData},
-    utils::{calculate_available, encode_base10, unpack_mint_account},
+    state::TokenStreamData,
+    utils::{calculate_available, unpack_mint_account},
     STRM_TREASURY,
 };
 
@@ -35,13 +35,10 @@ pub struct WithdrawAccounts<'a> {
     pub partner: AccountInfo<'a>,
     pub partner_tokens: AccountInfo<'a>,
     pub mint: AccountInfo<'a>,
-    pub rent: AccountInfo<'a>,
     pub token_program: AccountInfo<'a>,
-    pub associated_token_program: AccountInfo<'a>,
-    pub system_program: AccountInfo<'a>,
 }
 
-fn account_sanity_check(program_id: &Pubkey, a: WithdrawAccounts) -> ProgramResult {
+fn account_sanity_check(pid: &Pubkey, a: WithdrawAccounts) -> ProgramResult {
     msg!("Checking if all given accounts are correct");
 
     // These accounts must not be empty, and need to have correct ownership
@@ -49,7 +46,7 @@ fn account_sanity_check(program_id: &Pubkey, a: WithdrawAccounts) -> ProgramResu
         return Err(SfError::InvalidEscrowAccount.into())
     }
 
-    if a.metadata.data_is_empty() || a.metadata.owner != program_id {
+    if a.metadata.data_is_empty() || a.metadata.owner != pid {
         return Err(SfError::InvalidMetadataAccount.into())
     }
 
@@ -86,18 +83,13 @@ fn account_sanity_check(program_id: &Pubkey, a: WithdrawAccounts) -> ProgramResu
 
     // Check escrow token account is legit
     // TODO: Needs a deterministic seed and metadata should become a PDA
-    let escrow_tokens_pubkey =
-        Pubkey::find_program_address(&[a.metadata.key.as_ref()], program_id).0;
+    let escrow_tokens_pubkey = Pubkey::find_program_address(&[a.metadata.key.as_ref()], pid).0;
     if &escrow_tokens_pubkey != a.escrow_tokens.key {
         return Err(ProgramError::InvalidAccountData)
     }
 
     // On-chain program ID checks
-    if a.rent.key != &sysvar::rent::id() ||
-        a.token_program.key != &spl_token::id() ||
-        a.associated_token_program.key != &spl_associated_token_account::id() ||
-        a.system_program.key != &system_program::id()
-    {
+    if a.token_program.key != &spl_token::id() {
         return Err(ProgramError::InvalidAccountData)
     }
 
@@ -106,21 +98,14 @@ fn account_sanity_check(program_id: &Pubkey, a: WithdrawAccounts) -> ProgramResu
 }
 
 fn metadata_sanity_check(acc: WithdrawAccounts, metadata: TokenStreamData) -> ProgramResult {
-    let recipient_tokens_pubkey = get_associated_token_address(acc.recipient.key, acc.mint.key);
-    let partner_tokens_pubkey = get_associated_token_address(acc.partner.key, acc.mint.key);
-    let streamflow_treasury_tokens_pubkey =
-        get_associated_token_address(acc.streamflow_treasury.key, acc.mint.key);
-
+    // Compare that all the given accounts match the ones inside our metadata.
     if acc.recipient.key != &metadata.recipient ||
-        acc.recipient_tokens.key != &recipient_tokens_pubkey ||
         acc.recipient_tokens.key != &metadata.recipient_tokens ||
         acc.mint.key != &metadata.mint ||
         acc.escrow_tokens.key != &metadata.escrow_tokens ||
         acc.streamflow_treasury.key != &metadata.streamflow_treasury ||
-        acc.streamflow_treasury_tokens.key != &streamflow_treasury_tokens_pubkey ||
         acc.streamflow_treasury_tokens.key != &metadata.streamflow_treasury_tokens ||
         acc.partner.key != &metadata.partner ||
-        acc.partner_tokens.key != &partner_tokens_pubkey ||
         acc.partner_tokens.key != &metadata.partner_tokens
     {
         return Err(SfError::MetadataAccountMismatch.into())
@@ -137,13 +122,13 @@ fn metadata_sanity_check(acc: WithdrawAccounts, metadata: TokenStreamData) -> Pr
 /// The function will read the instructions from the metadata account and see
 /// if there are any unlocked funds. If so, they will be transferred from the
 /// escrow account to the stream recipient.
-pub fn withdraw(program_id: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResult {
+pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResult {
     msg!("Withdrawing from SPL token stream");
 
     let now = Clock::get()?.unix_timestamp as u64;
     let mint_info = unpack_mint_account(&acc.mint)?;
 
-    account_sanity_check(program_id, acc.clone())?;
+    account_sanity_check(pid, acc.clone())?;
 
     let mut data = acc.metadata.try_borrow_mut_data()?;
     let mut metadata: TokenStreamData = match solana_borsh::try_from_slice_unchecked(&data) {
@@ -178,28 +163,11 @@ pub fn withdraw(program_id: &Pubkey, acc: WithdrawAccounts, amount: u64) -> Prog
 
     // TODO: Handle requested amounts.
 
-    let escrow_tokens_bump =
-        Pubkey::find_program_address(&[acc.metadata.key.as_ref()], program_id).1;
+    let escrow_tokens_bump = Pubkey::find_program_address(&[acc.metadata.key.as_ref()], pid).1;
     let seeds = [acc.metadata.key.as_ref(), &[escrow_tokens_bump]];
 
     if recipient_available > 0 {
         msg!("Transferring unlocked tokens to recipient");
-        if acc.recipient_tokens.data_is_empty() {
-            msg!("Initializing recipient's associated token account");
-            invoke(
-                &create_associated_token_account(acc.sender.key, acc.recipient.key, acc.mint.key),
-                &[
-                    acc.sender.clone(),
-                    acc.recipient_tokens.clone(),
-                    acc.recipient.clone(),
-                    acc.mint.clone(),
-                    acc.system_program.clone(),
-                    acc.token_program.clone(),
-                    acc.rent.clone(),
-                ],
-            )?;
-        }
-
         invoke_signed(
             &spl_token::instruction::transfer(
                 acc.token_program.key,
@@ -207,7 +175,7 @@ pub fn withdraw(program_id: &Pubkey, acc: WithdrawAccounts, amount: u64) -> Prog
                 acc.recipient_tokens.key,
                 acc.escrow_tokens.key,
                 &[],
-                recipient_available, // TODO: FIXME
+                recipient_available,
             )?,
             &[
                 acc.escrow_tokens.clone(),    // src
@@ -218,18 +186,18 @@ pub fn withdraw(program_id: &Pubkey, acc: WithdrawAccounts, amount: u64) -> Prog
             &[&seeds],
         )?;
 
-        metadata.withdrawn_amount += recipient_available; // TODO: FIXME
+        metadata.withdrawn_amount += recipient_available;
         metadata.last_withdrawn_at = now;
         msg!(
             "Withdrawn: {} {} tokens",
-            encode_base10(recipient_available, mint_info.decimals.into()),
+            amount_to_ui_amount(recipient_available, mint_info.decimals),
             metadata.mint
         );
         msg!(
             "Remaining: {} {} tokens",
-            encode_base10(
+            amount_to_ui_amount(
                 metadata.ix.deposited_amount - metadata.withdrawn_amount,
-                mint_info.decimals.into()
+                mint_info.decimals
             ),
             metadata.mint
         );
@@ -237,26 +205,6 @@ pub fn withdraw(program_id: &Pubkey, acc: WithdrawAccounts, amount: u64) -> Prog
 
     if streamflow_available > 0 {
         msg!("Transferring unlocked tokens to Streamflow treasury");
-        if acc.streamflow_treasury_tokens.data_is_empty() {
-            msg!("Initializing Streamflow treasury associated token account");
-            invoke(
-                &create_associated_token_account(
-                    acc.sender.key,
-                    acc.streamflow_treasury.key,
-                    acc.mint.key,
-                ),
-                &[
-                    acc.sender.clone(),
-                    acc.streamflow_treasury_tokens.clone(),
-                    acc.streamflow_treasury.clone(),
-                    acc.mint.clone(),
-                    acc.system_program.clone(),
-                    acc.token_program.clone(),
-                    acc.rent.clone(),
-                ],
-            )?;
-        }
-
         invoke_signed(
             &spl_token::instruction::transfer(
                 acc.token_program.key,
@@ -264,7 +212,7 @@ pub fn withdraw(program_id: &Pubkey, acc: WithdrawAccounts, amount: u64) -> Prog
                 acc.streamflow_treasury_tokens.key,
                 acc.escrow_tokens.key,
                 &[],
-                streamflow_available, // TODO: FIXME
+                streamflow_available,
             )?,
             &[
                 acc.escrow_tokens.clone(),              // src
@@ -275,18 +223,18 @@ pub fn withdraw(program_id: &Pubkey, acc: WithdrawAccounts, amount: u64) -> Prog
             &[&seeds],
         )?;
 
-        metadata.streamflow_fee_withdrawn += streamflow_available; // TODO: FIXME
+        metadata.streamflow_fee_withdrawn += streamflow_available;
         metadata.last_withdrawn_at = now;
         msg!(
             "Withdrawn: {} {} tokens",
-            encode_base10(streamflow_available, mint_info.decimals.into()),
+            amount_to_ui_amount(streamflow_available, mint_info.decimals),
             metadata.mint
         );
         msg!(
             "Remaining: {} {} tokens",
-            encode_base10(
+            amount_to_ui_amount(
                 metadata.streamflow_fee_total - metadata.streamflow_fee_withdrawn,
-                mint_info.decimals.into()
+                mint_info.decimals
             ),
             metadata.mint
         );
@@ -294,22 +242,6 @@ pub fn withdraw(program_id: &Pubkey, acc: WithdrawAccounts, amount: u64) -> Prog
 
     if partner_available > 0 {
         msg!("Transferring unlocked tokens to partner");
-        if acc.partner_tokens.data_is_empty() {
-            msg!("Initializing partner's associated token account");
-            invoke(
-                &create_associated_token_account(acc.sender.key, acc.partner.key, acc.mint.key),
-                &[
-                    acc.sender.clone(),
-                    acc.partner_tokens.clone(),
-                    acc.partner.clone(),
-                    acc.mint.clone(),
-                    acc.system_program.clone(),
-                    acc.token_program.clone(),
-                    acc.rent.clone(),
-                ],
-            )?;
-        }
-
         invoke_signed(
             &spl_token::instruction::transfer(
                 acc.token_program.key,
@@ -317,7 +249,7 @@ pub fn withdraw(program_id: &Pubkey, acc: WithdrawAccounts, amount: u64) -> Prog
                 acc.partner_tokens.key,
                 acc.escrow_tokens.key,
                 &[],
-                partner_available, // TODO: FIXME
+                partner_available,
             )?,
             &[
                 acc.escrow_tokens.clone(),  // src
@@ -328,18 +260,18 @@ pub fn withdraw(program_id: &Pubkey, acc: WithdrawAccounts, amount: u64) -> Prog
             &[&seeds],
         )?;
 
-        metadata.partner_fee_withdrawn += partner_available; // TODO: FIXME
+        metadata.partner_fee_withdrawn += partner_available;
         metadata.last_withdrawn_at = now;
         msg!(
             "Withdrawn: {} {} tokens",
-            encode_base10(partner_available, mint_info.decimals.into()),
+            amount_to_ui_amount(partner_available, mint_info.decimals),
             metadata.mint
         );
         msg!(
             "Remaining: {} {} tokens",
-            encode_base10(
+            amount_to_ui_amount(
                 metadata.partner_fee_total - metadata.partner_fee_withdrawn,
-                mint_info.decimals.into()
+                mint_info.decimals
             ),
             metadata.mint
         );
@@ -357,10 +289,12 @@ pub fn withdraw(program_id: &Pubkey, acc: WithdrawAccounts, amount: u64) -> Prog
     {
         // TODO: Close metadata account once there is an alternative storage solution
         // for historical data.
+        // msg!("Closing metadata account");
         // let rent = acc.metadata.lamports();
         // **acc.metadata.try_borrow_mut_lamports()? -= rent;
         // **acc.streamflow_treasury.try_borrow_mut_lamports()? += rent;
 
+        msg!("Closing escrow SPL token account");
         invoke_signed(
             &spl_token::instruction::close_account(
                 acc.token_program.key,
