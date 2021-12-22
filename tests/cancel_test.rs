@@ -10,6 +10,8 @@ use solana_sdk::{
     signer::keypair::Keypair,
     system_program,
     sysvar::rent,
+    account::Account,
+    native_token::sol_to_lamports
 };
 use spl_associated_token_account::get_associated_token_address;
 use test_sdk::tools::clone_keypair;
@@ -22,10 +24,19 @@ use fascilities::*;
 
 #[tokio::test]
 async fn test_sender_not_cancellable_should_not_be_cancelled() -> Result<()> {
-    let mut tt = TimelockProgramTest::start_new().await;
+    let alice = Account {
+        lamports: sol_to_lamports(1.0),
+        ..Account::default()
+    };
+    let bob = Account {
+        lamports: sol_to_lamports(1.0),
+        ..Account::default()
+    };
 
-    let alice = clone_keypair(&tt.bench.alice);
-    let bob = clone_keypair(&tt.bench.bob);
+    let mut tt = TimelockProgramTest::start_new(&[alice, bob]).await;
+
+    let alice = clone_keypair(&tt.bench.accounts[0]);
+    let bob = clone_keypair(&tt.bench.accounts[1]);
     let payer = clone_keypair(&tt.bench.payer);
 
     let strm_token_mint = Keypair::new();
@@ -77,7 +88,7 @@ async fn test_sender_not_cancellable_should_not_be_cancelled() -> Result<()> {
             period: 200,
             cliff: 0,
             cliff_amount: 0,
-            cancelable_by_sender: cancelable_by_sender,
+            cancelable_by_sender,
             cancelable_by_recipient: false,
             withdrawal_public: false,
             transferable_by_sender: false,
@@ -144,10 +155,19 @@ async fn test_sender_not_cancellable_should_not_be_cancelled() -> Result<()> {
 
 #[tokio::test]
 async fn test_sender_cancellable_should_be_cancelled() -> Result<()> {
-    let mut tt = TimelockProgramTest::start_new().await;
+    let alice = Account {
+        lamports: sol_to_lamports(1.0),
+        ..Account::default()
+    };
+    let bob = Account {
+        lamports: sol_to_lamports(1.0),
+        ..Account::default()
+    };
 
-    let alice = clone_keypair(&tt.bench.alice);
-    let bob = clone_keypair(&tt.bench.bob);
+    let mut tt = TimelockProgramTest::start_new(&[alice, bob]).await;
+
+    let alice = clone_keypair(&tt.bench.accounts[0]);
+    let bob = clone_keypair(&tt.bench.accounts[1]);
     let payer = clone_keypair(&tt.bench.payer);
 
     let strm_token_mint = Keypair::new();
@@ -266,10 +286,19 @@ async fn test_sender_cancellable_should_be_cancelled() -> Result<()> {
 
 #[tokio::test]
 async fn test_recipient_cancellable_should_be_cancelled() -> Result<()> {
-    let mut tt = TimelockProgramTest::start_new().await;
+    let alice = Account {
+        lamports: sol_to_lamports(1.0),
+        ..Account::default()
+    };
+    let bob = Account {
+        lamports: sol_to_lamports(1.0),
+        ..Account::default()
+    };
 
-    let alice = clone_keypair(&tt.bench.alice);
-    let bob = clone_keypair(&tt.bench.bob);
+    let mut tt = TimelockProgramTest::start_new(&[alice, bob]).await;
+
+    let alice = clone_keypair(&tt.bench.accounts[0]);
+    let bob = clone_keypair(&tt.bench.accounts[1]);
     let payer = clone_keypair(&tt.bench.payer);
 
     let strm_token_mint = Keypair::new();
@@ -388,10 +417,19 @@ async fn test_recipient_cancellable_should_be_cancelled() -> Result<()> {
 
 #[tokio::test]
 async fn test_recipient_not_cancellable_should_not_be_cancelled() -> Result<()> {
-    let mut tt = TimelockProgramTest::start_new().await;
+    let alice = Account {
+        lamports: sol_to_lamports(1.0),
+        ..Account::default()
+    };
+    let bob = Account {
+        lamports: sol_to_lamports(1.0),
+        ..Account::default()
+    };
 
-    let alice = clone_keypair(&tt.bench.alice);
-    let bob = clone_keypair(&tt.bench.bob);
+    let mut tt = TimelockProgramTest::start_new(&[alice, bob]).await;
+
+    let alice = clone_keypair(&tt.bench.accounts[0]);
+    let bob = clone_keypair(&tt.bench.accounts[1]);
     let payer = clone_keypair(&tt.bench.payer);
 
     let strm_token_mint = Keypair::new();

@@ -4,7 +4,8 @@ use solana_sdk::{
     clock::UnixTimestamp,
     pubkey::Pubkey,
     signature::Signer,
-    signer::keypair::Keypair
+    signer::keypair::Keypair,
+    account::Account,
 };
 
 use test_sdk::{ProgramTestBench, TestBenchProgram};
@@ -46,7 +47,7 @@ pub struct TimelockProgramTest {
 }
 
 impl TimelockProgramTest {
-    pub async fn start_new() -> Self {
+    pub async fn start_new(accounts: &[Account]) -> Self {
         let program_id = Keypair::new().pubkey();
 
         let program = TestBenchProgram {
@@ -55,7 +56,7 @@ impl TimelockProgramTest {
             process_instruction: processor!(process_instruction),
         };
 
-        let bench = ProgramTestBench::start_new(&[program]).await;
+        let bench = ProgramTestBench::start_new(&[program], accounts).await;
 
         Self { bench, program_id }
     }
