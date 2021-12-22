@@ -33,6 +33,4 @@ pub mod topup_stream;
 pub mod transfer_recipient;
 pub mod withdraw_stream;
 
-pub(crate) const STRM_TREASURY: &str = "Ht5G1RhkcKnpLVLMhqJc5aqZ4wYUEbxbtZwGCVbgU7DL";
-
 pub(crate) const MAX_STRING_SIZE: usize = 200;

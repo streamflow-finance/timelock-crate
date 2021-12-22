@@ -18,10 +18,11 @@ use spl_token::amount_to_ui_amount;
 
 use crate::{
     error::SfError,
+    MAX_STRING_SIZE,
     state::{StreamInstruction, TokenStreamData},
     utils::{calculate_fee_from_amount, duration_sanity, pretty_time, unpack_mint_account},
-    MAX_STRING_SIZE, STRM_TREASURY,
 };
+use crate::state::STRM_TREASURY;
 
 #[derive(Clone, Debug)]
 pub struct CreateAccounts<'a> {
@@ -97,7 +98,6 @@ fn account_sanity_check(pid: &Pubkey, a: CreateAccounts) -> ProgramResult {
     {
         return Err(ProgramError::InvalidAccountData)
     }
-
     // Passed without touching the lasers
     Ok(())
 }
@@ -148,7 +148,6 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: StreamInstruction) -> Progr
         // In case the partner is not found, we fallback to Streamflow.
         Err(_) => fetch_partner_fee_data(&acc.streamflow_treasury, acc.streamflow_treasury.key)?,
     };
-
     // Calculate fees
     let uint_fee_for_partner = calculate_fee_from_amount(ix.deposited_amount, partner_fee);
     let uint_fee_for_strm = calculate_fee_from_amount(ix.deposited_amount, strm_fee);

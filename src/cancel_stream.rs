@@ -17,9 +17,9 @@ use spl_token::amount_to_ui_amount;
 use crate::{
     error::SfError,
     state::TokenStreamData,
-    utils::{calculate_available, unpack_mint_account, Invoker},
-    STRM_TREASURY,
+    utils::{calculate_available, Invoker, unpack_mint_account},
 };
+use crate::state::STRM_TREASURY;
 
 #[derive(Clone, Debug)]
 pub struct CancelAccounts<'a> {

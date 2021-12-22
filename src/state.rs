@@ -23,6 +23,8 @@ use crate::create_stream::CreateAccounts;
 // Hardcoded program version
 pub const PROGRAM_VERSION: u64 = 2;
 
+pub const STRM_TREASURY: &str = "Ht5G1RhkcKnpLVLMhqJc5aqZ4wYUEbxbtZwGCVbgU7DL";
+
 /// The struct containing instructions for initializing a stream
 #[derive(BorshDeserialize, BorshSerialize, Clone, Debug)]
 #[repr(C)]

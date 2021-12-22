@@ -18,8 +18,8 @@ use crate::{
     error::SfError,
     state::TokenStreamData,
     utils::{calculate_available, unpack_mint_account},
-    STRM_TREASURY,
 };
+use crate::state::STRM_TREASURY;
 
 #[derive(Clone, Debug)]
 pub struct WithdrawAccounts<'a> {

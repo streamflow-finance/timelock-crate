@@ -42,9 +42,19 @@ pub struct ProgramTestBench {
 
 impl ProgramTestBench {
 
-    pub async fn start_new(programs: &[TestBenchProgram<'_>], accounts: &[Account]) -> Self {
+    pub async fn start_new(
+        programs: &[TestBenchProgram<'_>],
+        accounts: &[Account], strm_acc: Pubkey
+    ) -> Self {
         let mut program_test = ProgramTest::default();
         let mut accounts_kp = Vec::new();
+        program_test.add_account(
+            strm_acc,
+            Account {
+                lamports: sol_to_lamports(1.0),
+                ..Account::default()
+            }
+        );
         for acc in accounts {
             let kp = Keypair::new();
             program_test.add_account(

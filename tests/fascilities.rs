@@ -47,7 +47,7 @@ pub struct TimelockProgramTest {
 }
 
 impl TimelockProgramTest {
-    pub async fn start_new(accounts: &[Account]) -> Self {
+    pub async fn start_new(accounts: &[Account], strm_acc: Pubkey) -> Self {
         let program_id = Keypair::new().pubkey();
 
         let program = TestBenchProgram {
@@ -56,7 +56,8 @@ impl TimelockProgramTest {
             process_instruction: processor!(process_instruction),
         };
 
-        let bench = ProgramTestBench::start_new(&[program], accounts).await;
+        let bench = ProgramTestBench::start_new(
+            &[program], accounts, strm_acc).await;
 
         Self { bench, program_id }
     }
