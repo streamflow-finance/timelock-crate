@@ -37,32 +37,22 @@ pub struct ProgramTestBench {
     pub rent: Rent,
     pub payer: Keypair,
     pub next_id: u8,
-    pub alice: Keypair,
-    pub bob: Keypair,
+    pub accounts: Vec<Keypair>
 }
 
 impl ProgramTestBench {
-    pub async fn start_new(programs: &[TestBenchProgram<'_>]) -> Self {
+
+    pub async fn start_new(programs: &[TestBenchProgram<'_>], accounts: &[Account]) -> Self {
         let mut program_test = ProgramTest::default();
-
-        let alice = Keypair::new();
-        let bob = Keypair::new();
-
-        program_test.add_account(
-            alice.pubkey(),
-            Account {
-                lamports: sol_to_lamports(1.0),
-                ..Account::default()
-            },
-        );
-
-        program_test.add_account(
-            bob.pubkey(),
-            Account {
-                lamports: sol_to_lamports(1.0),
-                ..Account::default()
-            },
-        );
+        let mut accounts_kp = Vec::new();
+        for acc in accounts {
+            let kp = Keypair::new();
+            program_test.add_account(
+                kp.pubkey(),
+                acc.clone()
+            );
+            accounts_kp.push(kp);
+        };
 
         for program in programs {
             program_test.add_program(
@@ -82,8 +72,7 @@ impl ProgramTestBench {
             rent,
             payer,
             next_id: 0,
-            alice,
-            bob,
+            accounts: accounts_kp
         }
     }
 
@@ -310,21 +299,21 @@ impl ProgramTestBench {
     }
 
     #[allow(dead_code)]
-    pub async fn get_bincode_account<T: serde::de::DeserializeOwned>(
+    pub async fn get_bincode_account<G: serde::de::DeserializeOwned>(
         &mut self,
         address: &Pubkey,
-    ) -> T {
+    ) -> G {
         self.context
             .banks_client
             .get_account(*address)
             .await
             .unwrap()
-            .map(|a| deserialize::<T>(a.data.borrow()).unwrap())
+            .map(|a| deserialize::<G>(a.data.borrow()).unwrap())
             .unwrap_or_else(|| panic!("GET-TEST-ACCOUNT-ERROR: Account {}", address))
     }
 
     /// TODO: Add to SDK
-    pub async fn get_borsh_account<T: BorshDeserialize>(&mut self, address: &Pubkey) -> T {
+    pub async fn get_borsh_account<G: BorshDeserialize>(&mut self, address: &Pubkey) -> G {
         self.get_account(address)
             .await
             .map(|a| try_from_slice_unchecked(&a.data).unwrap())
