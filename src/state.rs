@@ -187,22 +187,3 @@ impl TokenStreamData {
         }
     }
 }
-#[derive(Clone, Debug)]
-pub struct InstructionAccounts<'a> {
-    pub authority: AccountInfo<'a>,
-    pub sender: AccountInfo<'a>,
-    pub sender_tokens: AccountInfo<'a>,
-    pub recipient: AccountInfo<'a>,
-    pub recipient_tokens: AccountInfo<'a>,
-    pub metadata: AccountInfo<'a>,
-    pub escrow_tokens: AccountInfo<'a>,
-    pub streamflow_treasury: AccountInfo<'a>,
-    pub streamflow_treasury_tokens: AccountInfo<'a>,
-    pub partner: AccountInfo<'a>,
-    pub partner_tokens: AccountInfo<'a>,
-    pub mint: AccountInfo<'a>,
-    pub rent: AccountInfo<'a>,
-    pub token_program: AccountInfo<'a>,
-    pub associated_token_program: AccountInfo<'a>,
-    pub system_program: AccountInfo<'a>,
-}

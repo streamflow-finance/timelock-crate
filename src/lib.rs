@@ -24,8 +24,6 @@ pub mod entrypoint;
 pub(crate) mod error;
 /// Structs and data
 pub mod state;
-/// Functions related to SPL tokens
-//pub mod token;
 /// Utility functions
 pub(crate) mod utils;
 
