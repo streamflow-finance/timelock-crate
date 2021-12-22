@@ -37,25 +37,6 @@ entrypoint!(process_instruction);
 pub fn process_instruction(pid: &Pubkey, acc: &[AccountInfo], ix: &[u8]) -> ProgramResult {
     let ai = &mut acc.iter();
 
-    let ia = InstructionAccounts {
-        authority: next_account_info(ai)?.clone(),
-        sender: next_account_info(ai)?.clone(),
-        sender_tokens: next_account_info(ai)?.clone(),
-        recipient: next_account_info(ai)?.clone(),
-        recipient_tokens: next_account_info(ai)?.clone(),
-        metadata: next_account_info(ai)?.clone(),
-        escrow_tokens: next_account_info(ai)?.clone(),
-        streamflow_treasury: next_account_info(ai)?.clone(),
-        streamflow_treasury_tokens: next_account_info(ai)?.clone(),
-        partner: next_account_info(ai)?.clone(),
-        partner_tokens: next_account_info(ai)?.clone(),
-        mint: next_account_info(ai)?.clone(),
-        rent: next_account_info(ai)?.clone(),
-        token_program: next_account_info(ai)?.clone(),
-        associated_token_program: next_account_info(ai)?.clone(),
-        system_program: next_account_info(ai)?.clone(),
-    };
-
     match ix[0] {
         0 => {
             let ia = CreateAccounts {
@@ -63,56 +44,99 @@ pub fn process_instruction(pid: &Pubkey, acc: &[AccountInfo], ix: &[u8]) -> Prog
                 sender_tokens: next_account_info(ai)?.clone(),
                 recipient: next_account_info(ai)?.clone(),
                 recipient_tokens: next_account_info(ai)?.clone(),
-                metadata: next_account_info(ai)?.clone(),
-                escrow_tokens: next_account_info(ai)?.clone(),
                 streamflow_treasury: next_account_info(ai)?.clone(),
                 streamflow_treasury_tokens: next_account_info(ai)?.clone(),
                 partner: next_account_info(ai)?.clone(),
                 partner_tokens: next_account_info(ai)?.clone(),
+                escrow_tokens: next_account_info(ai)?.clone(),
+                contract: next_account_info(ai)?.clone(), //ex metadata
+                fee_oracle: next_account_info(ai)?.clone(), //pid of our fee oracle program
+                fee_oracle_pda: next_account_info(ai)?.clone(), //account where we store partner data
+                scheduler: nex_account_info(ai)?.clone(), //liquidator, cron job, our wallet that will invoke transactions, todo: think of better name
                 mint: next_account_info(ai)?.clone(),
-                rent: next_account_info(ai)?.clone(),
+                rent: next_account_info(ai)?.clone(), //TODO: getting warning that rent is deprecated in 1.9.0?
                 token_program: next_account_info(ai)?.clone(),
                 associated_token_program: next_account_info(ai)?.clone(),
                 system_program: next_account_info(ai)?.clone(),
             };
             let si = StreamInstruction::try_from_slice(&ix[1..])?;
-            return create(pid, ia, si)
+            return create(pid, ia, si);
         }
         1 => {
             let ia = WithdrawAccounts {
-                authority: next_account_info(ai)?.clone(),
-                sender: next_account_info(ai)?.clone(),
-                sender_tokens: next_account_info(ai)?.clone(),
+                invoker: next_account_info(ai)?.clone(), //ex authority
+                //don't need sender info any longer, as strm_treasury collects the fees from escrow_token account
                 recipient: next_account_info(ai)?.clone(),
                 recipient_tokens: next_account_info(ai)?.clone(),
-                metadata: next_account_info(ai)?.clone(),
-                escrow_tokens: next_account_info(ai)?.clone(),
                 streamflow_treasury: next_account_info(ai)?.clone(),
                 streamflow_treasury_tokens: next_account_info(ai)?.clone(),
                 partner: next_account_info(ai)?.clone(),
                 partner_tokens: next_account_info(ai)?.clone(),
+                escrow_tokens: next_account_info(ai)?.clone(),
+                contract: next_account_info(ai)?.clone(), //ex metadata
+                mint: next_account_info(ai)?.clone(),
+                rent: next_account_info(ai)?.clone(), //todo: getting warning that rent is deprecated in 1.9.0?
+                token_program: next_account_info(ai)?.clone(),
+                associated_token_program: next_account_info(ai)?.clone(),
+                system_program: next_account_info(ai)?.clone(),
+            };
+            let amount = u64::from_le_bytes(ix[1..].try_into().unwrap());
+            return withdraw(pid, ia, amount);
+        }
+        2 => {
+            let ia = CancelAccounts {
+                invoker: next_account_info(ai)?.clone(),
+                sender: next_account_info(ai)?.clone(),
+                sender_tokens: next_account_info(ai)?.clone(),
+                recipient: next_account_info(ai)?.clone(),
+                recipient_tokens: next_account_info(ai)?.clone(),
+                streamflow_treasury: next_account_info(ai)?.clone(),
+                streamflow_treasury_tokens: next_account_info(ai)?.clone(),
+                partner: next_account_info(ai)?.clone(),
+                partner_tokens: next_account_info(ai)?.clone(),
+                escrow_tokens: next_account_info(ai)?.clone(),
+                contract: next_account_info(ai)?.clone(), //ex metadata
                 mint: next_account_info(ai)?.clone(),
                 rent: next_account_info(ai)?.clone(),
                 token_program: next_account_info(ai)?.clone(),
                 associated_token_program: next_account_info(ai)?.clone(),
                 system_program: next_account_info(ai)?.clone(),
             };
-            let amount = u64::from_le_bytes(ix[1..].try_into().unwrap());
-            return withdraw(pid, ia, amount)
-        }
-        2 => {
-            // Comment for style
-            return cancel(pid, ia)
+
+            return cancel(pid, ia);
         }
         3 => {
-            // These should be initialized beforehand
-            let recipient = Pubkey::try_from_slice(&ix[1..33])?;
-            let recipient_tokens = Pubkey::try_from_slice(&ix[33..65])?;
-            return transfer_recipient(pid, ia, recipient, recipient_tokens)
+            let ia = TransferAccounts {
+                invoker: next_account_info(ai)?.clone(), //x
+                new_recipient: next_account_info(ai)?.clone(),
+                new_recipient_tokens: next_account_info(ai)?.clone(),
+                contract: next_account_info(ai)?.clone(), //ex metadata
+                mint: next_account_info(ai)?.clone(),
+                rent: next_account_info(ai)?.clone(), //todo: deprecated?
+                token_program: next_account_info(ai)?.clone(),
+                associated_token_program: next_account_info(ai)?.clone(),
+                system_program: next_account_info(ai)?.clone(),
+            };
+            return transfer_recipient(pid, ia); //new_recipient & new_recipient_tokens are passed as accounts
         }
         4 => {
+            let ia = TopupAccounts {
+                invoker: next_account_info(ai)?.clone(), //signer
+                invoker_tokens: next_account_info(ai)?.clone(),
+                recipient: next_account_info(ai)?.clone(),
+                recipient_tokens: next_account_info(ai)?.clone(),
+                streamflow_treasury: next_account_info(ai)?.clone(),
+                streamflow_treasury_tokens: next_account_info(ai)?.clone(),
+                partner: next_account_info(ai)?.clone(),
+                partner_tokens: next_account_info(ai)?.clone(),
+                escrow_tokens: next_account_info(ai)?.clone(),
+                contract: next_account_info(ai)?.clone(), //ex metadata
+                mint: next_account_info(ai)?.clone(),
+                token_program: next_account_info(ai)?.clone(),
+            };
+
             let amount = u64::from_le_bytes(ix[1..].try_into().unwrap());
-            return topup(pid, ia, amount)
+            return topup(pid, ia, amount);
         }
         _ => {}
     }
