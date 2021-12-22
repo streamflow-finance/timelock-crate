@@ -1927,7 +1927,6 @@ dependencies = [
 [[package]]
 name = "partner-oracle"
 version = "0.0.1"
-source = "git+ssh://git@github.com/streamflow-finance/partner-oracle.git#f6746277fdd09bd608093a051330b6b90229c053"
 dependencies = [
  "borsh",
  "solana-program",

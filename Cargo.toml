@@ -27,7 +27,7 @@ spl-token = {version = "3.2.0", features = ["no-entrypoint"]}
 thiserror = "1.0.30"
 
 [dependencies.partner-oracle]
-git = "ssh://git@github.com/streamflow-finance/partner-oracle.git"
+path = "/Users/nemanjaboskovic/personal/streamflow/partner-oracle"
 features = ["no-entrypoint"]
 
 [dev-dependencies]
