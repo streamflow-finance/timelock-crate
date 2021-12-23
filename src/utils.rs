@@ -85,6 +85,15 @@ pub fn calculate_available(now: u64, ix: StreamInstruction, total: u64, withdraw
     (periods_passed as f64 * period_amount) as u64 + cliff_amount - withdrawn
 }
 
+// TODO: impl calculations from ix
+pub fn calculate_external_deposit(balance: u64, deposited: u64, withdrawn: u64) -> u64 {
+    if deposited - withdrawn == balance {
+        return 0
+    }
+
+    balance - deposited - withdrawn
+}
+
 /// Given amount and percentage, return the u64 of that percentage.
 pub fn calculate_fee_from_amount(amount: u64, percentage: f32) -> u64 {
     if percentage <= 0.0 {
