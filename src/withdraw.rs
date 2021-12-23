@@ -50,22 +50,22 @@ fn account_sanity_check(pid: &Pubkey, a: WithdrawAccounts) -> ProgramResult {
 
     // These accounts must not be empty, and need to have correct ownership
     if a.escrow_tokens.data_is_empty() || a.escrow_tokens.owner != &spl_token::id() {
-        return Err(SfError::InvalidEscrowAccount.into());
+        return Err(SfError::InvalidEscrowAccount.into())
     }
 
     if a.metadata.data_is_empty() || a.metadata.owner != pid {
-        return Err(SfError::InvalidMetadataAccount.into());
+        return Err(SfError::InvalidMetadataAccount.into())
     }
 
     // We want these accounts to be writable
-    if !a.authority.is_writable
-        || !a.recipient_tokens.is_writable
-        || !a.metadata.is_writable
-        || !a.escrow_tokens.is_writable
-        || !a.streamflow_treasury_tokens.is_writable
-        || !a.partner_tokens.is_writable
+    if !a.authority.is_writable ||
+        !a.recipient_tokens.is_writable ||
+        !a.metadata.is_writable ||
+        !a.escrow_tokens.is_writable ||
+        !a.streamflow_treasury_tokens.is_writable ||
+        !a.partner_tokens.is_writable
     {
-        return Err(SfError::AccountsNotWritable.into());
+        return Err(SfError::AccountsNotWritable.into())
     }
 
     // Check if the associated token accounts are legit
@@ -74,26 +74,26 @@ fn account_sanity_check(pid: &Pubkey, a: WithdrawAccounts) -> ProgramResult {
     let recipient_tokens = get_associated_token_address(a.recipient.key, a.mint.key);
     let partner_tokens = get_associated_token_address(a.partner.key, a.mint.key);
 
-    if a.streamflow_treasury.key != &strm_treasury_pubkey
-        || a.streamflow_treasury_tokens.key != &strm_treasury_tokens
+    if a.streamflow_treasury.key != &strm_treasury_pubkey ||
+        a.streamflow_treasury_tokens.key != &strm_treasury_tokens
     {
-        return Err(SfError::InvalidTreasury.into());
+        return Err(SfError::InvalidTreasury.into())
     }
 
     if a.recipient_tokens.key != &recipient_tokens || a.partner_tokens.key != &partner_tokens {
-        return Err(SfError::MintMismatch.into());
+        return Err(SfError::MintMismatch.into())
     }
 
     // Check escrow token account is legit
     // TODO: Needs a deterministic seed and metadata should become a PDA
     let escrow_tokens_pubkey = Pubkey::find_program_address(&[a.metadata.key.as_ref()], pid).0;
     if &escrow_tokens_pubkey != a.escrow_tokens.key {
-        return Err(ProgramError::InvalidAccountData);
+        return Err(ProgramError::InvalidAccountData)
     }
 
     // On-chain program ID checks
     if a.token_program.key != &spl_token::id() {
-        return Err(ProgramError::InvalidAccountData);
+        return Err(ProgramError::InvalidAccountData)
     }
 
     // Passed without touching the lasers
@@ -102,16 +102,16 @@ fn account_sanity_check(pid: &Pubkey, a: WithdrawAccounts) -> ProgramResult {
 
 fn metadata_sanity_check(acc: WithdrawAccounts, metadata: TokenStreamData) -> ProgramResult {
     // Compare that all the given accounts match the ones inside our metadata.
-    if acc.recipient.key != &metadata.recipient
-        || acc.recipient_tokens.key != &metadata.recipient_tokens
-        || acc.mint.key != &metadata.mint
-        || acc.escrow_tokens.key != &metadata.escrow_tokens
-        || acc.streamflow_treasury.key != &metadata.streamflow_treasury
-        || acc.streamflow_treasury_tokens.key != &metadata.streamflow_treasury_tokens
-        || acc.partner.key != &metadata.partner
-        || acc.partner_tokens.key != &metadata.partner_tokens
+    if acc.recipient.key != &metadata.recipient ||
+        acc.recipient_tokens.key != &metadata.recipient_tokens ||
+        acc.mint.key != &metadata.mint ||
+        acc.escrow_tokens.key != &metadata.escrow_tokens ||
+        acc.streamflow_treasury.key != &metadata.streamflow_treasury ||
+        acc.streamflow_treasury_tokens.key != &metadata.streamflow_treasury_tokens ||
+        acc.partner.key != &metadata.partner ||
+        acc.partner_tokens.key != &metadata.partner_tokens
     {
-        return Err(SfError::MetadataAccountMismatch.into());
+        return Err(SfError::MetadataAccountMismatch.into())
     }
 
     // TODO: What else?
@@ -132,7 +132,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
     let mint_info = unpack_mint_account(&acc.mint)?;
 
     if !acc.authority.is_signer {
-        return Err(ProgramError::MissingRequiredSignature);
+        return Err(ProgramError::MissingRequiredSignature)
     }
 
     account_sanity_check(pid, acc.clone())?;
@@ -155,7 +155,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
     );
 
     if !withdraw_authority.can_withdraw(&metadata.ix) {
-        return Err(ProgramError::InvalidAccountData);
+        return Err(ProgramError::InvalidAccountData)
     }
 
     // Check what has been unlocked so far
@@ -182,7 +182,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
 
     if amount > recipient_available {
         msg!("Available for recipient: {}", recipient_available);
-        return Err(SfError::AmountMoreThanAvailable.into());
+        return Err(SfError::AmountMoreThanAvailable.into())
     }
 
     let escrow_tokens_bump = Pubkey::find_program_address(&[acc.metadata.key.as_ref()], pid).1;
@@ -305,9 +305,9 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
 
     // When everything is withdrawn, close the accounts.
     // TODO: Should we really be comparing to deposited amount?
-    if metadata.withdrawn_amount == metadata.ix.deposited_amount
-        && metadata.partner_fee_withdrawn == metadata.partner_fee_total
-        && metadata.streamflow_fee_withdrawn == metadata.streamflow_fee_total
+    if metadata.withdrawn_amount == metadata.ix.deposited_amount &&
+        metadata.partner_fee_withdrawn == metadata.partner_fee_total &&
+        metadata.streamflow_fee_withdrawn == metadata.streamflow_fee_total
     {
         // TODO: Close metadata account once there is an alternative storage solution
         // for historical data.
