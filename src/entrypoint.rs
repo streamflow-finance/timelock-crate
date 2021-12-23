@@ -48,8 +48,6 @@ pub fn process_instruction(pid: &Pubkey, acc: &[AccountInfo], ix: &[u8]) -> Prog
         1 => {
             let ia = WithdrawAccounts {
                 authority: next_account_info(ai)?.clone(),
-                sender: next_account_info(ai)?.clone(),
-                sender_tokens: next_account_info(ai)?.clone(),
                 recipient: next_account_info(ai)?.clone(),
                 recipient_tokens: next_account_info(ai)?.clone(),
                 metadata: next_account_info(ai)?.clone(),
