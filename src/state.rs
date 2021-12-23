@@ -22,8 +22,9 @@ use crate::create::CreateAccounts;
 
 // Hardcoded program version
 pub const PROGRAM_VERSION: u64 = 2;
-
-pub const STRM_TREASURY: &str = "Ht5G1RhkcKnpLVLMhqJc5aqZ4wYUEbxbtZwGCVbgU7DL";
+pub const STRM_TREASURY: &str = "Ht5G1RhkcKnpLVLMhqJc5aqZ4wYUEbxbtZwGCVbgU7DL"; //todo: update
+pub const MAX_STRING_SIZE: usize = 200;
+pub const STRM_FEE_DEFAULT_PERCENT: f32 = 0.25;
 
 /// The struct containing instructions for initializing a stream
 #[derive(BorshDeserialize, BorshSerialize, Clone, Debug)]

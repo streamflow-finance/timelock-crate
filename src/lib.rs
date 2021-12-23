@@ -16,5 +16,3 @@ pub mod create;
 pub mod topup;
 pub mod transfer;
 pub mod withdraw;
-
-pub(crate) const MAX_STRING_SIZE: usize = 200;

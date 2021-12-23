@@ -18,9 +18,11 @@ use spl_token::amount_to_ui_amount;
 
 use crate::{
     error::SfError,
-    state::{StreamInstruction, TokenStreamData, STRM_TREASURY},
+    state::{
+        StreamInstruction, TokenStreamData, MAX_STRING_SIZE, STRM_FEE_DEFAULT_PERCENT,
+        STRM_TREASURY,
+    },
     utils::{calculate_fee_from_amount, duration_sanity, pretty_time, unpack_mint_account},
-    MAX_STRING_SIZE,
 };
 
 #[derive(Clone, Debug)]
@@ -118,12 +120,13 @@ fn account_sanity_check(pid: &Pubkey, a: CreateAccounts) -> ProgramResult {
     {
         return Err(ProgramError::InvalidAccountData)
     }
+
     // Passed without touching the lasers
     Ok(())
 }
 
 fn instruction_sanity_check(ix: StreamInstruction, now: u64) -> ProgramResult {
-    // We'll limit the stream name lenggth
+    // We'll limit the stream name length
     if ix.stream_name.len() > MAX_STRING_SIZE {
         return Err(SfError::StreamNameTooLong.into())
     }
@@ -172,25 +175,27 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: StreamInstruction) -> Progr
 
     // Check partner accounts are legit
     // TODO: How to enforce correct partner account?
-    let (partner_fee, strm_fee) = match fetch_partner_fee_data(&acc.fee_oracle, acc.partner.key) {
-        Ok(v) => v,
-        // In case the partner is not found, we fallback to Streamflow.
-        Err(_) => fetch_partner_fee_data(&acc.fee_oracle, acc.streamflow_treasury.key)?,
-    };
+    //Todo: can we do a CPI (invoke) here to further obfuscate internal structure of fees account?
+    let (partner_fee_percent, strm_fee_percent) =
+        match fetch_partner_fee_data(&acc.fee_oracle, acc.partner.key) {
+            Ok(v) => v,
+            // In case the partner is not found, we fallback to default.
+            Err(_) => (0.0, STRM_FEE_DEFAULT_PERCENT),
+        };
     // Calculate fees
-    let uint_fee_for_partner = calculate_fee_from_amount(ix.deposited_amount, partner_fee);
-    let uint_fee_for_strm = calculate_fee_from_amount(ix.deposited_amount, strm_fee);
-    msg!("Fee for partner: {}", uint_fee_for_partner / mint_info.decimals as u64);
-    msg!("Fee for Streamflow: {}", uint_fee_for_strm / mint_info.decimals as u64);
+    let partner_fee_amount = calculate_fee_from_amount(ix.deposited_amount, partner_fee_percent);
+    let strm_fee_amount = calculate_fee_from_amount(ix.deposited_amount, strm_fee_percent);
+    msg!("Fee for partner: {}", partner_fee_amount / mint_info.decimals as u64);
+    msg!("Fee for Streamflow: {}", strm_fee_amount / mint_info.decimals as u64);
 
     let mut metadata = TokenStreamData::new(
         now,
         acc.clone(),
         ix.clone(),
-        uint_fee_for_partner,
-        partner_fee,
-        uint_fee_for_strm,
-        strm_fee,
+        partner_fee_amount,
+        partner_fee_percent,
+        strm_fee_amount,
+        strm_fee_percent,
     );
 
     // Move closable_at (from third party), when recurring ignore end_date
@@ -264,7 +269,7 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: StreamInstruction) -> Progr
             acc.escrow_tokens.key,
             acc.sender.key,
             &[],
-            ix.deposited_amount + uint_fee_for_partner + uint_fee_for_strm,
+            ix.deposited_amount + partner_fee_amount + strm_fee_amount,
         )?,
         &[
             acc.sender_tokens.clone(),
@@ -292,7 +297,7 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: StreamInstruction) -> Progr
         )?;
     }
 
-    if partner_fee > 0.0 && acc.partner_tokens.data_is_empty() {
+    if partner_fee_percent > 0.0 && acc.partner_tokens.data_is_empty() {
         msg!("Initializing parther's associated token account");
         invoke(
             &create_associated_token_account(acc.sender.key, acc.partner.key, acc.mint.key),
@@ -308,7 +313,7 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: StreamInstruction) -> Progr
         )?;
     }
 
-    if strm_fee > 0.0 && acc.streamflow_treasury_tokens.data_is_empty() {
+    if strm_fee_percent > 0.0 && acc.streamflow_treasury_tokens.data_is_empty() {
         msg!("Initializing Streamflow treasury associated token account");
         invoke(
             &create_associated_token_account(
