@@ -164,8 +164,8 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
     }
 
     let cluster_rent = Rent::get()?;
-    let now = Clock::get()?.unix_timestamp as u64;
     let mint_info = unpack_mint_account(&acc.mint)?;
+    let now = Clock::get()?.unix_timestamp as u64;
 
     // Sanity checks
     account_sanity_check(pid, acc.clone())?;
@@ -182,6 +182,7 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
             // In case the partner is not found, we fallback to default.
             Err(_) => (0.0, STRM_FEE_DEFAULT_PERCENT),
         };
+
     // Calculate fees
     let partner_fee_amount = calculate_fee_from_amount(ix.deposited_amount, partner_fee_percent);
     let strm_fee_amount = calculate_fee_from_amount(ix.deposited_amount, strm_fee_percent);

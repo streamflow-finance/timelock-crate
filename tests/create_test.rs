@@ -120,7 +120,7 @@ async fn test_create_stream_success() -> Result<()> {
 
     assert_eq!(metadata_acc.owner, tt.program_id);
     assert_eq!(metadata_data.magic, PROGRAM_VERSION);
-    assert_eq!(metadata_data.withdrawn_amount, 0);
+    assert_eq!(metadata_data.amount_withdrawn, 0);
     assert_eq!(metadata_data.canceled_at, 0);
     assert_eq!(metadata_data.closable_at, now + 605);
     assert_eq!(metadata_data.last_withdrawn_at, 0);

@@ -107,7 +107,7 @@ async fn timelock_program_test() -> Result<()> {
 
     assert_eq!(metadata_acc.owner, tt.program_id);
     assert_eq!(metadata_data.magic, PROGRAM_VERSION);
-    assert_eq!(metadata_data.withdrawn_amount, 0);
+    assert_eq!(metadata_data.amount_withdrawn, 0);
     assert_eq!(metadata_data.canceled_at, 0);
     assert_eq!(metadata_data.closable_at, now + 605);
     assert_eq!(metadata_data.last_withdrawn_at, 0);
@@ -145,7 +145,7 @@ async fn timelock_program_test() -> Result<()> {
     tt.bench.process_transaction(&[withdraw_stream_ix_bytes], Some(&[&bob])).await?;
 
     let metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
-    assert_eq!(metadata_data.withdrawn_amount, 1180000000);
+    assert_eq!(metadata_data.amount_withdrawn, 1180000000);
 
     println!("{:#?}", metadata_data);
     Ok(())
@@ -680,7 +680,7 @@ async fn timelock_program_test_recurring() -> Result<()> {
     tt.bench.process_transaction(&[withdraw_stream_ix_bytes], Some(&[&bob])).await?;
 
     let metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
-    assert_eq!(metadata_data.withdrawn_amount, spl_token::ui_amount_to_amount(25.0, 8));
+    assert_eq!(metadata_data.amount_withdrawn, spl_token::ui_amount_to_amount(25.0, 8));
     assert_eq!(metadata_data.last_withdrawn_at, new_now);
 
     // Try to topup, stream expired, shouldn't succeed

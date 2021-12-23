@@ -69,7 +69,7 @@ pub struct Contract {
     /// Timestamp when stream was created
     pub created_at: u64,
     /// Amount of funds withdrawn
-    pub withdrawn_amount: u64,
+    pub amount_withdrawn: u64,
     /// Timestamp when stream was canceled (if canceled)
     pub canceled_at: u64,
     /// Timestamp at which stream can be safely canceled by a 3rd party
@@ -129,7 +129,7 @@ impl Contract {
         Self {
             magic: PROGRAM_VERSION,
             created_at: now, // TODO: is oke?
-            withdrawn_amount: 0,
+            amount_withdrawn: 0,
             canceled_at: 0,
             closable_at: ix.end_time, // TODO: is oke?
             last_withdrawn_at: 0,

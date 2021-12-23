@@ -163,7 +163,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
         now,
         metadata.ix.clone(),
         metadata.ix.deposited_amount,
-        metadata.withdrawn_amount,
+        metadata.amount_withdrawn,
     );
 
     let streamflow_available = calculate_available(
@@ -208,7 +208,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
             &[&seeds],
         )?;
 
-        metadata.withdrawn_amount += amount;
+        metadata.amount_withdrawn += amount;
         metadata.last_withdrawn_at = now;
         msg!(
             "Withdrawn: {} {} tokens",
@@ -218,7 +218,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
         msg!(
             "Remaining: {} {} tokens",
             amount_to_ui_amount(
-                metadata.ix.deposited_amount - metadata.withdrawn_amount,
+                metadata.ix.deposited_amount - metadata.amount_withdrawn,
                 mint_info.decimals
             ),
             metadata.mint
@@ -305,7 +305,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
 
     // When everything is withdrawn, close the accounts.
     // TODO: Should we really be comparing to deposited amount?
-    if metadata.withdrawn_amount == metadata.ix.deposited_amount &&
+    if metadata.amount_withdrawn == metadata.ix.deposited_amount &&
         metadata.partner_fee_withdrawn == metadata.partner_fee_total &&
         metadata.streamflow_fee_withdrawn == metadata.streamflow_fee_total
     {
