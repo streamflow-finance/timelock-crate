@@ -61,7 +61,7 @@ pub fn topup(_program_id: &Pubkey, acc: TopupAccounts, amount: u64) -> ProgramRe
             acc.escrow_tokens.key,
             acc.sender.key,
             &[],
-            amount, //
+            amount,
         )?,
         &[
             acc.sender_tokens.clone(),
