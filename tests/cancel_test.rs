@@ -16,7 +16,7 @@ use solana_sdk::{
 use spl_associated_token_account::get_associated_token_address;
 use test_sdk::tools::clone_keypair;
 
-use streamflow_timelock::state::{Contract, StreamInstruction, PROGRAM_VERSION};
+use streamflow_timelock::state::{Contract, CreateParams, PROGRAM_VERSION};
 
 mod fascilities;
 
@@ -67,7 +67,7 @@ async fn test_sender_not_cancellable_should_not_be_cancelled() -> Result<()> {
 
     let create_stream_ix = CreateStreamIx {
         ix: 0,
-        metadata: StreamInstruction {
+        metadata: CreateParams {
             start_time: now + 10,
             end_time: now + 1010,
             deposited_amount: spl_token::ui_amount_to_amount(10.0, 8),
@@ -181,7 +181,7 @@ async fn test_sender_cancellable_should_be_cancelled() -> Result<()> {
 
     let create_stream_ix = CreateStreamIx {
         ix: 0,
-        metadata: StreamInstruction {
+        metadata: CreateParams {
             start_time: now + 10,
             end_time: now + 1010,
             deposited_amount: spl_token::ui_amount_to_amount(10.0, 8),
@@ -295,7 +295,7 @@ async fn test_recipient_cancellable_should_be_cancelled() -> Result<()> {
 
     let create_stream_ix = CreateStreamIx {
         ix: 0,
-        metadata: StreamInstruction {
+        metadata: CreateParams {
             start_time: now + 10,
             end_time: now + 1010,
             deposited_amount: spl_token::ui_amount_to_amount(10.0, 8),
@@ -409,7 +409,7 @@ async fn test_recipient_not_cancellable_should_not_be_cancelled() -> Result<()> 
 
     let create_stream_ix = CreateStreamIx {
         ix: 0,
-        metadata: StreamInstruction {
+        metadata: CreateParams {
             start_time: now + 10,
             end_time: now + 1010,
             deposited_amount: spl_token::ui_amount_to_amount(10.0, 8),

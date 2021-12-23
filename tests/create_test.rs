@@ -19,7 +19,7 @@ use spl_associated_token_account::get_associated_token_address;
 
 use test_sdk::tools::clone_keypair;
 
-use streamflow_timelock::state::{Contract, CreateStreamParams, PROGRAM_VERSION, STRM_TREASURY};
+use streamflow_timelock::state::{Contract, CreateParams, PROGRAM_VERSION, STRM_TREASURY};
 
 mod fascilities;
 
@@ -73,7 +73,7 @@ async fn test_create_stream_success() -> Result<()> {
 
     let create_stream_ix = CreateStreamIx {
         ix: 0,
-        metadata: CreateStreamParams {
+        metadata: CreateParams {
             start_time: now + 5,
             end_time: now + 605,
             deposited_amount: spl_token::ui_amount_to_amount(20.0, 8),
@@ -195,7 +195,7 @@ async fn test_create_stream_success() -> Result<()> {
 //
 //     let create_stream_ix = CreateStreamIx {
 //         ix: 0,
-//         metadata: StreamInstruction {
+//         metadata: CreateParams {
 //             start_time: now + 5,
 //             end_time: now + 605,
 //             deposited_amount: spl_token::ui_amount_to_amount(20.0, 8),
@@ -294,7 +294,7 @@ async fn test_create_stream_success() -> Result<()> {
 //
 //     let create_stream_ix = CreateStreamIx {
 //         ix: 0,
-//         metadata: StreamInstruction {
+//         metadata: CreateParams {
 //             start_time: now + 5,
 //             end_time: now + 605,
 //             deposited_amount: spl_token::ui_amount_to_amount(20.0, 8),
@@ -394,7 +394,7 @@ async fn test_create_stream_success() -> Result<()> {
 //
 //     let create_stream_ix = CreateStreamIx {
 //         ix: 0,
-//         metadata: StreamInstruction {
+//         metadata: CreateParams {
 //             start_time: now + 5,
 //             end_time: now + 605,
 //             deposited_amount: spl_token::ui_amount_to_amount(20.0, 8),
@@ -494,7 +494,7 @@ async fn test_create_stream_success() -> Result<()> {
 //
 //     let create_stream_ix = CreateStreamIx {
 //         ix: 0,
-//         metadata: StreamInstruction {
+//         metadata: CreateParams {
 //             start_time: now + 5,
 //             end_time: now + 605,
 //             deposited_amount: spl_token::ui_amount_to_amount(20.0, 8),
@@ -595,7 +595,7 @@ async fn test_create_stream_success() -> Result<()> {
 //
 //     let create_stream_ix = CreateStreamIx {
 //         ix: 0,
-//         metadata: StreamInstruction {
+//         metadata: CreateParams {
 //             start_time: now + 5,
 //             end_time: now + 605,
 //             deposited_amount: spl_token::ui_amount_to_amount(20.0, 8),
@@ -696,7 +696,7 @@ async fn test_create_stream_success() -> Result<()> {
 //
 //     let create_stream_ix = CreateStreamIx {
 //         ix: 0,
-//         metadata: StreamInstruction {
+//         metadata: CreateParams {
 //             start_time: now + 5,
 //             end_time: now + 605,
 //             deposited_amount: spl_token::ui_amount_to_amount(20.0, 8),
@@ -799,7 +799,7 @@ async fn test_create_stream_success() -> Result<()> {
 //
 //     let create_stream_ix = CreateStreamIx {
 //         ix: 0,
-//         metadata: StreamInstruction {
+//         metadata: CreateParams {
 //             start_time: now + 5,
 //             end_time: now + 605,
 //             deposited_amount: spl_token::ui_amount_to_amount(20.0, 8),
@@ -903,7 +903,7 @@ async fn test_create_stream_success() -> Result<()> {
 //
 //     let create_stream_ix = CreateStreamIx {
 //         ix: 0,
-//         metadata: StreamInstruction {
+//         metadata: CreateParams {
 //             start_time: now + 5,
 //             end_time: now + 605,
 //             deposited_amount: spl_token::ui_amount_to_amount(20.0, 8),
@@ -1006,7 +1006,7 @@ async fn test_create_stream_success() -> Result<()> {
 //
 //     let create_stream_ix = CreateStreamIx {
 //         ix: 0,
-//         metadata: StreamInstruction {
+//         metadata: CreateParams {
 //             start_time: now + 5,
 //             end_time: now + 605,
 //             deposited_amount: spl_token::ui_amount_to_amount(20.0, 8),
@@ -1108,7 +1108,7 @@ async fn test_create_stream_success() -> Result<()> {
 //
 //     let create_stream_ix = CreateStreamIx {
 //         ix: 0,
-//         metadata: StreamInstruction {
+//         metadata: CreateParams {
 //             start_time: now + 5,
 //             end_time: now + 605,
 //             deposited_amount: spl_token::ui_amount_to_amount(20.0, 8),
@@ -1211,7 +1211,7 @@ async fn test_create_stream_success() -> Result<()> {
 //
 //     let create_stream_ix = CreateStreamIx {
 //         ix: 0,
-//         metadata: StreamInstruction {
+//         metadata: CreateParams {
 //             start_time: now + 5,
 //             end_time: now + 605,
 //             deposited_amount: spl_token::ui_amount_to_amount(20.0, 8),
@@ -1314,7 +1314,7 @@ async fn test_create_stream_success() -> Result<()> {
 //
 //     let create_stream_ix = CreateStreamIx {
 //         ix: 0,
-//         metadata: StreamInstruction {
+//         metadata: CreateParams {
 //             start_time: now + 5,
 //             end_time: now + 605,
 //             deposited_amount: spl_token::ui_amount_to_amount(20.0, 8),

@@ -16,8 +16,8 @@
 #     stream_name: "foobar",
 # });
 #
-# const buffer = borsh.serialize(StreamInstruction, value);
-# const de_value = borsh.deserialize(StreamInstruction, Struct, buffer);
+# const buffer = borsh.serialize(CreateParams, value);
+# const de_value = borsh.deserialize(CreateParams, Struct, buffer);
 
 import re
 import sys

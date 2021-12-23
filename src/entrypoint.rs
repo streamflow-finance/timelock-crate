@@ -12,7 +12,7 @@ use solana_program::{
 use crate::{
     cancel::{cancel, CancelAccounts},
     create::{create, CreateAccounts},
-    state::StreamInstruction,
+    state::CreateParams,
     topup::{topup, TopupAccounts},
     transfer::{transfer_recipient, TransferAccounts},
     withdraw::{withdraw, WithdrawAccounts},
@@ -42,7 +42,7 @@ pub fn process_instruction(pid: &Pubkey, acc: &[AccountInfo], ix: &[u8]) -> Prog
                 associated_token_program: next_account_info(ai)?.clone(),
                 system_program: next_account_info(ai)?.clone(),
             };
-            let si = StreamInstruction::try_from_slice(&ix[1..])?;
+            let si = CreateParams::try_from_slice(&ix[1..])?;
             return create(pid, ia, si)
         }
         1 => {

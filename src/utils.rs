@@ -4,7 +4,7 @@ use solana_program::{
 };
 use std::iter::FromIterator;
 
-use crate::{error::SfError, state::CreateStreamParams};
+use crate::{error::SfError, state::CreateParams};
 
 /// Do a sanity check with given Unix timestamps.
 pub fn duration_sanity(now: u64, start: u64, end: u64, cliff: u64) -> ProgramResult {
@@ -46,7 +46,7 @@ pub fn pretty_time(t: u64) -> String {
 }
 
 // TODO: Test units, be robust against possible overflows.
-pub fn calculate_available(now: u64, ix: CreateStreamParams, total: u64, withdrawn: u64) -> u64 {
+pub fn calculate_available(now: u64, ix: CreateParams, total: u64, withdrawn: u64) -> u64 {
     if ix.start_time > now || ix.cliff > now || total == 0 || total == withdrawn {
         return 0
     }
@@ -129,7 +129,7 @@ impl Invoker {
         }
     }
 
-    pub fn can_cancel(&self, ix: &CreateStreamParams) -> bool {
+    pub fn can_cancel(&self, ix: &CreateParams) -> bool {
         match self {
             Self::Sender => ix.cancelable_by_sender,
             Self::Recipient => ix.cancelable_by_recipient,
@@ -139,7 +139,7 @@ impl Invoker {
         }
     }
 
-    pub fn can_transfer(&self, ix: &CreateStreamParams) -> bool {
+    pub fn can_transfer(&self, ix: &CreateParams) -> bool {
         match self {
             Self::Sender => ix.transferable_by_sender,
             Self::Recipient => ix.transferable_by_recipient,
@@ -149,7 +149,7 @@ impl Invoker {
         }
     }
 
-    pub fn can_withdraw(&self, ix: &CreateStreamParams) -> bool {
+    pub fn can_withdraw(&self, ix: &CreateParams) -> bool {
         if ix.withdrawal_public {
             return true
         }

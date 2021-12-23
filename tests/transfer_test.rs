@@ -16,7 +16,7 @@ use solana_sdk::{
 use spl_associated_token_account::get_associated_token_address;
 use test_sdk::tools::clone_keypair;
 
-use streamflow_timelock::state::{Contract, CreateStreamParams, PROGRAM_VERSION};
+use streamflow_timelock::state::{Contract, CreateParams, PROGRAM_VERSION};
 
 mod fascilities;
 
@@ -67,7 +67,7 @@ async fn test_sender_not_transferable_should_not_be_transfered() -> Result<()> {
 
     let create_stream_ix = CreateStreamIx {
         ix: 0,
-        metadata: CreateStreamParams {
+        metadata: CreateParams {
             start_time: now + 10,
             end_time: now + 1010,
             deposited_amount: spl_token::ui_amount_to_amount(10.0, 8),
@@ -184,7 +184,7 @@ async fn test_sender_transferable_should_be_transfered() -> Result<()> {
 
     let create_stream_ix = CreateStreamIx {
         ix: 0,
-        metadata: CreateStreamParams {
+        metadata: CreateParams {
             start_time: now + 10,
             end_time: now + 1010,
             deposited_amount: spl_token::ui_amount_to_amount(10.0, 8),
@@ -301,7 +301,7 @@ async fn test_recipient_not_transferable_should_not_be_transfered() -> Result<()
 
     let create_stream_ix = CreateStreamIx {
         ix: 0,
-        metadata: CreateStreamParams {
+        metadata: CreateParams {
             start_time: now + 10,
             end_time: now + 1010,
             deposited_amount: spl_token::ui_amount_to_amount(10.0, 8),
@@ -418,7 +418,7 @@ async fn test_recipient_transferable_should_be_transfered() -> Result<()> {
 
     let create_stream_ix = CreateStreamIx {
         ix: 0,
-        metadata: CreateStreamParams {
+        metadata: CreateParams {
             start_time: now + 10,
             end_time: now + 1010,
             deposited_amount: spl_token::ui_amount_to_amount(10.0, 8),
