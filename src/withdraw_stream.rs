@@ -140,17 +140,20 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
 
     metadata_sanity_check(acc.clone(), metadata.clone())?;
 
+    // Confirm the signer is actually authorized for this instruction
     let withdraw_authority = Invoker::new(
         acc.authority.key,
-        acc.sender.key,
-        acc.recipient.key,
+        &metadata.sender,
+        &metadata.recipient,
         &metadata.streamflow_treasury,
         &metadata.partner,
     );
+
     if !withdraw_authority.can_withdraw(&metadata.ix) {
         return Err(ProgramError::InvalidAccountData)
     }
 
+    // Check what has been unlocked so far
     let recipient_available = calculate_available(
         now,
         metadata.ix.clone(),
