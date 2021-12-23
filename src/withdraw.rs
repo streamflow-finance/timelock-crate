@@ -162,7 +162,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
     let recipient_available = calculate_available(
         now,
         metadata.ix.clone(),
-        metadata.ix.deposited_amount,
+        metadata.ix.amount_deposited,
         metadata.amount_withdrawn,
     );
 
@@ -218,7 +218,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
         msg!(
             "Remaining: {} {} tokens",
             amount_to_ui_amount(
-                metadata.ix.deposited_amount - metadata.amount_withdrawn,
+                metadata.ix.amount_deposited - metadata.amount_withdrawn,
                 mint_info.decimals
             ),
             metadata.mint
@@ -305,7 +305,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
 
     // When everything is withdrawn, close the accounts.
     // TODO: Should we really be comparing to deposited amount?
-    if metadata.amount_withdrawn == metadata.ix.deposited_amount &&
+    if metadata.amount_withdrawn == metadata.ix.amount_deposited &&
         metadata.partner_fee_withdrawn == metadata.partner_fee_total &&
         metadata.streamflow_fee_withdrawn == metadata.streamflow_fee_total
     {

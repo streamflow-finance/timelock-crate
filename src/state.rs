@@ -35,7 +35,7 @@ pub struct CreateParams {
     /// Timestamp when all tokens are fully vested
     pub end_time: u64,
     /// Deposited amount of tokens
-    pub deposited_amount: u64,
+    pub amount_deposited: u64,
     /// Time step (period) in seconds per which the vesting occurs
     pub period: u64,
     /// Amount released per period
@@ -125,13 +125,13 @@ impl Contract {
         strm_fee: u64,
         strm_pct: f32,
     ) -> Self {
-        // TODO: calculate cancel_time based on other parameters (incl. deposited_amount)
+        // TODO: calculate cancel_time based on other parameters (incl. amount_deposited)
         Self {
             magic: PROGRAM_VERSION,
             created_at: now, // TODO: is oke?
             amount_withdrawn: 0,
             canceled_at: 0,
-            closable_at: ix.end_time, // TODO: is oke?
+            closable_at: ix.end_time,
             last_withdrawn_at: 0,
             sender: *acc.sender.key,
             sender_tokens: *acc.sender_tokens.key,
@@ -160,7 +160,7 @@ impl Contract {
 
         let cliff_amount = if self.ix.cliff_amount > 0 { self.ix.cliff_amount } else { 0 };
         // Deposit smaller then cliff amount, cancelable at cliff
-        if self.ix.deposited_amount < cliff_amount {
+        if self.ix.amount_deposited < cliff_amount {
             return cliff_time
         }
         // Nr of seconds after the cliff
@@ -170,10 +170,10 @@ impl Contract {
             self.ix.release_rate / self.ix.period
         } else {
             // stream per second
-            ((self.ix.deposited_amount - cliff_amount) / seconds_nr) as u64
+            ((self.ix.amount_deposited - cliff_amount) / seconds_nr) as u64
         };
         // Seconds till account runs out of available funds, +1 as ceil (integer)
-        let seconds_left = ((self.ix.deposited_amount - cliff_amount) / amount_per_second) + 1;
+        let seconds_left = ((self.ix.amount_deposited - cliff_amount) / amount_per_second) + 1;
 
         msg!(
             "Release {}, Period {}, seconds left {}",
