@@ -1,5 +1,10 @@
 use std::str::FromStr;
 
+use crate::{
+    error::SfError,
+    state::{TokenStreamData, STRM_TREASURY},
+    utils::{calculate_available, unpack_mint_account, Invoker},
+};
 use borsh::BorshSerialize;
 use solana_program::{
     account_info::AccountInfo,
@@ -13,12 +18,6 @@ use solana_program::{
 };
 use spl_associated_token_account::get_associated_token_address;
 use spl_token::amount_to_ui_amount;
-use crate::utils::Invoker;
-use crate::{
-    error::SfError,
-    state::{TokenStreamData, STRM_TREASURY},
-    utils::{calculate_available, unpack_mint_account},
-};
 
 #[derive(Clone, Debug)]
 pub struct WithdrawAccounts<'a> {
@@ -142,8 +141,11 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
     metadata_sanity_check(acc.clone(), metadata.clone())?;
 
     let withdraw_authority = Invoker::new(
-        acc.authority.key, acc.sender.key,
-        acc.recipient.key, &metadata.streamflow_treasury, &metadata.partner
+        acc.authority.key,
+        acc.sender.key,
+        acc.recipient.key,
+        &metadata.streamflow_treasury,
+        &metadata.partner,
     );
     if !withdraw_authority.can_withdraw(&metadata.ix) {
         return Err(ProgramError::InvalidAccountData)

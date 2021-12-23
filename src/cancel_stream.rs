@@ -16,10 +16,9 @@ use spl_token::amount_to_ui_amount;
 
 use crate::{
     error::SfError,
-    state::TokenStreamData,
-    utils::{calculate_available, Invoker, unpack_mint_account},
+    state::{TokenStreamData, STRM_TREASURY},
+    utils::{calculate_available, unpack_mint_account, Invoker},
 };
-use crate::state::STRM_TREASURY;
 
 #[derive(Clone, Debug)]
 pub struct CancelAccounts<'a> {
@@ -148,8 +147,11 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
             return Err(ProgramError::MissingRequiredSignature)
         }
         let cancel_authority = Invoker::new(
-            acc.authority.key, acc.sender.key,
-            acc.recipient.key, &metadata.streamflow_treasury, &metadata.partner
+            acc.authority.key,
+            acc.sender.key,
+            acc.recipient.key,
+            &metadata.streamflow_treasury,
+            &metadata.partner,
         );
         if !cancel_authority.can_cancel(&metadata.ix) {
             return Err(ProgramError::InvalidAccountData)

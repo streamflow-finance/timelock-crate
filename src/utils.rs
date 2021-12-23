@@ -100,12 +100,17 @@ pub enum Invoker {
     Recipient,
     StreamflowTreasury,
     Partner,
-    None
+    None,
 }
 
 impl Invoker {
-    pub fn new(authority: &Pubkey, sender: &Pubkey, recipient: &Pubkey,
-               streamflow_treasury: &Pubkey, partner: &Pubkey) -> Self {
+    pub fn new(
+        authority: &Pubkey,
+        sender: &Pubkey,
+        recipient: &Pubkey,
+        streamflow_treasury: &Pubkey,
+        partner: &Pubkey,
+    ) -> Self {
         if authority == sender {
             Self::Sender
         } else if authority == recipient {
@@ -141,7 +146,7 @@ impl Invoker {
 
     pub fn can_withdraw(&self, ix: &StreamInstruction) -> bool {
         if ix.withdrawal_public {
-            true
+            return true
         }
 
         match self {

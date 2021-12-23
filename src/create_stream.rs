@@ -18,11 +18,10 @@ use spl_token::amount_to_ui_amount;
 
 use crate::{
     error::SfError,
-    MAX_STRING_SIZE,
-    state::{StreamInstruction, TokenStreamData},
+    state::{StreamInstruction, TokenStreamData, STRM_TREASURY},
     utils::{calculate_fee_from_amount, duration_sanity, pretty_time, unpack_mint_account},
+    MAX_STRING_SIZE,
 };
-use crate::state::STRM_TREASURY;
 
 #[derive(Clone, Debug)]
 pub struct CreateAccounts<'a> {
