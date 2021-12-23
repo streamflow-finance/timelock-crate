@@ -23,8 +23,6 @@ use spl_token::amount_to_ui_amount;
 pub struct WithdrawAccounts<'a> {
     /// Account invoking transaction.
     pub authority: AccountInfo<'a>,
-    pub sender: AccountInfo<'a>,
-    pub sender_tokens: AccountInfo<'a>,
     /// Recipient's wallet address
     pub recipient: AccountInfo<'a>,
     /// The associated token account address of a stream `recipient`
@@ -73,7 +71,6 @@ fn account_sanity_check(pid: &Pubkey, a: WithdrawAccounts) -> ProgramResult {
     // Check if the associated token accounts are legit
     let strm_treasury_pubkey = Pubkey::from_str(STRM_TREASURY).unwrap();
     let strm_treasury_tokens = get_associated_token_address(&strm_treasury_pubkey, a.mint.key);
-    let sender_tokens = get_associated_token_address(a.sender.key, a.mint.key);
     let recipient_tokens = get_associated_token_address(a.recipient.key, a.mint.key);
     let partner_tokens = get_associated_token_address(a.partner.key, a.mint.key);
 
@@ -83,10 +80,7 @@ fn account_sanity_check(pid: &Pubkey, a: WithdrawAccounts) -> ProgramResult {
         return Err(SfError::InvalidTreasury.into());
     }
 
-    if a.sender_tokens.key != &sender_tokens
-        || a.recipient_tokens.key != &recipient_tokens
-        || a.partner_tokens.key != &partner_tokens
-    {
+    if a.recipient_tokens.key != &recipient_tokens || a.partner_tokens.key != &partner_tokens {
         return Err(SfError::MintMismatch.into());
     }
 
