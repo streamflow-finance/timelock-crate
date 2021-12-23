@@ -112,9 +112,9 @@ impl Contract {
     ) -> Self {
         // TODO: calculate cancel_time based on other parameters (incl. amount_deposited)
         Self {
-            created_at: now, // TODO: is oke?
             magic: 0,
             version: PROGRAM_VERSION,
+            created_at: now,
             amount_withdrawn: 0,
             canceled_at: 0,
             closable_at: ix.end_time,
