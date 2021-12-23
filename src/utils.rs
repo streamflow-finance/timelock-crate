@@ -63,7 +63,7 @@ pub fn calculate_available(now: u64, ix: StreamInstruction, total: u64, withdraw
     let period_amount = if ix.release_rate > 0 {
         ix.release_rate as f64
     } else {
-        (ix.total_amount - cliff_amount) as f64 / num_periods
+        (ix.deposited_amount - cliff_amount) as f64 / num_periods
     };
 
     let periods_passed = (now - cliff) / ix.period;

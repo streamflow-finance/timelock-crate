@@ -33,11 +33,8 @@ pub struct StreamInstruction {
     pub start_time: u64,
     /// Timestamp when all tokens are fully vested
     pub end_time: u64,
-    /// Deposited amount of tokens (should be <= total_amount)
+    /// Deposited amount of tokens
     pub deposited_amount: u64,
-    /// Total amount of the tokens in the escrow account if
-    /// contract is fully vested
-    pub total_amount: u64,
     /// Time step (period) in seconds per which the vesting occurs
     pub period: u64,
     /// Amount released per period
@@ -172,7 +169,7 @@ impl TokenStreamData {
             self.ix.release_rate / self.ix.period
         } else {
             // stream per second
-            ((self.ix.total_amount - cliff_amount) / seconds_nr) as u64
+            ((self.ix.deposited_amount - cliff_amount) / seconds_nr) as u64
         };
         // Seconds till account runs out of available funds, +1 as ceil (integer)
         let seconds_left = ((self.ix.deposited_amount - cliff_amount) / amount_per_second) + 1;

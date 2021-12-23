@@ -69,7 +69,6 @@ async fn timelock_program_test() -> Result<()> {
             start_time: now + 5,
             end_time: now + 605,
             deposited_amount: spl_token::ui_amount_to_amount(20.0, 8),
-            total_amount: spl_token::ui_amount_to_amount(20.0, 8),
             period: 1,
             cliff: 0,
             cliff_amount: 0,
@@ -121,7 +120,6 @@ async fn timelock_program_test() -> Result<()> {
     assert_eq!(metadata_data.ix.start_time, now + 5);
     assert_eq!(metadata_data.ix.end_time, now + 605);
     assert_eq!(metadata_data.ix.deposited_amount, spl_token::ui_amount_to_amount(20.0, 8));
-    assert_eq!(metadata_data.ix.total_amount, spl_token::ui_amount_to_amount(20.0, 8));
     assert_eq!(metadata_data.ix.stream_name, "TheTestoooooooooor".to_string());
 
     // Let's warp ahead and try withdrawing some of the stream.
@@ -200,7 +198,6 @@ async fn timelock_program_test2() -> Result<()> {
             start_time: now + 10,
             end_time: now + 1010,
             deposited_amount: spl_token::ui_amount_to_amount(10.0, 8),
-            total_amount: spl_token::ui_amount_to_amount(20.0, 8),
             period: 1,
             cliff: 0,
             cliff_amount: 0,
@@ -243,7 +240,6 @@ async fn timelock_program_test2() -> Result<()> {
     assert_eq!(metadata_data.ix.start_time, now + 10);
     assert_eq!(metadata_data.ix.end_time, now + 1010);
     assert_eq!(metadata_data.ix.deposited_amount, spl_token::ui_amount_to_amount(10.0, 8));
-    assert_eq!(metadata_data.ix.total_amount, spl_token::ui_amount_to_amount(20.0, 8));
     assert_eq!(metadata_data.ix.stream_name, "Test2".to_string());
 
     // Test if recipient can be transfered, should return error
@@ -421,7 +417,6 @@ async fn timelock_program_test_transfer() -> Result<()> {
             start_time: now + 10,
             end_time: now + 1010,
             deposited_amount: spl_token::ui_amount_to_amount(10.0, 8),
-            total_amount: spl_token::ui_amount_to_amount(20.0, 8),
             period: 1,
             cliff: 0,
             cliff_amount: 0,
@@ -535,7 +530,6 @@ async fn timelock_program_test_recurring() -> Result<()> {
             start_time: now + 10,
             end_time: now + 1010,
             deposited_amount: spl_token::ui_amount_to_amount(10.0, 8),
-            total_amount: spl_token::ui_amount_to_amount(20.0, 8),
             period: 200,
             cliff: 0,
             cliff_amount: 0,

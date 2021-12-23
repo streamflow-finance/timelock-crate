@@ -79,7 +79,6 @@ async fn test_create_stream_success() -> Result<()> {
             start_time: now + 5,
             end_time: now + 605,
             deposited_amount: spl_token::ui_amount_to_amount(20.0, 8),
-            total_amount: spl_token::ui_amount_to_amount(20.0, 8),
             period: 1,
             amount_per_period: 333333,
             cliff: 0,
@@ -136,7 +135,6 @@ async fn test_create_stream_success() -> Result<()> {
     assert_eq!(metadata_data.ix.start_time, now + 5);
     assert_eq!(metadata_data.ix.end_time, now + 605);
     assert_eq!(metadata_data.ix.deposited_amount, spl_token::ui_amount_to_amount(20.0, 8));
-    assert_eq!(metadata_data.ix.total_amount, spl_token::ui_amount_to_amount(20.0, 8));
     assert_eq!(metadata_data.ix.stream_name, "TheTestoooooooooor".to_string());
     Ok(())
 }
@@ -203,7 +201,6 @@ async fn test_create_stream_success() -> Result<()> {
 //             start_time: now + 5,
 //             end_time: now + 605,
 //             deposited_amount: spl_token::ui_amount_to_amount(20.0, 8),
-//             total_amount: spl_token::ui_amount_to_amount(20.0, 8),
 //             period: 1,
 //             cliff: 0,
 //             cliff_amount: 0,
@@ -303,7 +300,6 @@ async fn test_create_stream_success() -> Result<()> {
 //             start_time: now + 5,
 //             end_time: now + 605,
 //             deposited_amount: spl_token::ui_amount_to_amount(20.0, 8),
-//             total_amount: spl_token::ui_amount_to_amount(20.0, 8),
 //             period: 1,
 //             cliff: 0,
 //             cliff_amount: 0,
@@ -404,7 +400,6 @@ async fn test_create_stream_success() -> Result<()> {
 //             start_time: now + 5,
 //             end_time: now + 605,
 //             deposited_amount: spl_token::ui_amount_to_amount(20.0, 8),
-//             total_amount: spl_token::ui_amount_to_amount(20.0, 8),
 //             period: 1,
 //             cliff: 0,
 //             cliff_amount: 0,
@@ -505,7 +500,7 @@ async fn test_create_stream_success() -> Result<()> {
 //             start_time: now + 5,
 //             end_time: now + 605,
 //             deposited_amount: spl_token::ui_amount_to_amount(20.0, 8),
-//             total_amount: spl_token::ui_amount_to_amount(20.0, 8),
+
 //             period: 1,
 //             cliff: 0,
 //             cliff_amount: 0,
@@ -606,7 +601,7 @@ async fn test_create_stream_success() -> Result<()> {
 //             start_time: now + 5,
 //             end_time: now + 605,
 //             deposited_amount: spl_token::ui_amount_to_amount(20.0, 8),
-//             total_amount: spl_token::ui_amount_to_amount(20.0, 8),
+
 //             period: 1,
 //             cliff: 0,
 //             cliff_amount: 0,
@@ -707,7 +702,7 @@ async fn test_create_stream_success() -> Result<()> {
 //             start_time: now + 5,
 //             end_time: now + 605,
 //             deposited_amount: spl_token::ui_amount_to_amount(20.0, 8),
-//             total_amount: spl_token::ui_amount_to_amount(20.0, 8),
+
 //             period: 1,
 //             cliff: 0,
 //             cliff_amount: 0,
@@ -810,7 +805,7 @@ async fn test_create_stream_success() -> Result<()> {
 //             start_time: now + 5,
 //             end_time: now + 605,
 //             deposited_amount: spl_token::ui_amount_to_amount(20.0, 8),
-//             total_amount: spl_token::ui_amount_to_amount(20.0, 8),
+
 //             period: 1,
 //             cliff: 0,
 //             cliff_amount: 0,
@@ -914,7 +909,7 @@ async fn test_create_stream_success() -> Result<()> {
 //             start_time: now + 5,
 //             end_time: now + 605,
 //             deposited_amount: spl_token::ui_amount_to_amount(20.0, 8),
-//             total_amount: spl_token::ui_amount_to_amount(20.0, 8),
+
 //             period: 1,
 //             cliff: 0,
 //             cliff_amount: 0,
@@ -1017,7 +1012,7 @@ async fn test_create_stream_success() -> Result<()> {
 //             start_time: now + 5,
 //             end_time: now + 605,
 //             deposited_amount: spl_token::ui_amount_to_amount(20.0, 8),
-//             total_amount: spl_token::ui_amount_to_amount(20.0, 8),
+
 //             period: 1,
 //             cliff: 0,
 //             cliff_amount: 0,
@@ -1119,7 +1114,7 @@ async fn test_create_stream_success() -> Result<()> {
 //             start_time: now + 5,
 //             end_time: now + 605,
 //             deposited_amount: spl_token::ui_amount_to_amount(20.0, 8),
-//             total_amount: spl_token::ui_amount_to_amount(20.0, 8),
+
 //             period: 1,
 //             cliff: 0,
 //             cliff_amount: 0,
@@ -1222,7 +1217,7 @@ async fn test_create_stream_success() -> Result<()> {
 //             start_time: now + 5,
 //             end_time: now + 605,
 //             deposited_amount: spl_token::ui_amount_to_amount(20.0, 8),
-//             total_amount: spl_token::ui_amount_to_amount(20.0, 8),
+
 //             period: 1,
 //             cliff: now,
 //             cliff_amount: 0,
@@ -1325,7 +1320,7 @@ async fn test_create_stream_success() -> Result<()> {
 //             start_time: now + 5,
 //             end_time: now + 605,
 //             deposited_amount: spl_token::ui_amount_to_amount(20.0, 8),
-//             total_amount: spl_token::ui_amount_to_amount(20.0, 8),
+
 //             period: 1,
 //             cliff: now + 606,
 //             cliff_amount: 0,

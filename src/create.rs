@@ -131,10 +131,6 @@ fn instruction_sanity_check(ix: StreamInstruction, now: u64) -> ProgramResult {
     // Check if timestamps are all in order and valid
     duration_sanity(now, ix.start_time, ix.end_time, ix.cliff)?;
 
-    if ix.deposited_amount > ix.total_amount {
-        return Err(SfError::InvalidDeposit.into())
-    }
-
     // Can't deposit less than what's needed for one period
     if ix.deposited_amount < ix.amount_per_period {
         return Err(SfError::InvalidDeposit.into())
@@ -198,7 +194,7 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: StreamInstruction) -> Progr
     );
 
     // Move closable_at (from third party), when recurring ignore end_date
-    if ix.deposited_amount < ix.total_amount || ix.release_rate > 0 {
+    if ix.release_rate > 0 {
         metadata.closable_at = metadata.closable();
         msg!("Closable at: {}", metadata.closable_at);
     }
