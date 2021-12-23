@@ -25,21 +25,41 @@ use crate::{
 
 #[derive(Clone, Debug)]
 pub struct CreateAccounts<'a> {
+    /// Wallet of the stream creator.
     pub sender: AccountInfo<'a>,
+    /// Associated token account address of `sender`.
     pub sender_tokens: AccountInfo<'a>,
+    /// Wallet address of the recipient.
     pub recipient: AccountInfo<'a>,
+    /// Associated token account address of `recipient`.
     pub recipient_tokens: AccountInfo<'a>,
+    /// The account holding the stream parameters.
+    /// Expects empty (non-initialized) account.
     pub metadata: AccountInfo<'a>,
+    /// The escrow account holding the funds.
+    /// Expects empty (non-initialized) account.
     pub escrow_tokens: AccountInfo<'a>,
+    /// Streamflow treasury account
     pub streamflow_treasury: AccountInfo<'a>,
+    /// Streamflow treasury's associated token account
     pub streamflow_treasury_tokens: AccountInfo<'a>,
+    /// Partner treasury account
     pub partner: AccountInfo<'a>,
+    /// Partner's associated token account
     pub partner_tokens: AccountInfo<'a>,
+    /// The SPL token mint account
     pub mint: AccountInfo<'a>,
+    /// Internal program that handles fees for specified partners
     pub fee_oracle: AccountInfo<'a>,
+    /// The Rent Sysvar account
     pub rent: AccountInfo<'a>,
+    /// The SPL program needed in case an associated account
+    /// for the new recipient is being created.
     pub token_program: AccountInfo<'a>,
+    /// The Associated Token program needed in case associated
+    /// account for the new recipient is being created.
     pub associated_token_program: AccountInfo<'a>,
+    /// The Solana system program
     pub system_program: AccountInfo<'a>,
 }
 
