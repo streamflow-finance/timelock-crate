@@ -63,6 +63,7 @@ pub struct CreateAccounts<'a> {
     pub associated_token_program: AccountInfo<'a>,
     /// The Solana system program needed for account creation
     pub system_program: AccountInfo<'a>,
+    //todo: add "liquidator" (think of better name, too)
 }
 
 fn account_sanity_check(pid: &Pubkey, a: CreateAccounts) -> ProgramResult {
@@ -74,13 +75,15 @@ fn account_sanity_check(pid: &Pubkey, a: CreateAccounts) -> ProgramResult {
     }
 
     // We want these accounts to be writable
-    if !a.sender.is_writable ||
-        !a.sender_tokens.is_writable ||
-        !a.recipient_tokens.is_writable ||
-        !a.metadata.is_writable ||
-        !a.escrow_tokens.is_writable ||
-        !a.streamflow_treasury_tokens.is_writable ||
+    if !a.sender.is_writable ||             //fee payer
+        !a.sender_tokens.is_writable ||     //debtor
+        !a.recipient_tokens.is_writable ||  //might be created
+        !a.metadata.is_writable ||          //will be created
+        !a.escrow_tokens.is_writable ||     //creditor
+        !a.streamflow_treasury_tokens.is_writable || //might be created
         !a.partner_tokens.is_writable
+    //might be created
+    // || !a.liquidator.is_writable //creditor (tx fees)
     {
         return Err(SfError::AccountsNotWritable.into())
     }
@@ -146,6 +149,7 @@ fn instruction_sanity_check(ix: StreamInstruction, now: u64) -> ProgramResult {
     // i.e.
     // - if we set the end date, then release rate is calculated based on the end date
     // - if we set the release rate, then the end date is calculated based on this
+    //TODO: Solution: input only release rate and calculate end_date based upon that.
 
     // TODO: Anything else?
 
@@ -156,8 +160,7 @@ fn instruction_sanity_check(ix: StreamInstruction, now: u64) -> ProgramResult {
 pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: StreamInstruction) -> ProgramResult {
     msg!("Initializing SPL token stream");
 
-    // The stream initializer, and the keypair for creating the metadata
-    // account must sign this.
+    // The stream initializer, and the keypair for creating the metadata account must sign this.
     // TODO: Metadata should be a PDA
     if !acc.sender.is_signer || !acc.metadata.is_signer {
         return Err(ProgramError::MissingRequiredSignature)
