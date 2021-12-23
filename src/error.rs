@@ -18,6 +18,9 @@ pub(crate) enum SfError {
     #[error("Invalid escrow account")]
     InvalidEscrowAccount,
 
+    #[error("Provided account(s) is/are not valid associated token accounts.")]
+    NotAssociated,
+
     #[error("Sender mint does not match accounts mint!")]
     MintMismatch,
 
@@ -27,7 +30,7 @@ pub(crate) enum SfError {
     #[error("Stream closed")]
     StreamClosed,
 
-    #[error("Invalid Streamflow Treasury accounts")]
+    #[error("Invalid Streamflow Treasury accounts supplied")]
     InvalidTreasury,
 
     #[error("Stream name too long")]
