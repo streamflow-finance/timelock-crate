@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use crate::{
     error::SfError,
-    state::{TokenStreamData, STRM_TREASURY},
+    state::{Contract, STRM_TREASURY},
     utils::{calculate_available, unpack_mint_account, Invoker},
 };
 use borsh::BorshSerialize;
@@ -100,7 +100,7 @@ fn account_sanity_check(pid: &Pubkey, a: WithdrawAccounts) -> ProgramResult {
     Ok(())
 }
 
-fn metadata_sanity_check(acc: WithdrawAccounts, metadata: TokenStreamData) -> ProgramResult {
+fn metadata_sanity_check(acc: WithdrawAccounts, metadata: Contract) -> ProgramResult {
     // Compare that all the given accounts match the ones inside our metadata.
     if acc.recipient.key != &metadata.recipient ||
         acc.recipient_tokens.key != &metadata.recipient_tokens ||
@@ -138,7 +138,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
     account_sanity_check(pid, acc.clone())?;
 
     let mut data = acc.metadata.try_borrow_mut_data()?;
-    let mut metadata: TokenStreamData = match solana_borsh::try_from_slice_unchecked(&data) {
+    let mut metadata: Contract = match solana_borsh::try_from_slice_unchecked(&data) {
         Ok(v) => v,
         Err(_) => return Err(SfError::InvalidMetadata.into()),
     };

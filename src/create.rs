@@ -19,8 +19,7 @@ use spl_token::amount_to_ui_amount;
 use crate::{
     error::SfError,
     state::{
-        StreamInstruction, TokenStreamData, MAX_STRING_SIZE, STRM_FEE_DEFAULT_PERCENT,
-        STRM_TREASURY,
+        Contract, StreamInstruction, MAX_STRING_SIZE, STRM_FEE_DEFAULT_PERCENT, STRM_TREASURY,
     },
     utils::{calculate_fee_from_amount, duration_sanity, format, pretty_time, unpack_mint_account},
 };
@@ -191,7 +190,7 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: StreamInstruction) -> Progr
     msg!("Partner fee: {}", format(partner_fee_amount, mint_info.decimals));
     msg!("Streamflow fee: {}", format(strm_fee_amount, mint_info.decimals));
 
-    let mut metadata = TokenStreamData::new(
+    let mut metadata = Contract::new(
         now,
         acc.clone(),
         ix.clone(),

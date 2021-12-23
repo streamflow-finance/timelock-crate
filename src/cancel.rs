@@ -16,7 +16,7 @@ use spl_token::amount_to_ui_amount;
 
 use crate::{
     error::SfError,
-    state::{TokenStreamData, STRM_TREASURY},
+    state::{Contract, STRM_TREASURY},
     utils::{calculate_available, unpack_mint_account, Invoker},
 };
 
@@ -111,7 +111,7 @@ fn account_sanity_check(pid: &Pubkey, a: CancelAccounts) -> ProgramResult {
     Ok(())
 }
 
-fn metadata_sanity_check(acc: CancelAccounts, metadata: TokenStreamData) -> ProgramResult {
+fn metadata_sanity_check(acc: CancelAccounts, metadata: Contract) -> ProgramResult {
     // Compare that all the given accounts match the ones inside our metadata.
     if acc.recipient.key != &metadata.recipient ||
         acc.recipient_tokens.key != &metadata.recipient_tokens ||
@@ -146,7 +146,7 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
     account_sanity_check(pid, acc.clone())?;
 
     let mut data = acc.metadata.try_borrow_mut_data()?;
-    let mut metadata: TokenStreamData = match solana_borsh::try_from_slice_unchecked(&data) {
+    let mut metadata: Contract = match solana_borsh::try_from_slice_unchecked(&data) {
         Ok(v) => v,
         Err(_) => return Err(SfError::InvalidMetadata.into()),
     };

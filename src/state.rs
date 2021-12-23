@@ -63,7 +63,7 @@ pub struct StreamInstruction {
 /// TokenStreamData is the struct containing metadata for an SPL token stream.
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug)]
 #[repr(C)]
-pub struct TokenStreamData {
+pub struct Contract {
     /// Magic bytes, will be used for version of the contract
     pub magic: u64,
     /// Timestamp when stream was created
@@ -114,7 +114,7 @@ pub struct TokenStreamData {
     pub ix: StreamInstruction,
 }
 
-impl TokenStreamData {
+impl Contract {
     /// Initialize a new `TokenStreamData` struct.
     pub fn new(
         now: u64,

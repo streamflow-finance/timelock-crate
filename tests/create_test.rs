@@ -19,9 +19,7 @@ use spl_associated_token_account::get_associated_token_address;
 
 use test_sdk::tools::clone_keypair;
 
-use streamflow_timelock::state::{
-    StreamInstruction, TokenStreamData, PROGRAM_VERSION, STRM_TREASURY,
-};
+use streamflow_timelock::state::{Contract, StreamInstruction, PROGRAM_VERSION, STRM_TREASURY};
 
 mod fascilities;
 
@@ -118,7 +116,7 @@ async fn test_create_stream_success() -> Result<()> {
     tt.bench.process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp])).await?;
 
     let metadata_acc = tt.bench.get_account(&metadata_kp.pubkey()).await.unwrap();
-    let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
+    let metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
 
     assert_eq!(metadata_acc.owner, tt.program_id);
     assert_eq!(metadata_data.magic, PROGRAM_VERSION);

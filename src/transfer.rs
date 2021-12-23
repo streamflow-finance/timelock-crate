@@ -5,7 +5,7 @@ use solana_program::{
 };
 use spl_associated_token_account::{create_associated_token_account, get_associated_token_address};
 
-use crate::{error::SfError, state::TokenStreamData, utils::Invoker};
+use crate::{error::SfError, state::Contract, utils::Invoker};
 
 #[derive(Clone, Debug)]
 pub struct TransferAccounts<'a> {
@@ -63,7 +63,7 @@ fn account_sanity_check(pid: &Pubkey, a: TransferAccounts) -> ProgramResult {
     Ok(())
 }
 
-fn metadata_sanity_check(acc: TransferAccounts, metadata: TokenStreamData) -> ProgramResult {
+fn metadata_sanity_check(acc: TransferAccounts, metadata: Contract) -> ProgramResult {
     msg!("Checking metadata for correctness");
 
     if acc.mint.key != &metadata.mint {
@@ -83,7 +83,7 @@ pub fn transfer_recipient(pid: &Pubkey, acc: TransferAccounts) -> ProgramResult 
     account_sanity_check(pid, acc.clone())?;
 
     let mut data = acc.metadata.try_borrow_mut_data()?;
-    let mut metadata: TokenStreamData = match solana_borsh::try_from_slice_unchecked(&data) {
+    let mut metadata: Contract = match solana_borsh::try_from_slice_unchecked(&data) {
         Ok(v) => v,
         Err(_) => return Err(SfError::InvalidMetadata.into()),
     };
