@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 use borsh::{BorshDeserialize, BorshSerialize};
-use solana_program::{account_info::AccountInfo, msg, pubkey::Pubkey};
+use solana_program::{msg, pubkey::Pubkey};
 
 use crate::create_stream::CreateAccounts;
 

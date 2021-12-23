@@ -17,25 +17,32 @@ exclude = [
     "misc/*",
     ".github/*"
 ]
+resolver = "2"
 
 [dependencies]
 borsh = "0.9.1"
 num-traits = "0.2.14"
-solana-program = "1.8.10"
+solana-program = "1.8.11"
 spl-associated-token-account = {version = "1.0.3", features = ["no-entrypoint"]}
 spl-token = {version = "3.2.0", features = ["no-entrypoint"]}
 thiserror = "1.0.30"
 
 [dependencies.partner-oracle]
-path = "/Users/nemanjaboskovic/personal/streamflow/partner-oracle"
+git = "ssh://git@github.com/streamflow-finance/partner-oracle.git"
+default-features = false
 features = ["no-entrypoint"]
 
 [dev-dependencies]
-solana-program-test = "1.8.10"
-solana-client = "1.8.10"
-solana-sdk = "1.8.10"
+solana-program-test = "1.8.11"
+solana-client = "1.8.11"
+solana-sdk = "1.8.11"
 anyhow = "1.0.44"
 test-sdk = { path = "./test-sdk" }
+
+[dev-dependencies.partner-oracle]
+git = "ssh://git@github.com/streamflow-finance/partner-oracle.git"
+default-features = false
+features = ["with-entrypoint"]
 
 [lib]
 crate-type = ["cdylib", "lib"]
