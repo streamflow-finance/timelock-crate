@@ -91,7 +91,7 @@ pub fn calculate_external_deposit(balance: u64, deposited: u64, withdrawn: u64) 
         return 0
     }
 
-    balance - deposited - withdrawn
+    balance - (deposited - withdrawn)
 }
 
 /// Given amount and percentage, return the u64 of that percentage.
@@ -168,9 +168,9 @@ impl Invoker {
     }
 }
 
-#[allow(unused_imports)]
+#[cfg(test)]
 mod tests {
-    use crate::utils::duration_sanity;
+    use super::*;
 
     #[test]
     fn test_duration_sanity() {
@@ -181,5 +181,12 @@ mod tests {
         assert!(duration_sanity(100, 130, 130, 130).is_err());
         assert!(duration_sanity(130, 130, 130, 130).is_err());
         assert!(duration_sanity(100, 110, 130, 140).is_err());
+    }
+
+    #[test]
+    fn test_external_deposit() {
+        assert_eq!(calculate_external_deposit(9, 10, 4), 3);
+        assert_eq!(calculate_external_deposit(100, 100, 0), 0);
+        assert_eq!(calculate_external_deposit(100, 100, 100), 100);
     }
 }
