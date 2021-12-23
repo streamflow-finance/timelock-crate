@@ -27,6 +27,10 @@ pub struct WithdrawAccounts<'a> {
     pub recipient: AccountInfo<'a>,
     /// The associated token account address of a stream `recipient`
     pub recipient_tokens: AccountInfo<'a>,
+    /// The account holding the stream parameters
+    pub metadata: AccountInfo<'a>,
+    /// The escrow account holding the stream funds
+    pub escrow_tokens: AccountInfo<'a>,
     /// Streamflow treasury account
     pub streamflow_treasury: AccountInfo<'a>,
     /// Streamflow treasury's associated token account
@@ -35,10 +39,6 @@ pub struct WithdrawAccounts<'a> {
     pub partner: AccountInfo<'a>,
     /// Partner's associated token account
     pub partner_tokens: AccountInfo<'a>,
-    /// The account holding the stream parameters
-    pub metadata: AccountInfo<'a>,
-    /// The escrow account holding the stream funds
-    pub escrow_tokens: AccountInfo<'a>,
     /// The SPL token mint account
     pub mint: AccountInfo<'a>,
     /// The SPL token program
