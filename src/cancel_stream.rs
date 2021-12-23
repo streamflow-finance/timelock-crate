@@ -138,8 +138,6 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
 
     metadata_sanity_check(acc.clone(), metadata.clone())?;
 
-    // TODO: Check signer(s)
-
     // If stream is expired, anyone can close it
     if now < metadata.closable_at {
         msg!("Stream not yet expired, checking authorization");
@@ -148,8 +146,8 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         }
         let cancel_authority = Invoker::new(
             acc.authority.key,
-            acc.sender.key,
-            acc.recipient.key,
+            &metadata.sender,
+            &metadata.recipient,
             &metadata.streamflow_treasury,
             &metadata.partner,
         );
