@@ -51,6 +51,7 @@ pub fn process_instruction(pid: &Pubkey, acc: &[AccountInfo], ix: &[u8]) -> Prog
                 partner: next_account_info(ai)?.clone(),
                 partner_tokens: next_account_info(ai)?.clone(),
                 mint: next_account_info(ai)?.clone(),
+                fee_oracle: next_account_info(ai)?.clone(),
                 rent: next_account_info(ai)?.clone(),
                 token_program: next_account_info(ai)?.clone(),
                 associated_token_program: next_account_info(ai)?.clone(),

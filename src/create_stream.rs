@@ -36,6 +36,7 @@ pub struct CreateAccounts<'a> {
     pub partner: AccountInfo<'a>,
     pub partner_tokens: AccountInfo<'a>,
     pub mint: AccountInfo<'a>,
+    pub fee_oracle: AccountInfo<'a>,
     pub rent: AccountInfo<'a>,
     pub token_program: AccountInfo<'a>,
     pub associated_token_program: AccountInfo<'a>,
@@ -142,10 +143,10 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: StreamInstruction) -> Progr
 
     // Check partner accounts are legit
     // TODO: How to enforce correct partner account?
-    let (partner_fee, strm_fee) = match fetch_partner_fee_data(&acc.partner, acc.partner.key) {
+    let (partner_fee, strm_fee) = match fetch_partner_fee_data(&acc.fee_oracle, acc.partner.key) {
         Ok(v) => v,
         // In case the partner is not found, we fallback to Streamflow.
-        Err(_) => fetch_partner_fee_data(&acc.streamflow_treasury, acc.streamflow_treasury.key)?,
+        Err(_) => fetch_partner_fee_data(&acc.fee_oracle, acc.streamflow_treasury.key)?,
     };
     // Calculate fees
     let uint_fee_for_partner = calculate_fee_from_amount(ix.deposited_amount, partner_fee);
