@@ -35,7 +35,7 @@ pub struct WithdrawAccounts<'a> {
     pub partner: AccountInfo<'a>,
     /// Partner's associated token account
     pub partner_tokens: AccountInfo<'a>,
-    /// The account holding the stream metadata
+    /// The account holding the stream parameters
     pub metadata: AccountInfo<'a>,
     /// The escrow account holding the stream funds
     pub escrow_tokens: AccountInfo<'a>,

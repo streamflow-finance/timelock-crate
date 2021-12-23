@@ -59,7 +59,7 @@ pub struct CreateAccounts<'a> {
     /// The Associated Token program needed in case associated
     /// account for the new recipient is being created.
     pub associated_token_program: AccountInfo<'a>,
-    /// The Solana system program
+    /// The Solana system program needed for account creation
     pub system_program: AccountInfo<'a>,
 }
 

@@ -22,18 +22,33 @@ use crate::{
 
 #[derive(Clone, Debug)]
 pub struct CancelAccounts<'a> {
+    /// Account invoking cancel. Can be either stream sender or recipient, depending on the value
+    /// of `cancelable_by_sender` and `cancelable_by_recipient`
+    /// But when stream expires anyone can cancel
     pub authority: AccountInfo<'a>,
+    /// The main wallet address of the initializer
     pub sender: AccountInfo<'a>,
+    /// The associated token account address of `sender`
     pub sender_tokens: AccountInfo<'a>,
+    /// The main wallet address of the recipient
     pub recipient: AccountInfo<'a>,
+    /// The associated token account address of `recipient`
     pub recipient_tokens: AccountInfo<'a>,
+    /// The account holding the stream parameters
     pub metadata: AccountInfo<'a>,
+    /// The escrow account holding the funds.
     pub escrow_tokens: AccountInfo<'a>,
+    /// Streamflow treasury account
     pub streamflow_treasury: AccountInfo<'a>,
+    /// Streamflow treasury's associated token account
     pub streamflow_treasury_tokens: AccountInfo<'a>,
+    /// Partner treasury account
     pub partner: AccountInfo<'a>,
+    /// Partner's associated token account
     pub partner_tokens: AccountInfo<'a>,
+    /// The SPL token mint account
     pub mint: AccountInfo<'a>,
+    /// The SPL token program
     pub token_program: AccountInfo<'a>,
 }
 

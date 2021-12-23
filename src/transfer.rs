@@ -9,14 +9,24 @@ use crate::{error::SfError, state::TokenStreamData, utils::Invoker};
 
 #[derive(Clone, Debug)]
 pub struct TransferAccounts<'a> {
+    /// Account invoking cancel.
     pub authority: AccountInfo<'a>,
+    /// Wallet address of a new recipient
     pub recipient: AccountInfo<'a>,
+    /// The associated token account address of a `new_recipient`
     pub recipient_tokens: AccountInfo<'a>,
+    /// The account holding the stream parameters
     pub metadata: AccountInfo<'a>,
+    /// The SPL token mint account
     pub mint: AccountInfo<'a>,
+    /// The system Rent account
     pub rent: AccountInfo<'a>,
+    /// The SPL token program
     pub token_program: AccountInfo<'a>,
+    /// The Associated Token program needed in case associated
+    /// account for the new recipient is being created.
     pub associated_token_program: AccountInfo<'a>,
+    /// The Solana system program needed for account creation
     pub system_program: AccountInfo<'a>,
 }
 
