@@ -8,11 +8,7 @@ use solana_program::{
     system_instruction, sysvar,
 };
 use solana_program_test::{ProgramTest, ProgramTestContext};
-use solana_sdk::{
-    account::Account, native_token::sol_to_lamports,
-    process_instruction::ProcessInstructionWithContext, signature::Keypair, signer::Signer,
-    transaction::Transaction,
-};
+use solana_sdk::{account::Account, signature::Keypair, signer::Signer, transaction::Transaction};
 
 use bincode::deserialize;
 
@@ -23,67 +19,24 @@ use crate::tools::map_transaction_error;
 pub mod cookies;
 pub mod tools;
 
-/// Specification of a program which is loaded into the test bench
-#[derive(Clone)]
-pub struct TestBenchProgram<'a> {
-    pub program_name: &'a str,
-    pub program_id: Pubkey,
-    pub process_instruction: Option<ProcessInstructionWithContext>,
-}
-
 /// Program's test bench which captures test context, rent and payer and common utility functions
 pub struct ProgramTestBench {
     pub context: ProgramTestContext,
     pub rent: Rent,
     pub payer: Keypair,
     pub next_id: u8,
-    pub accounts: Vec<Keypair>
 }
 
 impl ProgramTestBench {
-
-    pub async fn start_new(
-        programs: &[TestBenchProgram<'_>],
-        accounts: &[Account], strm_acc: Pubkey
-    ) -> Self {
-        let mut program_test = ProgramTest::default();
-        let mut accounts_kp = Vec::new();
-        program_test.add_account(
-            strm_acc,
-            Account {
-                lamports: sol_to_lamports(1.0),
-                ..Account::default()
-            }
-        );
-        for acc in accounts {
-            let kp = Keypair::new();
-            program_test.add_account(
-                kp.pubkey(),
-                acc.clone()
-            );
-            accounts_kp.push(kp);
-        };
-
-        for program in programs {
-            program_test.add_program(
-                program.program_name,
-                program.program_id,
-                program.process_instruction,
-            )
-        }
-
+    /// Create new bench given a ProgramTest instance populated with all of the
+    /// desired programs.
+    pub async fn start_new(program_test: ProgramTest) -> Self {
         let mut context = program_test.start_with_context().await;
         let rent = context.banks_client.get_rent().await.unwrap();
 
         let payer = clone_keypair(&context.payer);
 
-        Self {
-            context,
-            rent,
-            payer,
-            next_id: 0,
-            accounts: accounts_kp
-        }
+        Self { context, rent, payer, next_id: 0 }
     }
 
     pub fn get_unique_name(&mut self, prefix: &str) -> String {
@@ -105,12 +58,7 @@ impl ProgramTestBench {
             all_signers.extend_from_slice(signers);
         }
 
-        let recent_blockhash = self
-            .context
-            .banks_client
-            .get_recent_blockhash()
-            .await
-            .unwrap();
+        let recent_blockhash = self.context.banks_client.get_recent_blockhash().await.unwrap();
 
         transaction.sign(&all_signers, recent_blockhash);
 
@@ -144,9 +92,7 @@ impl ProgramTestBench {
             .unwrap(),
         ];
 
-        self.process_transaction(&instructions, Some(&[mint_keypair]))
-            .await
-            .unwrap();
+        self.process_transaction(&instructions, Some(&[mint_keypair])).await.unwrap();
     }
 
     #[allow(dead_code)]
@@ -159,8 +105,7 @@ impl ProgramTestBench {
         let create_account_instruction = system_instruction::create_account(
             &self.context.payer.pubkey(),
             &token_account_keypair.pubkey(),
-            self.rent
-                .minimum_balance(spl_token::state::Account::get_packed_len()),
+            self.rent.minimum_balance(spl_token::state::Account::get_packed_len()),
             spl_token::state::Account::get_packed_len() as u64,
             &spl_token::id(),
         );
@@ -189,9 +134,7 @@ impl ProgramTestBench {
                 token_mint,
             );
 
-        self.process_transaction(&[create_account_instruction], Some(&[]))
-            .await
-            .unwrap();
+        self.process_transaction(&[create_account_instruction], Some(&[])).await.unwrap();
     }
 
     #[allow(dead_code)]
@@ -204,20 +147,12 @@ impl ProgramTestBench {
     ) -> TokenAccountCookie {
         let token_account_keypair = Keypair::new();
 
-        self.create_empty_token_account(&token_account_keypair, token_mint, owner)
+        self.create_empty_token_account(&token_account_keypair, token_mint, owner).await;
+
+        self.mint_tokens(token_mint, token_mint_authority, &token_account_keypair.pubkey(), amount)
             .await;
 
-        self.mint_tokens(
-            token_mint,
-            token_mint_authority,
-            &token_account_keypair.pubkey(),
-            amount,
-        )
-        .await;
-
-        TokenAccountCookie {
-            address: token_account_keypair.pubkey(),
-        }
+        TokenAccountCookie { address: token_account_keypair.pubkey() }
     }
 
     pub async fn mint_tokens(
@@ -237,9 +172,7 @@ impl ProgramTestBench {
         )
         .unwrap();
 
-        self.process_transaction(&[mint_instruction], Some(&[token_mint_authority]))
-            .await
-            .unwrap();
+        self.process_transaction(&[mint_instruction], Some(&[token_mint_authority])).await.unwrap();
     }
 
     #[allow(dead_code)]
@@ -255,8 +188,7 @@ impl ProgramTestBench {
         let create_account_instruction = system_instruction::create_account(
             &self.context.payer.pubkey(),
             &token_account_keypair.pubkey(),
-            self.rent
-                .minimum_balance(spl_token::state::Account::get_packed_len()),
+            self.rent.minimum_balance(spl_token::state::Account::get_packed_len()),
             spl_token::state::Account::get_packed_len() as u64,
             &spl_token::id(),
         );
@@ -304,26 +236,25 @@ impl ProgramTestBench {
 
     #[allow(dead_code)]
     pub async fn get_clock(&mut self) -> Clock {
-        self.get_bincode_account::<Clock>(&sysvar::clock::id())
-            .await
+        self.get_bincode_account::<Clock>(&sysvar::clock::id()).await
     }
 
     #[allow(dead_code)]
-    pub async fn get_bincode_account<G: serde::de::DeserializeOwned>(
+    pub async fn get_bincode_account<T: serde::de::DeserializeOwned>(
         &mut self,
         address: &Pubkey,
-    ) -> G {
+    ) -> T {
         self.context
             .banks_client
             .get_account(*address)
             .await
             .unwrap()
-            .map(|a| deserialize::<G>(a.data.borrow()).unwrap())
+            .map(|a| deserialize::<T>(a.data.borrow()).unwrap())
             .unwrap_or_else(|| panic!("GET-TEST-ACCOUNT-ERROR: Account {}", address))
     }
 
     /// TODO: Add to SDK
-    pub async fn get_borsh_account<G: BorshDeserialize>(&mut self, address: &Pubkey) -> G {
+    pub async fn get_borsh_account<T: BorshDeserialize>(&mut self, address: &Pubkey) -> T {
         self.get_account(address)
             .await
             .map(|a| try_from_slice_unchecked(&a.data).unwrap())
@@ -332,10 +263,6 @@ impl ProgramTestBench {
 
     #[allow(dead_code)]
     pub async fn get_account(&mut self, address: &Pubkey) -> Option<Account> {
-        self.context
-            .banks_client
-            .get_account(*address)
-            .await
-            .unwrap()
+        self.context.banks_client.get_account(*address).await.unwrap()
     }
 }
