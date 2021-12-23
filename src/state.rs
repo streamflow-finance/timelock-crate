@@ -29,7 +29,7 @@ pub const STRM_FEE_DEFAULT_PERCENT: f32 = 0.25;
 /// The struct containing instructions for initializing a stream
 #[derive(BorshDeserialize, BorshSerialize, Clone, Debug)]
 #[repr(C)]
-pub struct StreamInstruction {
+pub struct CreateStreamParams {
     /// Timestamp when the tokens start vesting
     pub start_time: u64,
     /// Timestamp when all tokens are fully vested
@@ -111,7 +111,7 @@ pub struct Contract {
     /// Fee percentage for partner
     pub partner_fee_percent: f32,
     /// The stream instruction
-    pub ix: StreamInstruction,
+    pub ix: CreateStreamParams,
 }
 
 impl Contract {
@@ -119,7 +119,7 @@ impl Contract {
     pub fn new(
         now: u64,
         acc: CreateAccounts,
-        ix: StreamInstruction,
+        ix: CreateStreamParams,
         partner_fee: u64,
         partner_pct: f32,
         strm_fee: u64,

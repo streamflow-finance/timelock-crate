@@ -19,7 +19,7 @@ use spl_token::amount_to_ui_amount;
 use crate::{
     error::SfError,
     state::{
-        Contract, StreamInstruction, MAX_STRING_SIZE, STRM_FEE_DEFAULT_PERCENT, STRM_TREASURY,
+        Contract, CreateStreamParams, MAX_STRING_SIZE, STRM_FEE_DEFAULT_PERCENT, STRM_TREASURY,
     },
     utils::{calculate_fee_from_amount, duration_sanity, format, pretty_time, unpack_mint_account},
 };
@@ -127,7 +127,7 @@ fn account_sanity_check(pid: &Pubkey, a: CreateAccounts) -> ProgramResult {
     Ok(())
 }
 
-fn instruction_sanity_check(ix: StreamInstruction, now: u64) -> ProgramResult {
+fn instruction_sanity_check(ix: CreateStreamParams, now: u64) -> ProgramResult {
     // We'll limit the stream name length
     if ix.stream_name.len() > MAX_STRING_SIZE {
         return Err(SfError::StreamNameTooLong.into())
@@ -156,7 +156,7 @@ fn instruction_sanity_check(ix: StreamInstruction, now: u64) -> ProgramResult {
     Ok(())
 }
 
-pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: StreamInstruction) -> ProgramResult {
+pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateStreamParams) -> ProgramResult {
     msg!("Initializing SPL token stream");
 
     // The stream initializer, and the keypair for creating the metadata account must sign this.
