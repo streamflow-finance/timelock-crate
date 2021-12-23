@@ -98,15 +98,22 @@ pub fn calculate_fee_from_amount(amount: u64, percentage: f32) -> u64 {
 pub enum Invoker {
     Sender,
     Recipient,
-    None,
+    StreamflowTreasury,
+    Partner,
+    None
 }
 
 impl Invoker {
-    pub fn new(authority: &Pubkey, sender: &Pubkey, recipient: &Pubkey) -> Self {
+    pub fn new(authority: &Pubkey, sender: &Pubkey, recipient: &Pubkey,
+               streamflow_treasury: &Pubkey, partner: &Pubkey) -> Self {
         if authority == sender {
             Self::Sender
         } else if authority == recipient {
             Self::Recipient
+        } else if authority == streamflow_treasury {
+            Self::StreamflowTreasury
+        } else if authority == partner {
+            Self::Partner
         } else {
             Self::None
         }
@@ -116,6 +123,8 @@ impl Invoker {
         match self {
             Self::Sender => ix.cancelable_by_sender,
             Self::Recipient => ix.cancelable_by_recipient,
+            Self::StreamflowTreasury => false,
+            Self::Partner => false,
             Self::None => false,
         }
     }
@@ -124,6 +133,22 @@ impl Invoker {
         match self {
             Self::Sender => ix.transferable_by_sender,
             Self::Recipient => ix.transferable_by_recipient,
+            Self::StreamflowTreasury => false,
+            Self::Partner => false,
+            Self::None => false,
+        }
+    }
+
+    pub fn can_withdraw(&self, ix: &StreamInstruction) -> bool {
+        if ix.withdrawal_public {
+            true
+        }
+
+        match self {
+            Self::Sender => false,
+            Self::Recipient => true,
+            Self::StreamflowTreasury => ix.deposited_amount == 0,
+            Self::Partner => ix.deposited_amount == 0,
             Self::None => false,
         }
     }

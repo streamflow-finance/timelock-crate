@@ -80,7 +80,10 @@ pub fn transfer_recipient(pid: &Pubkey, acc: TransferAccounts) -> ProgramResult 
 
     metadata_sanity_check(acc.clone(), metadata.clone())?;
 
-    let cancel_authority = Invoker::new(acc.authority.key, &metadata.sender, &metadata.recipient);
+    let cancel_authority = Invoker::new(
+        acc.authority.key, &metadata.sender, &metadata.recipient,
+        &metadata.streamflow_treasury, &metadata.partner
+    );
     if !cancel_authority.can_transfer(&metadata.ix) {
         return Err(SfError::TransferNotAllowed.into())
     }

@@ -13,7 +13,7 @@ use solana_program::{
 };
 use spl_associated_token_account::get_associated_token_address;
 use spl_token::amount_to_ui_amount;
-
+use crate::utils::Invoker;
 use crate::{
     error::SfError,
     state::TokenStreamData,
@@ -128,6 +128,10 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
     let now = Clock::get()?.unix_timestamp as u64;
     let mint_info = unpack_mint_account(&acc.mint)?;
 
+    if !acc.authority.is_signer {
+        return Err(ProgramError::MissingRequiredSignature)
+    }
+
     account_sanity_check(pid, acc.clone())?;
 
     let mut data = acc.metadata.try_borrow_mut_data()?;
@@ -138,7 +142,13 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
 
     metadata_sanity_check(acc.clone(), metadata.clone())?;
 
-    // TODO: Check signer(s)
+    let withdraw_authority = Invoker::new(
+        acc.authority.key, acc.sender.key,
+        acc.recipient.key, &metadata.streamflow_treasury, &metadata.partner
+    );
+    if !withdraw_authority.can_withdraw(&metadata.ix) {
+        return Err(ProgramError::InvalidAccountData)
+    }
 
     let recipient_available = calculate_available(
         now,
