@@ -105,10 +105,10 @@ impl Contract {
         now: u64,
         acc: CreateAccounts,
         ix: CreateParams,
-        partner_fee: u64,
-        partner_pct: f32,
-        strm_fee: u64,
-        strm_pct: f32,
+        partner_fee_total: u64,
+        partner_fee_percent: f32,
+        streamflow_fee_total: u64,
+        streamflow_fee_percent: f32,
     ) -> Self {
         // TODO: calculate cancel_time based on other parameters (incl. amount_deposited)
         Self {
@@ -127,14 +127,14 @@ impl Contract {
             escrow_tokens: *acc.escrow_tokens.key,
             streamflow_treasury: *acc.streamflow_treasury.key,
             streamflow_treasury_tokens: *acc.streamflow_treasury_tokens.key,
-            streamflow_fee_total: strm_fee,
+            streamflow_fee_total,
             streamflow_fee_withdrawn: 0,
-            streamflow_fee_percent: strm_pct,
+            streamflow_fee_percent,
             partner: *acc.partner.key,
             partner_tokens: *acc.partner_tokens.key,
-            partner_fee_total: partner_fee,
+            partner_fee_total,
             partner_fee_withdrawn: 0,
-            partner_fee_percent: partner_pct,
+            partner_fee_percent,
             ix,
         }
     }
