@@ -4,7 +4,7 @@ use solana_program::{msg, pubkey::Pubkey};
 use crate::create::CreateAccounts;
 
 // Hardcoded program version
-pub const PROGRAM_VERSION: u64 = 2;
+pub const PROGRAM_VERSION: u8 = 2;
 pub const STRM_TREASURY: &str = "Ht5G1RhkcKnpLVLMhqJc5aqZ4wYUEbxbtZwGCVbgU7DL"; //todo: update
 pub const MAX_STRING_SIZE: usize = 200;
 pub const STRM_FEE_DEFAULT_PERCENT: f32 = 0.25;
@@ -47,8 +47,10 @@ pub struct CreateParams {
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug)]
 #[repr(C)]
 pub struct Contract {
-    /// Magic bytes, will be used for version of the contract
+    /// Magic bytes
     pub magic: u64,
+    /// Version of the program
+    pub version: u8,
     /// Timestamp when stream was created
     pub created_at: u64,
     /// Amount of funds withdrawn
@@ -110,8 +112,9 @@ impl Contract {
     ) -> Self {
         // TODO: calculate cancel_time based on other parameters (incl. amount_deposited)
         Self {
-            magic: PROGRAM_VERSION,
             created_at: now, // TODO: is oke?
+            magic: 0,
+            version: PROGRAM_VERSION,
             amount_withdrawn: 0,
             canceled_at: 0,
             closable_at: ix.end_time,
