@@ -70,7 +70,7 @@ async fn test_sender_not_transferable_should_not_be_transfered() -> Result<()> {
         metadata: CreateParams {
             start_time: now + 10,
             end_time: now + 1010,
-            deposited_amount: spl_token::ui_amount_to_amount(10.0, 8),
+            amount_deposited: spl_token::ui_amount_to_amount(10.0, 8),
             period: 1,
             cliff: 0,
             cliff_amount: 0,
@@ -187,7 +187,7 @@ async fn test_sender_transferable_should_be_transfered() -> Result<()> {
         metadata: CreateParams {
             start_time: now + 10,
             end_time: now + 1010,
-            deposited_amount: spl_token::ui_amount_to_amount(10.0, 8),
+            amount_deposited: spl_token::ui_amount_to_amount(10.0, 8),
             period: 1,
             cliff: 0,
             cliff_amount: 0,
@@ -304,7 +304,7 @@ async fn test_recipient_not_transferable_should_not_be_transfered() -> Result<()
         metadata: CreateParams {
             start_time: now + 10,
             end_time: now + 1010,
-            deposited_amount: spl_token::ui_amount_to_amount(10.0, 8),
+            amount_deposited: spl_token::ui_amount_to_amount(10.0, 8),
             period: 1,
             cliff: 0,
             cliff_amount: 0,
@@ -421,7 +421,7 @@ async fn test_recipient_transferable_should_be_transfered() -> Result<()> {
         metadata: CreateParams {
             start_time: now + 10,
             end_time: now + 1010,
-            deposited_amount: spl_token::ui_amount_to_amount(10.0, 8),
+            amount_deposited: spl_token::ui_amount_to_amount(10.0, 8),
             period: 1,
             cliff: 0,
             cliff_amount: 0,

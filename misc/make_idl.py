@@ -5,7 +5,7 @@
 # const value = new Struct({
 #     start_time: new BN(1234),
 #     end_time: new BN(4321),
-#     deposited_amount: new BN(31415),
+#     amount_deposited: new BN(31415),
 #     period: new BN(21515),
 #     cliff: new BN(3184791),
 #     cliff_amount: new BN(8241719),

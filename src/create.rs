@@ -135,7 +135,7 @@ fn instruction_sanity_check(ix: CreateParams, now: u64) -> ProgramResult {
     duration_sanity(now, ix.start_time, ix.end_time, ix.cliff)?;
 
     // Can't deposit less than what's needed for one period
-    if ix.deposited_amount < ix.amount_per_period {
+    if ix.amount_deposited < ix.amount_per_period {
         return Err(SfError::InvalidDeposit.into())
     }
 
@@ -184,8 +184,8 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
         };
 
     // Calculate fees
-    let partner_fee_amount = calculate_fee_from_amount(ix.deposited_amount, partner_fee_percent);
-    let strm_fee_amount = calculate_fee_from_amount(ix.deposited_amount, strm_fee_percent);
+    let partner_fee_amount = calculate_fee_from_amount(ix.amount_deposited, partner_fee_percent);
+    let strm_fee_amount = calculate_fee_from_amount(ix.amount_deposited, strm_fee_percent);
     msg!("Partner fee: {}", format(partner_fee_amount, mint_info.decimals));
     msg!("Streamflow fee: {}", format(strm_fee_amount, mint_info.decimals));
 
@@ -270,7 +270,7 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
             acc.escrow_tokens.key,
             acc.sender.key,
             &[],
-            ix.deposited_amount + partner_fee_amount + strm_fee_amount,
+            ix.amount_deposited + partner_fee_amount + strm_fee_amount,
         )?,
         &[
             acc.sender_tokens.clone(),
@@ -336,7 +336,7 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
 
     msg!(
         "Success initializing {} {} token_stream for {}",
-        amount_to_ui_amount(ix.deposited_amount, mint_info.decimals),
+        amount_to_ui_amount(ix.amount_deposited, mint_info.decimals),
         acc.mint.key,
         acc.recipient.key
     );

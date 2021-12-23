@@ -70,7 +70,7 @@ async fn test_sender_not_cancellable_should_not_be_cancelled() -> Result<()> {
         metadata: CreateParams {
             start_time: now + 10,
             end_time: now + 1010,
-            deposited_amount: spl_token::ui_amount_to_amount(10.0, 8),
+            amount_deposited: spl_token::ui_amount_to_amount(10.0, 8),
             period: 200,
             cliff: 0,
             cliff_amount: 0,
@@ -184,7 +184,7 @@ async fn test_sender_cancellable_should_be_cancelled() -> Result<()> {
         metadata: CreateParams {
             start_time: now + 10,
             end_time: now + 1010,
-            deposited_amount: spl_token::ui_amount_to_amount(10.0, 8),
+            amount_deposited: spl_token::ui_amount_to_amount(10.0, 8),
             period: 200,
             cliff: 0,
             cliff_amount: 0,
@@ -298,7 +298,7 @@ async fn test_recipient_cancellable_should_be_cancelled() -> Result<()> {
         metadata: CreateParams {
             start_time: now + 10,
             end_time: now + 1010,
-            deposited_amount: spl_token::ui_amount_to_amount(10.0, 8),
+            amount_deposited: spl_token::ui_amount_to_amount(10.0, 8),
             period: 200,
             cliff: 0,
             cliff_amount: 0,
@@ -412,7 +412,7 @@ async fn test_recipient_not_cancellable_should_not_be_cancelled() -> Result<()> 
         metadata: CreateParams {
             start_time: now + 10,
             end_time: now + 1010,
-            deposited_amount: spl_token::ui_amount_to_amount(10.0, 8),
+            amount_deposited: spl_token::ui_amount_to_amount(10.0, 8),
             period: 200,
             cliff: 0,
             cliff_amount: 0,

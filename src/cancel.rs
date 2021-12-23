@@ -174,7 +174,7 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
     let recipient_available = calculate_available(
         now,
         metadata.ix.clone(),
-        metadata.ix.deposited_amount,
+        metadata.ix.amount_deposited,
         metadata.amount_withdrawn,
     );
 
@@ -194,7 +194,7 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
 
     // TODO: Handle requested amounts.
 
-    let recipient_remains = metadata.ix.deposited_amount - recipient_available;
+    let recipient_remains = metadata.ix.amount_deposited - recipient_available;
     let streamflow_remains = metadata.streamflow_fee_total - streamflow_available;
     let partner_remains = metadata.partner_fee_total - partner_available;
 
@@ -231,7 +231,7 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         msg!(
             "Remaining: {} {} tokens",
             amount_to_ui_amount(
-                metadata.ix.deposited_amount - metadata.amount_withdrawn,
+                metadata.ix.amount_deposited - metadata.amount_withdrawn,
                 mint_info.decimals
             ),
             metadata.mint

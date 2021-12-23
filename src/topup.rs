@@ -80,7 +80,7 @@ pub fn topup(_program_id: &Pubkey, acc: TopupAccounts, amount: u64) -> ProgramRe
     // TODO: Do we request topup + fees, or take fees from the topup?
     metadata.streamflow_fee_total += uint_fee_for_strm;
     metadata.partner_fee_total += uint_fee_for_partner;
-    metadata.ix.deposited_amount += amount - uint_fee_for_strm - uint_fee_for_partner;
+    metadata.ix.amount_deposited += amount - uint_fee_for_strm - uint_fee_for_partner;
     metadata.closable_at = metadata.closable();
 
     let bytes = metadata.try_to_vec()?;

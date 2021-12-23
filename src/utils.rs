@@ -64,7 +64,7 @@ pub fn calculate_available(now: u64, ix: CreateParams, total: u64, withdrawn: u6
     let period_amount = if ix.release_rate > 0 {
         ix.release_rate as f64
     } else {
-        (ix.deposited_amount - cliff_amount) as f64 / num_periods
+        (ix.amount_deposited - cliff_amount) as f64 / num_periods
     };
 
     let periods_passed = (now - cliff) / ix.period;
@@ -157,8 +157,8 @@ impl Invoker {
         match self {
             Self::Sender => false,
             Self::Recipient => true,
-            Self::StreamflowTreasury => ix.deposited_amount == 0,
-            Self::Partner => ix.deposited_amount == 0,
+            Self::StreamflowTreasury => ix.amount_deposited == 0,
+            Self::Partner => ix.amount_deposited == 0,
             Self::None => false,
         }
     }
