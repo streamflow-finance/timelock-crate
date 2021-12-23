@@ -40,6 +40,8 @@ pub struct StreamInstruction {
     pub total_amount: u64,
     /// Time step (period) in seconds per which the vesting occurs
     pub period: u64,
+    /// Amount released per period
+    pub amount_per_period: u64,
     /// Vesting contract "cliff" timestamp
     pub cliff: u64,
     /// Amount unlocked at the "cliff" timestamp
