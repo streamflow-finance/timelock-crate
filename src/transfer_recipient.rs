@@ -50,6 +50,9 @@ pub fn transfer_recipient(
         return Err(ProgramError::InvalidAccountData)
     }
 
+    //todo: should we withdraw what's available before transferring recipient? I'd say YES.
+    //(that means we also need streamflow_treasury_tokens, partner_tokens, escrow_tokens in account list
+
     metadata.recipient = recipient;
     metadata.recipient_tokens = recipient_tokens;
 
