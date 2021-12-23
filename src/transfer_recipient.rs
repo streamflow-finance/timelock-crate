@@ -25,28 +25,28 @@ fn account_sanity_check(pid: &Pubkey, a: TransferAccounts) -> ProgramResult {
 
     // These accounts must not be empty, and need to have correct ownership
     if a.metadata.data_is_empty() || a.metadata.owner != pid {
-        return Err(SfError::InvalidMetadataAccount.into())
+        return Err(SfError::InvalidMetadataAccount.into());
     }
 
     // We want these accounts to be writable
     if !a.authority.is_writable || !a.recipient_tokens.is_writable || !a.metadata.is_writable {
-        return Err(SfError::AccountsNotWritable.into())
+        return Err(SfError::AccountsNotWritable.into());
     }
 
     // Check if the associated token accounts are legit
     let recipient_tokens = get_associated_token_address(a.recipient.key, a.mint.key);
 
     if a.recipient_tokens.key != &recipient_tokens {
-        return Err(SfError::MintMismatch.into())
+        return Err(SfError::MintMismatch.into());
     }
 
     // On-chain program ID checks
-    if a.rent.key != &sysvar::rent::id() ||
-        a.token_program.key != &spl_token::id() ||
-        a.associated_token_program.key != &spl_associated_token_account::id() ||
-        a.system_program.key != &system_program::id()
+    if a.rent.key != &sysvar::rent::id()
+        || a.token_program.key != &spl_token::id()
+        || a.associated_token_program.key != &spl_associated_token_account::id()
+        || a.system_program.key != &system_program::id()
     {
-        return Err(ProgramError::InvalidAccountData)
+        return Err(ProgramError::InvalidAccountData);
     }
 
     // Passed without touching the lasers
@@ -57,7 +57,7 @@ fn metadata_sanity_check(acc: TransferAccounts, metadata: TokenStreamData) -> Pr
     msg!("Checking metadata for correctness");
 
     if acc.mint.key != &metadata.mint {
-        return Err(SfError::MintMismatch.into())
+        return Err(SfError::MintMismatch.into());
     }
 
     // TODO: What else?
@@ -82,11 +82,13 @@ pub fn transfer_recipient(pid: &Pubkey, acc: TransferAccounts) -> ProgramResult 
 
     let cancel_authority = Invoker::new(acc.authority.key, &metadata.sender, &metadata.recipient);
     if !cancel_authority.can_transfer(&metadata.ix) {
-        return Err(SfError::TransferNotAllowed.into())
+        return Err(SfError::TransferNotAllowed.into());
     }
 
     metadata.recipient = *acc.recipient.key;
     metadata.recipient_tokens = *acc.recipient_tokens.key;
+    //todo: should we withdraw what's available before transferring recipient? I'd say YES.
+    //(that means we also need streamflow_treasury_tokens, partner_tokens, escrow_tokens in account list
 
     if acc.recipient_tokens.data_is_empty() {
         msg!("Initializing new recipient's associated token account");
