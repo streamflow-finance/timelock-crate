@@ -39,11 +39,6 @@ solana-sdk = "1.8.11"
 anyhow = "1.0.44"
 test-sdk = { path = "./test-sdk" }
 
-[dev-dependencies.partner-oracle]
-git = "ssh://git@github.com/streamflow-finance/partner-oracle.git"
-default-features = false
-features = ["with-entrypoint"]
-
 [lib]
 crate-type = ["cdylib", "lib"]
 
