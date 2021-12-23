@@ -3,7 +3,9 @@ use borsh::BorshSerialize;
 use solana_program::program_error::ProgramError;
 use solana_program_test::tokio;
 use solana_sdk::{
+    account::Account,
     instruction::{AccountMeta, Instruction},
+    native_token::sol_to_lamports,
     program_pack::Pack,
     pubkey::Pubkey,
     signature::Signer,
@@ -22,23 +24,22 @@ use fascilities::*;
 
 #[tokio::test]
 async fn test_sender_not_cancellable_should_not_be_cancelled() -> Result<()> {
-    let mut tt = TimelockProgramTest::start_new().await;
+    let alice = Account { lamports: sol_to_lamports(1.0), ..Account::default() };
+    let bob = Account { lamports: sol_to_lamports(1.0), ..Account::default() };
 
-    let alice = clone_keypair(&tt.bench.alice);
-    let bob = clone_keypair(&tt.bench.bob);
+    let mut tt = TimelockProgramTest::start_new(&[alice, bob]).await;
+
+    let alice = clone_keypair(&tt.accounts[0]);
+    let bob = clone_keypair(&tt.accounts[1]);
     let payer = clone_keypair(&tt.bench.payer);
 
     let strm_token_mint = Keypair::new();
     let alice_ass_token = get_associated_token_address(&alice.pubkey(), &strm_token_mint.pubkey());
     let bob_ass_token = get_associated_token_address(&bob.pubkey(), &strm_token_mint.pubkey());
 
-    tt.bench
-        .create_mint(&strm_token_mint, &tt.bench.payer.pubkey())
-        .await;
+    tt.bench.create_mint(&strm_token_mint, &tt.bench.payer.pubkey()).await;
 
-    tt.bench
-        .create_associated_token_account(&strm_token_mint.pubkey(), &alice.pubkey())
-        .await;
+    tt.bench.create_associated_token_account(&strm_token_mint.pubkey(), &alice.pubkey()).await;
 
     tt.bench
         .mint_tokens(
@@ -51,10 +52,7 @@ async fn test_sender_not_cancellable_should_not_be_cancelled() -> Result<()> {
 
     let alice_ass_account = tt.bench.get_account(&alice_ass_token).await.unwrap();
     let alice_token_data = spl_token::state::Account::unpack_from_slice(&alice_ass_account.data)?;
-    assert_eq!(
-        alice_token_data.amount,
-        spl_token::ui_amount_to_amount(100.0, 8)
-    );
+    assert_eq!(alice_token_data.amount, spl_token::ui_amount_to_amount(100.0, 8));
     assert_eq!(alice_token_data.mint, strm_token_mint.pubkey());
     assert_eq!(alice_token_data.owner, alice.pubkey());
 
@@ -105,9 +103,7 @@ async fn test_sender_not_cancellable_should_not_be_cancelled() -> Result<()> {
         ],
     );
 
-    tt.bench
-        .process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp]))
-        .await?;
+    tt.bench.process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp])).await?;
 
     let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
 
@@ -141,26 +137,24 @@ async fn test_sender_not_cancellable_should_not_be_cancelled() -> Result<()> {
     Ok(())
 }
 
-
 #[tokio::test]
 async fn test_sender_cancellable_should_be_cancelled() -> Result<()> {
-    let mut tt = TimelockProgramTest::start_new().await;
+    let alice = Account { lamports: sol_to_lamports(1.0), ..Account::default() };
+    let bob = Account { lamports: sol_to_lamports(1.0), ..Account::default() };
 
-    let alice = clone_keypair(&tt.bench.alice);
-    let bob = clone_keypair(&tt.bench.bob);
+    let mut tt = TimelockProgramTest::start_new(&[alice, bob]).await;
+
+    let alice = clone_keypair(&tt.accounts[0]);
+    let bob = clone_keypair(&tt.accounts[1]);
     let payer = clone_keypair(&tt.bench.payer);
 
     let strm_token_mint = Keypair::new();
     let alice_ass_token = get_associated_token_address(&alice.pubkey(), &strm_token_mint.pubkey());
     let bob_ass_token = get_associated_token_address(&bob.pubkey(), &strm_token_mint.pubkey());
 
-    tt.bench
-        .create_mint(&strm_token_mint, &tt.bench.payer.pubkey())
-        .await;
+    tt.bench.create_mint(&strm_token_mint, &tt.bench.payer.pubkey()).await;
 
-    tt.bench
-        .create_associated_token_account(&strm_token_mint.pubkey(), &alice.pubkey())
-        .await;
+    tt.bench.create_associated_token_account(&strm_token_mint.pubkey(), &alice.pubkey()).await;
 
     tt.bench
         .mint_tokens(
@@ -173,10 +167,7 @@ async fn test_sender_cancellable_should_be_cancelled() -> Result<()> {
 
     let alice_ass_account = tt.bench.get_account(&alice_ass_token).await.unwrap();
     let alice_token_data = spl_token::state::Account::unpack_from_slice(&alice_ass_account.data)?;
-    assert_eq!(
-        alice_token_data.amount,
-        spl_token::ui_amount_to_amount(100.0, 8)
-    );
+    assert_eq!(alice_token_data.amount, spl_token::ui_amount_to_amount(100.0, 8));
     assert_eq!(alice_token_data.mint, strm_token_mint.pubkey());
     assert_eq!(alice_token_data.owner, alice.pubkey());
 
@@ -199,7 +190,7 @@ async fn test_sender_cancellable_should_be_cancelled() -> Result<()> {
             period: 200,
             cliff: 0,
             cliff_amount: 0,
-            cancelable_by_sender: cancelable_by_sender,
+            cancelable_by_sender,
             cancelable_by_recipient: false,
             withdrawal_public: false,
             transferable_by_sender: false,
@@ -227,9 +218,7 @@ async fn test_sender_cancellable_should_be_cancelled() -> Result<()> {
         ],
     );
 
-    tt.bench
-        .process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp]))
-        .await?;
+    tt.bench.process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp])).await?;
 
     let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
 
@@ -263,26 +252,24 @@ async fn test_sender_cancellable_should_be_cancelled() -> Result<()> {
     Ok(())
 }
 
-
 #[tokio::test]
 async fn test_recipient_cancellable_should_be_cancelled() -> Result<()> {
-    let mut tt = TimelockProgramTest::start_new().await;
+    let alice = Account { lamports: sol_to_lamports(1.0), ..Account::default() };
+    let bob = Account { lamports: sol_to_lamports(1.0), ..Account::default() };
 
-    let alice = clone_keypair(&tt.bench.alice);
-    let bob = clone_keypair(&tt.bench.bob);
+    let mut tt = TimelockProgramTest::start_new(&[alice, bob]).await;
+
+    let alice = clone_keypair(&tt.accounts[0]);
+    let bob = clone_keypair(&tt.accounts[1]);
     let payer = clone_keypair(&tt.bench.payer);
 
     let strm_token_mint = Keypair::new();
     let alice_ass_token = get_associated_token_address(&alice.pubkey(), &strm_token_mint.pubkey());
     let bob_ass_token = get_associated_token_address(&bob.pubkey(), &strm_token_mint.pubkey());
 
-    tt.bench
-        .create_mint(&strm_token_mint, &tt.bench.payer.pubkey())
-        .await;
+    tt.bench.create_mint(&strm_token_mint, &tt.bench.payer.pubkey()).await;
 
-    tt.bench
-        .create_associated_token_account(&strm_token_mint.pubkey(), &alice.pubkey())
-        .await;
+    tt.bench.create_associated_token_account(&strm_token_mint.pubkey(), &alice.pubkey()).await;
 
     tt.bench
         .mint_tokens(
@@ -295,10 +282,7 @@ async fn test_recipient_cancellable_should_be_cancelled() -> Result<()> {
 
     let alice_ass_account = tt.bench.get_account(&alice_ass_token).await.unwrap();
     let alice_token_data = spl_token::state::Account::unpack_from_slice(&alice_ass_account.data)?;
-    assert_eq!(
-        alice_token_data.amount,
-        spl_token::ui_amount_to_amount(100.0, 8)
-    );
+    assert_eq!(alice_token_data.amount, spl_token::ui_amount_to_amount(100.0, 8));
     assert_eq!(alice_token_data.mint, strm_token_mint.pubkey());
     assert_eq!(alice_token_data.owner, alice.pubkey());
 
@@ -322,7 +306,7 @@ async fn test_recipient_cancellable_should_be_cancelled() -> Result<()> {
             cliff: 0,
             cliff_amount: 0,
             cancelable_by_sender: false,
-            cancelable_by_recipient: cancelable_by_recipient,
+            cancelable_by_recipient,
             withdrawal_public: false,
             transferable_by_sender: false,
             transferable_by_recipient: false,
@@ -349,9 +333,7 @@ async fn test_recipient_cancellable_should_be_cancelled() -> Result<()> {
         ],
     );
 
-    tt.bench
-        .process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp]))
-        .await?;
+    tt.bench.process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp])).await?;
 
     let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
 
@@ -385,26 +367,24 @@ async fn test_recipient_cancellable_should_be_cancelled() -> Result<()> {
     Ok(())
 }
 
-
 #[tokio::test]
 async fn test_recipient_not_cancellable_should_not_be_cancelled() -> Result<()> {
-    let mut tt = TimelockProgramTest::start_new().await;
+    let alice = Account { lamports: sol_to_lamports(1.0), ..Account::default() };
+    let bob = Account { lamports: sol_to_lamports(1.0), ..Account::default() };
 
-    let alice = clone_keypair(&tt.bench.alice);
-    let bob = clone_keypair(&tt.bench.bob);
+    let mut tt = TimelockProgramTest::start_new(&[alice, bob]).await;
+
+    let alice = clone_keypair(&tt.accounts[0]);
+    let bob = clone_keypair(&tt.accounts[1]);
     let payer = clone_keypair(&tt.bench.payer);
 
     let strm_token_mint = Keypair::new();
     let alice_ass_token = get_associated_token_address(&alice.pubkey(), &strm_token_mint.pubkey());
     let bob_ass_token = get_associated_token_address(&bob.pubkey(), &strm_token_mint.pubkey());
 
-    tt.bench
-        .create_mint(&strm_token_mint, &tt.bench.payer.pubkey())
-        .await;
+    tt.bench.create_mint(&strm_token_mint, &tt.bench.payer.pubkey()).await;
 
-    tt.bench
-        .create_associated_token_account(&strm_token_mint.pubkey(), &alice.pubkey())
-        .await;
+    tt.bench.create_associated_token_account(&strm_token_mint.pubkey(), &alice.pubkey()).await;
 
     tt.bench
         .mint_tokens(
@@ -417,10 +397,7 @@ async fn test_recipient_not_cancellable_should_not_be_cancelled() -> Result<()> 
 
     let alice_ass_account = tt.bench.get_account(&alice_ass_token).await.unwrap();
     let alice_token_data = spl_token::state::Account::unpack_from_slice(&alice_ass_account.data)?;
-    assert_eq!(
-        alice_token_data.amount,
-        spl_token::ui_amount_to_amount(100.0, 8)
-    );
+    assert_eq!(alice_token_data.amount, spl_token::ui_amount_to_amount(100.0, 8));
     assert_eq!(alice_token_data.mint, strm_token_mint.pubkey());
     assert_eq!(alice_token_data.owner, alice.pubkey());
 
@@ -444,7 +421,7 @@ async fn test_recipient_not_cancellable_should_not_be_cancelled() -> Result<()> 
             cliff: 0,
             cliff_amount: 0,
             cancelable_by_sender: false,
-            cancelable_by_recipient: cancelable_by_recipient,
+            cancelable_by_recipient,
             withdrawal_public: false,
             transferable_by_sender: false,
             transferable_by_recipient: false,
@@ -471,9 +448,7 @@ async fn test_recipient_not_cancellable_should_not_be_cancelled() -> Result<()> 
         ],
     );
 
-    tt.bench
-        .process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp]))
-        .await?;
+    tt.bench.process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp])).await?;
 
     let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
 

@@ -1,16 +1,15 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program_test::processor;
 use solana_sdk::{
-    clock::UnixTimestamp,
-    pubkey::Pubkey,
-    signature::Signer,
-    signer::keypair::Keypair
+    account::Account, clock::UnixTimestamp, native_token::sol_to_lamports, pubkey::Pubkey,
+    signature::Signer, signer::keypair::Keypair,
 };
 
-use test_sdk::{ProgramTestBench, TestBenchProgram};
+use partner_oracle::fees::{Partner, Partners};
+use solana_program_test::ProgramTest;
 
-use streamflow_timelock::entrypoint::process_instruction;
-use streamflow_timelock::state::StreamInstruction;
+use streamflow_timelock::{entrypoint::process_instruction, state::StreamInstruction};
+use test_sdk::ProgramTestBench;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone)]
 pub struct CreateStreamIx {
@@ -43,21 +42,79 @@ pub struct TransferIx {
 pub struct TimelockProgramTest {
     pub bench: ProgramTestBench,
     pub program_id: Pubkey,
+    pub accounts: Vec<Keypair>,
+    // pub accounts: TestAccounts,
 }
 
+/*
+pub TestAccounts {
+    alice: Keypair,
+    bob: Keypair,
+    ...
+}
+*/
+
 impl TimelockProgramTest {
-    pub async fn start_new() -> Self {
+    pub async fn start_new(accounts: &[Account], strm_acc: &Pubkey) -> Self {
+        let mut program_test = ProgramTest::default();
+
         let program_id = Keypair::new().pubkey();
 
-        let program = TestBenchProgram {
-            program_name: "streamflow_timelock",
+        let mut accounts_kp = vec![];
+
+        program_test.add_program(
+            "streamflow_timelock",
             program_id,
-            process_instruction: processor!(process_instruction),
-        };
+            processor!(process_instruction),
+        );
 
-        let bench = ProgramTestBench::start_new(&[program]).await;
+        program_test.add_program(
+            "partner_oracle",
+            partner_oracle::id(),
+            processor!(partner_oracle::entrypoint::process_instruction),
+        );
 
-        Self { bench, program_id }
+        program_test.add_account(
+            *strm_acc,
+            Account { lamports: sol_to_lamports(1.0), ..Account::default() },
+        );
+
+        for acc in accounts {
+            let kp = Keypair::new();
+            program_test.add_account(kp.pubkey(), acc.clone());
+            accounts_kp.push(kp);
+        }
+
+        // Oracle & fees stuff
+        let fees_acc_pubkey = Pubkey::find_program_address(
+            &[&partner_oracle::FEES_METADATA_SEED],
+            &partner_oracle::id(),
+        )
+        .0;
+
+        let strm_partner = Partner { pubkey: *strm_acc, partner_fee: 0.0, strm_fee: 0.25 };
+        let some_partner =
+            Partner { pubkey: Keypair::new().pubkey(), partner_fee: 0.25, strm_fee: 0.25 };
+        let another_partner =
+            Partner { pubkey: Keypair::new().pubkey(), partner_fee: 0.25, strm_fee: 0.25 };
+
+        let partners = Partners(vec![strm_partner, some_partner, another_partner]);
+        let partner_data_bytes = partners.try_to_vec().unwrap();
+
+        program_test.add_account(
+            fees_acc_pubkey,
+            Account {
+                lamports: sol_to_lamports(10.0),
+                data: partner_data_bytes,
+                owner: partner_oracle::id(),
+                executable: false,
+                rent_epoch: 1000000,
+            },
+        );
+
+        let bench = ProgramTestBench::start_new(program_test).await;
+
+        Self { bench, program_id, accounts: accounts_kp }
     }
 
     pub async fn advance_clock_past_timestamp(&mut self, unix_timestamp: UnixTimestamp) {

@@ -3,7 +3,9 @@ use borsh::BorshSerialize;
 use solana_program::program_error::ProgramError;
 use solana_program_test::tokio;
 use solana_sdk::{
+    account::Account,
     instruction::{AccountMeta, Instruction},
+    native_token::sol_to_lamports,
     program_pack::Pack,
     pubkey::Pubkey,
     signature::Signer,
@@ -20,13 +22,15 @@ mod fascilities;
 
 use fascilities::*;
 
-
 #[tokio::test]
 async fn timelock_program_test() -> Result<()> {
-    let mut tt = TimelockProgramTest::start_new().await;
+    let alice = Account { lamports: sol_to_lamports(1.0), ..Account::default() };
+    let bob = Account { lamports: sol_to_lamports(1.0), ..Account::default() };
 
-    let alice = clone_keypair(&tt.bench.alice);
-    let bob = clone_keypair(&tt.bench.bob);
+    let mut tt = TimelockProgramTest::start_new(&[alice, bob]).await;
+
+    let alice = clone_keypair(&tt.accounts[0]);
+    let bob = clone_keypair(&tt.accounts[1]);
     let payer = clone_keypair(&tt.bench.payer);
 
     let strm_token_mint = Keypair::new();
@@ -151,10 +155,13 @@ async fn timelock_program_test() -> Result<()> {
 
 #[tokio::test]
 async fn timelock_program_test2() -> Result<()> {
-    let mut tt = TimelockProgramTest::start_new().await;
+    let alice = Account { lamports: sol_to_lamports(1.0), ..Account::default() };
+    let bob = Account { lamports: sol_to_lamports(1.0), ..Account::default() };
 
-    let alice = clone_keypair(&tt.bench.alice);
-    let bob = clone_keypair(&tt.bench.bob);
+    let mut tt = TimelockProgramTest::start_new(&[alice, bob]).await;
+
+    let alice = clone_keypair(&tt.accounts[0]);
+    let bob = clone_keypair(&tt.accounts[1]);
     let payer = clone_keypair(&tt.bench.payer);
 
     let strm_token_mint = Keypair::new();
@@ -263,7 +270,7 @@ async fn timelock_program_test2() -> Result<()> {
     assert!(transaction_error.is_err());
 
     // Top up account with 12 and see new amount in escrow account
-    let topup_ix = TopUpIx { ix: 4, amount: spl_token::ui_amount_to_amount(10.0, 8) }; // 4 => topup
+    let topup_ix = TopUpIx { ix: 4, amount: spl_token::ui_amount_to_amount(10.0, 8) }; // 4 => topup_stream
     let topupix_bytes = Instruction::new_with_bytes(
         tt.program_id,
         &topup_ix.try_to_vec()?,
@@ -369,10 +376,13 @@ async fn timelock_program_test2() -> Result<()> {
 
 #[tokio::test]
 async fn timelock_program_test_transfer() -> Result<()> {
-    let mut tt = TimelockProgramTest::start_new().await;
+    let alice = Account { lamports: sol_to_lamports(1.0), ..Account::default() };
+    let bob = Account { lamports: sol_to_lamports(1.0), ..Account::default() };
 
-    let alice = clone_keypair(&tt.bench.alice);
-    let bob = clone_keypair(&tt.bench.bob);
+    let mut tt = TimelockProgramTest::start_new(&[alice, bob]).await;
+
+    let alice = clone_keypair(&tt.accounts[0]);
+    let bob = clone_keypair(&tt.accounts[1]);
     let payer = clone_keypair(&tt.bench.payer);
 
     let strm_token_mint = Keypair::new();
@@ -480,10 +490,13 @@ async fn timelock_program_test_transfer() -> Result<()> {
 
 #[tokio::test]
 async fn timelock_program_test_recurring() -> Result<()> {
-    let mut tt = TimelockProgramTest::start_new().await;
+    let alice = Account { lamports: sol_to_lamports(1.0), ..Account::default() };
+    let bob = Account { lamports: sol_to_lamports(1.0), ..Account::default() };
 
-    let alice = clone_keypair(&tt.bench.alice);
-    let bob = clone_keypair(&tt.bench.bob);
+    let mut tt = TimelockProgramTest::start_new(&[alice, bob]).await;
+
+    let alice = clone_keypair(&tt.accounts[0]);
+    let bob = clone_keypair(&tt.accounts[1]);
     let payer = clone_keypair(&tt.bench.payer);
 
     let strm_token_mint = Keypair::new();
@@ -568,7 +581,7 @@ async fn timelock_program_test_recurring() -> Result<()> {
     assert_eq!(metadata_data.ix.release_rate, 100000000);
 
     // Top up account with 12 and see new amount in escrow account
-    let topup_ix = TopUpIx { ix: 4, amount: spl_token::ui_amount_to_amount(20.0, 8) }; // 4 => topup
+    let topup_ix = TopUpIx { ix: 4, amount: spl_token::ui_amount_to_amount(20.0, 8) }; // 4 => topup_stream
     let topupix_bytes = Instruction::new_with_bytes(
         tt.program_id,
         &topup_ix.try_to_vec()?,
@@ -677,7 +690,7 @@ async fn timelock_program_test_recurring() -> Result<()> {
     assert_eq!(metadata_data.last_withdrawn_at, new_now);
 
     // Try to topup, stream expired, shouldn't succeed
-    let topup_ix = TopUpIx { ix: 4, amount: spl_token::ui_amount_to_amount(10.0, 8) }; // 4 => topup
+    let topup_ix = TopUpIx { ix: 4, amount: spl_token::ui_amount_to_amount(10.0, 8) }; // 4 => topup_stream
     let topupix_bytes = Instruction::new_with_bytes(
         tt.program_id,
         &topup_ix.try_to_vec()?,
