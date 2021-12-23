@@ -16,10 +16,9 @@ use spl_token::amount_to_ui_amount;
 
 use crate::{
     error::SfError,
-    state::TokenStreamData,
+    state::{TokenStreamData, STRM_TREASURY},
     utils::{calculate_available, unpack_mint_account},
 };
-use crate::state::STRM_TREASURY;
 
 #[derive(Clone, Debug)]
 pub struct WithdrawAccounts<'a> {
@@ -161,12 +160,15 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
         metadata.partner_fee_withdrawn,
     );
 
-    // TODO: Handle requested amounts.
+    if amount > recipient_available {
+        msg!("Available for recipient: {}", recipient_available);
+        return Err(SfError::AmountMoreThanAvailable.into())
+    }
 
     let escrow_tokens_bump = Pubkey::find_program_address(&[acc.metadata.key.as_ref()], pid).1;
     let seeds = [acc.metadata.key.as_ref(), &[escrow_tokens_bump]];
 
-    if recipient_available > 0 {
+    if amount > 0 {
         msg!("Transferring unlocked tokens to recipient");
         invoke_signed(
             &spl_token::instruction::transfer(
@@ -175,7 +177,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
                 acc.recipient_tokens.key,
                 acc.escrow_tokens.key,
                 &[],
-                recipient_available,
+                amount,
             )?,
             &[
                 acc.escrow_tokens.clone(),    // src
@@ -186,11 +188,11 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
             &[&seeds],
         )?;
 
-        metadata.withdrawn_amount += recipient_available;
+        metadata.withdrawn_amount += amount;
         metadata.last_withdrawn_at = now;
         msg!(
             "Withdrawn: {} {} tokens",
-            amount_to_ui_amount(recipient_available, mint_info.decimals),
+            amount_to_ui_amount(amount, mint_info.decimals),
             metadata.mint
         );
         msg!(

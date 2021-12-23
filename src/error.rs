@@ -41,6 +41,9 @@ pub(crate) enum SfError {
 
     #[error("Amount cannot be zero")]
     AmountIsZero,
+
+    #[error("Amount requested is larger than available")]
+    AmountMoreThanAvailable,
 }
 
 impl From<SfError> for ProgramError {
