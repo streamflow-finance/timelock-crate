@@ -32,9 +32,8 @@ async fn test_create_stream_success() -> Result<()> {
     let strm_key = Pubkey::from_str(STRM_TREASURY).unwrap();
     let alice = Account { lamports: sol_to_lamports(1.0), ..Account::default() };
     let bob = Account { lamports: sol_to_lamports(1.0), ..Account::default() };
-    let partner = Account { lamports: sol_to_lamports(1.0), ..Account::default() };
 
-    let mut tt = TimelockProgramTest::start_new(&[alice, bob, partner], &strm_key).await;
+    let mut tt = TimelockProgramTest::start_new(&[alice, bob], &strm_key).await;
 
     let alice = clone_keypair(&tt.accounts[0]);
     let bob = clone_keypair(&tt.accounts[1]);
@@ -82,6 +81,7 @@ async fn test_create_stream_success() -> Result<()> {
             deposited_amount: spl_token::ui_amount_to_amount(20.0, 8),
             total_amount: spl_token::ui_amount_to_amount(20.0, 8),
             period: 1,
+            amount_per_period: 333333,
             cliff: 0,
             cliff_amount: 0,
             cancelable_by_sender: false,

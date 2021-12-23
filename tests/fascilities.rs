@@ -10,6 +10,7 @@ use solana_program_test::ProgramTest;
 
 use streamflow_timelock::{entrypoint::process_instruction, state::StreamInstruction};
 use test_sdk::ProgramTestBench;
+use test_sdk::tools::clone_keypair;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone)]
 pub struct CreateStreamIx {
@@ -43,6 +44,7 @@ pub struct TimelockProgramTest {
     pub bench: ProgramTestBench,
     pub program_id: Pubkey,
     pub accounts: Vec<Keypair>,
+    pub fees_acc: Pubkey
     // pub accounts: TestAccounts,
 }
 
@@ -69,7 +71,7 @@ impl TimelockProgramTest {
         );
 
         program_test.add_program(
-            "partner_oracle",
+            "partner-oracle",
             partner_oracle::id(),
             processor!(partner_oracle::entrypoint::process_instruction),
         );
@@ -92,11 +94,15 @@ impl TimelockProgramTest {
         )
         .0;
 
+        let some_partner_kp =  Keypair::new();
+        accounts_kp.push(clone_keypair(&some_partner_kp));
+        let another_partner_kp = Keypair::new();
+        accounts_kp.push(clone_keypair(&another_partner_kp));
         let strm_partner = Partner { pubkey: *strm_acc, partner_fee: 0.0, strm_fee: 0.25 };
         let some_partner =
-            Partner { pubkey: Keypair::new().pubkey(), partner_fee: 0.25, strm_fee: 0.25 };
+            Partner { pubkey: some_partner_kp.pubkey(), partner_fee: 0.25, strm_fee: 0.25 };
         let another_partner =
-            Partner { pubkey: Keypair::new().pubkey(), partner_fee: 0.25, strm_fee: 0.25 };
+            Partner { pubkey: another_partner_kp.pubkey(), partner_fee: 0.25, strm_fee: 0.25 };
 
         let partners = Partners(vec![strm_partner, some_partner, another_partner]);
         let partner_data_bytes = partners.try_to_vec().unwrap();
@@ -114,7 +120,7 @@ impl TimelockProgramTest {
 
         let bench = ProgramTestBench::start_new(program_test).await;
 
-        Self { bench, program_id, accounts: accounts_kp }
+        Self { bench, program_id, accounts: accounts_kp, fees_acc: fees_acc_pubkey }
     }
 
     pub async fn advance_clock_past_timestamp(&mut self, unix_timestamp: UnixTimestamp) {
