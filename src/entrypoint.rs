@@ -10,12 +10,12 @@ use solana_program::{
 };
 
 use crate::{
-    cancel_stream::{cancel, CancelAccounts},
-    create_stream::{create, CreateAccounts},
+    cancel::{cancel, CancelAccounts},
+    create::{create, CreateAccounts},
     state::StreamInstruction,
-    topup_stream::{topup, TopupAccounts},
-    transfer_recipient::{transfer_recipient, TransferAccounts},
-    withdraw_stream::{withdraw, WithdrawAccounts},
+    topup::{topup, TopupAccounts},
+    transfer::{transfer_recipient, TransferAccounts},
+    withdraw::{withdraw, WithdrawAccounts},
 };
 
 entrypoint!(process_instruction);

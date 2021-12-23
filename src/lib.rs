@@ -11,10 +11,10 @@ pub mod state;
 /// Utility functions
 pub(crate) mod utils;
 
-pub mod cancel_stream;
-pub mod create_stream;
-pub mod topup_stream;
-pub mod transfer_recipient;
-pub mod withdraw_stream;
+pub mod cancel;
+pub mod create;
+pub mod topup;
+pub mod transfer;
+pub mod withdraw;
 
 pub(crate) const MAX_STRING_SIZE: usize = 200;

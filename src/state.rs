@@ -18,7 +18,7 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{msg, pubkey::Pubkey};
 
-use crate::create_stream::CreateAccounts;
+use crate::create::CreateAccounts;
 
 // Hardcoded program version
 pub const PROGRAM_VERSION: u64 = 2;
