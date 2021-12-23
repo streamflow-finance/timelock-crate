@@ -2,6 +2,7 @@ use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
     program_pack::Pack, pubkey::Pubkey,
 };
+use std::iter::FromIterator;
 
 use crate::{error::SfError, state::StreamInstruction};
 
@@ -86,7 +87,17 @@ pub fn calculate_fee_from_amount(amount: u64, percentage: f32) -> u64 {
     }
 
     // TODO: Test units
+    //todo: is something lost in this calculation? floats are imprecise.
     (amount as f64 * (percentage / 100.0) as f64) as u64
+}
+
+/// Encode given amount to a string with given decimal places.
+pub fn format(amount: u64, decimal_places: usize) -> String {
+    let mut s: Vec<char> =
+        format!("{:0width$}", amount, width = 1 + decimal_places).chars().collect();
+    s.insert(s.len() - decimal_places, '.');
+
+    String::from_iter(&s).trim_end_matches('0').trim_end_matches('.').to_string()
 }
 
 pub enum Invoker {

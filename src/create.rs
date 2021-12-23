@@ -22,7 +22,7 @@ use crate::{
         StreamInstruction, TokenStreamData, MAX_STRING_SIZE, STRM_FEE_DEFAULT_PERCENT,
         STRM_TREASURY,
     },
-    utils::{calculate_fee_from_amount, duration_sanity, pretty_time, unpack_mint_account},
+    utils::{calculate_fee_from_amount, duration_sanity, format, pretty_time, unpack_mint_account},
 };
 
 #[derive(Clone, Debug)]
@@ -188,8 +188,8 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: StreamInstruction) -> Progr
     // Calculate fees
     let partner_fee_amount = calculate_fee_from_amount(ix.deposited_amount, partner_fee_percent);
     let strm_fee_amount = calculate_fee_from_amount(ix.deposited_amount, strm_fee_percent);
-    msg!("Fee for partner: {}", partner_fee_amount / mint_info.decimals as u64);
-    msg!("Fee for Streamflow: {}", strm_fee_amount / mint_info.decimals as u64);
+    msg!("Partner fee: {}", format(partner_fee_amount, mint_info.decimals));
+    msg!("Streamflow fee: {}", format(strm_fee_amount, mint_info.decimals));
 
     let mut metadata = TokenStreamData::new(
         now,
