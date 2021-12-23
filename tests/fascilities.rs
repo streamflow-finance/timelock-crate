@@ -9,8 +9,7 @@ use partner_oracle::fees::{Partner, Partners};
 use solana_program_test::ProgramTest;
 
 use streamflow_timelock::{entrypoint::process_instruction, state::StreamInstruction};
-use test_sdk::ProgramTestBench;
-use test_sdk::tools::clone_keypair;
+use test_sdk::{tools::clone_keypair, ProgramTestBench};
 
 #[derive(BorshSerialize, BorshDeserialize, Clone)]
 pub struct CreateStreamIx {
@@ -44,8 +43,7 @@ pub struct TimelockProgramTest {
     pub bench: ProgramTestBench,
     pub program_id: Pubkey,
     pub accounts: Vec<Keypair>,
-    pub fees_acc: Pubkey
-    // pub accounts: TestAccounts,
+    pub fees_acc: Pubkey, // pub accounts: TestAccounts,
 }
 
 /*
@@ -70,11 +68,7 @@ impl TimelockProgramTest {
             processor!(process_instruction),
         );
 
-        program_test.add_program(
-            "partner-oracle",
-            partner_oracle::id(),
-            processor!(partner_oracle::entrypoint::process_instruction),
-        );
+        program_test.add_program("partner_oracle", partner_oracle::id(), None);
 
         program_test.add_account(
             *strm_acc,
@@ -94,7 +88,7 @@ impl TimelockProgramTest {
         )
         .0;
 
-        let some_partner_kp =  Keypair::new();
+        let some_partner_kp = Keypair::new();
         accounts_kp.push(clone_keypair(&some_partner_kp));
         let another_partner_kp = Keypair::new();
         accounts_kp.push(clone_keypair(&another_partner_kp));
