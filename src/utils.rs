@@ -149,7 +149,7 @@ impl Invoker {
         }
     }
 
-    pub fn can_withdraw(&self, ix: &CreateParams) -> bool {
+    pub fn can_withdraw(&self, ix: &CreateParams, requested: u64) -> bool {
         if ix.withdrawal_public {
             return true
         }
@@ -157,8 +157,8 @@ impl Invoker {
         match self {
             Self::Sender => false,
             Self::Recipient => true,
-            Self::StreamflowTreasury => ix.amount_deposited == 0,
-            Self::Partner => ix.amount_deposited == 0,
+            Self::StreamflowTreasury => requested == 0,
+            Self::Partner => requested == 0,
             Self::None => false,
         }
     }
