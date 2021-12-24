@@ -259,7 +259,6 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         )?;
 
         metadata.streamflow_fee_withdrawn += streamflow_available; // TODO: FIXME
-        metadata.last_withdrawn_at = now;
         msg!(
             "Withdrawn: {} {} tokens",
             amount_to_ui_amount(streamflow_available, mint_info.decimals),
@@ -296,7 +295,6 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         )?;
 
         metadata.partner_fee_withdrawn += partner_available;
-        metadata.last_withdrawn_at = now;
         msg!(
             "Withdrawn: {} {} tokens",
             amount_to_ui_amount(partner_available, mint_info.decimals),
