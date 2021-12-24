@@ -2,6 +2,7 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{msg, pubkey::Pubkey};
 
 use crate::create::CreateAccounts;
+use crate::utils::{calculate_external_deposit, calculate_fee_from_amount};
 
 // Hardcoded program version
 pub const PROGRAM_VERSION: u8 = 2;
@@ -174,5 +175,24 @@ impl Contract {
         } else {
             cliff_time + seconds_left
         }
+    }
+
+    pub fn sync_balance(&mut self, balance: u64){
+
+        let external_deposit = calculate_external_deposit(
+            balance, self.ix.amount_deposited, self.amount_withdrawn
+        );
+
+        if external_deposit > 0 {
+            self.deposit(external_deposit);
+        }
+    }
+
+    pub fn deposit(&mut self, amount: u64) {
+        let partner_fee_addition = calculate_fee_from_amount(amount, self.partner_fee_percent);
+        let strm_fee_addition = calculate_fee_from_amount(amount, self.partner_fee_percent);
+        self.ix.amount_deposited += (amount - partner_fee_addition - strm_fee_addition);
+        self.partner_fee_total += partner_fee_addition;
+        self.streamflow_fee_total += strm_fee_addition;
     }
 }

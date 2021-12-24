@@ -164,7 +164,6 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
     account_sanity_check(pid, acc.clone())?;
     instruction_sanity_check(ix.clone(), now)?;
 
-    // TODO: Check available balances?
 
     // Check partner accounts are legit
     // TODO: How to enforce correct partner account?
@@ -181,6 +180,14 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
     let strm_fee_amount = calculate_fee_from_amount(ix.amount_deposited, strm_fee_percent);
     msg!("Partner fee: {}", format(partner_fee_amount, mint_info.decimals as usize));
     msg!("Streamflow fee: {}", format(strm_fee_amount, mint_info.decimals as usize));
+
+    let gross_amount = ix.amount_deposited + partner_fee_amount + strm_fee_amount;
+
+    let sender_tokens = spl_token::state::Account::unpack_from_slice(*acc.sender_tokens.data)?;
+    if sender_tokens.amount < gross_amount {
+        return Err(SfError::AmountMoreThanAvailable.into());
+    }
+
 
     let mut metadata = Contract::new(
         now,

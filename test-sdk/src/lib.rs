@@ -5,7 +5,7 @@ use cookies::TokenAccountCookie;
 use solana_program::{
     borsh::try_from_slice_unchecked, clock::Clock, instruction::Instruction,
     program_error::ProgramError, program_pack::Pack, pubkey::Pubkey, rent::Rent,
-    system_instruction, sysvar,
+    system_instruction, sysvar
 };
 use solana_program_test::{ProgramTest, ProgramTestContext};
 use solana_sdk::{account::Account, signature::Keypair, signer::Signer, transaction::Transaction};
