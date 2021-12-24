@@ -302,11 +302,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
     data[0..bytes.len()].clone_from_slice(&bytes);
 
     // When everything is withdrawn, close the accounts.
-    // TODO: Should we really be comparing to deposited amount?
-    if metadata.amount_withdrawn == metadata.ix.amount_deposited &&
-        metadata.partner_fee_withdrawn == metadata.partner_fee_total &&
-        metadata.streamflow_fee_withdrawn == metadata.streamflow_fee_total
-    {
+    if now >= metadata.ix.end_time {
         // TODO: Close metadata account once there is an alternative storage solution
         // for historical data.
         // msg!("Closing metadata account");
