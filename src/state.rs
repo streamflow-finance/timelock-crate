@@ -60,7 +60,7 @@ pub struct Contract {
     /// Timestamp at which stream can be safely canceled by a 3rd party
     /// (Stream is either fully vested or there isn't enough capital to
     /// keep it active)
-    pub closable_at: u64,
+    pub closable_at: u64, //TODO: remove, calculate end date and use that as closable_date
     /// Timestamp of the last withdrawal
     pub last_withdrawn_at: u64,
     /// Pubkey of the stream initializer
