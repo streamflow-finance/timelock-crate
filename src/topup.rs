@@ -9,6 +9,7 @@ use solana_program::{
     sysvar::{clock::Clock, Sysvar},
 };
 use spl_token::amount_to_ui_amount;
+use spl_token::solana_program::program_pack::Pack;
 
 use crate::{
     error::SfError,
@@ -46,6 +47,10 @@ pub fn topup(_program_id: &Pubkey, acc: TopupAccounts, amount: u64) -> ProgramRe
         Err(_) => return Err(SfError::InvalidMetadata.into()),
     };
 
+    let escrow_tokens = spl_token::state::Account::unpack_from_slice(**acc.escrow_tokens.data)?;
+
+    metadata.sync_balance(escrow_tokens.amount);
+
     //metadata_sanity_check(acc.clone())?;
 
     let now = Clock::get()?.unix_timestamp as u64;
@@ -71,16 +76,7 @@ pub fn topup(_program_id: &Pubkey, acc: TopupAccounts, amount: u64) -> ProgramRe
         ],
     )?;
 
-    let mint_info = unpack_mint_account(&acc.mint)?;
-    let uint_fee_for_partner = calculate_fee_from_amount(amount, metadata.partner_fee_percent);
-    let uint_fee_for_strm = calculate_fee_from_amount(amount, metadata.streamflow_fee_percent);
-    msg!("Fee for partner: {}", uint_fee_for_partner / mint_info.decimals as u64);
-    msg!("Fee for Streamflow: {}", uint_fee_for_strm / mint_info.decimals as u64);
-
-    // TODO: Do we request topup + fees, or take fees from the topup?
-    metadata.streamflow_fee_total += uint_fee_for_strm;
-    metadata.partner_fee_total += uint_fee_for_partner;
-    metadata.ix.amount_deposited += amount - uint_fee_for_strm - uint_fee_for_partner;
+    metadata.deposit(amount);
     metadata.closable_at = metadata.closable();
 
     let bytes = metadata.try_to_vec()?;

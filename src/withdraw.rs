@@ -6,11 +6,13 @@ use crate::{
     utils::{calculate_available, unpack_mint_account, Invoker},
 };
 use borsh::BorshSerialize;
+use partner_oracle::fees::fetch_partner_fee_data;
 use solana_program::{
     account_info::AccountInfo,
     borsh as solana_borsh,
     entrypoint::ProgramResult,
     msg,
+    program_pack::Pack,
     program::invoke_signed,
     program_error::ProgramError,
     pubkey::Pubkey,
@@ -18,6 +20,8 @@ use solana_program::{
 };
 use spl_associated_token_account::get_associated_token_address;
 use spl_token::amount_to_ui_amount;
+use crate::state::STRM_FEE_DEFAULT_PERCENT;
+use crate::utils::{calculate_external_deposit, calculate_fee_from_amount};
 
 #[derive(Clone, Debug)]
 pub struct WithdrawAccounts<'a> {
@@ -157,6 +161,10 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
     if !withdraw_authority.can_withdraw(&metadata.ix, requested_amount) {
         return Err(ProgramError::InvalidAccountData)
     }
+
+    let escrow_tokens = spl_token::state::Account::unpack_from_slice(**acc.escrow_tokens.data)?;
+
+    metadata.sync_balance(escrow_tokens.amount);
 
     // Check what has been unlocked so far
     let recipient_available = calculate_available(
