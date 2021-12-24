@@ -139,14 +139,7 @@ fn instruction_sanity_check(ix: CreateParams, now: u64) -> ProgramResult {
         return Err(SfError::InvalidDeposit.into())
     }
 
-    // TODO: We have 2 conflicting parameter fields:
-    // Check how contract.amount_per_period vibes with
-    // num_periods = (end - cliff) / period;
-    // amount_per_period = amount_deposited / num_periods
-    // i.e.
-    // - if we set the end date, then release rate is calculated based on the end date
-    // - if we set the release rate, then the end date is calculated based on this
-    //TODO: Solution: input only release rate and calculate end_date based upon that.
+    //TODO: input only release rate and calculate end_date based upon that.
 
     // TODO: Anything else?
 

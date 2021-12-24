@@ -16,7 +16,8 @@ pub struct CreateParams {
     /// Timestamp when the tokens start vesting
     pub start_time: u64,
     /// Timestamp when all tokens are fully vested
-    pub end_time: u64,
+    pub end_time: u64, /* todo: move to metadata, calculate based on cliff, period,
+                        * amount_per_period (not Create stream input params) */
     /// Deposited amount of tokens
     pub amount_deposited: u64,
     /// Time step (period) in seconds per which the vesting occurs
