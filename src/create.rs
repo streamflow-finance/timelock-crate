@@ -186,8 +186,8 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
     // Calculate fees
     let partner_fee_amount = calculate_fee_from_amount(ix.amount_deposited, partner_fee_percent);
     let strm_fee_amount = calculate_fee_from_amount(ix.amount_deposited, strm_fee_percent);
-    msg!("Partner fee: {}", format(partner_fee_amount, mint_info.decimals));
-    msg!("Streamflow fee: {}", format(strm_fee_amount, mint_info.decimals));
+    msg!("Partner fee: {}", format(partner_fee_amount, mint_info.decimals as usize));
+    msg!("Streamflow fee: {}", format(strm_fee_amount, mint_info.decimals as usize));
 
     let mut metadata = Contract::new(
         now,
