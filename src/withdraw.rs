@@ -246,7 +246,6 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
         )?;
 
         metadata.streamflow_fee_withdrawn += streamflow_available;
-        metadata.last_withdrawn_at = now;
         msg!(
             "Withdrawn: {} {} tokens",
             amount_to_ui_amount(streamflow_available, mint_info.decimals),
@@ -283,7 +282,6 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
         )?;
 
         metadata.partner_fee_withdrawn += partner_available;
-        metadata.last_withdrawn_at = now;
         msg!(
             "Withdrawn: {} {} tokens",
             amount_to_ui_amount(partner_available, mint_info.decimals),
