@@ -1,24 +1,10 @@
-// Copyright (c) 2021 Ivan Jelincic <parazyd@dyne.org>
-//
-// This file is part of streamflow-finance/timelock-crate
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License version 3
-// as published by the Free Software Foundation.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with this program. If not, see <https://www.gnu.org/licenses/>.
 use solana_program::{
     account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
     program_pack::Pack, pubkey::Pubkey,
 };
+use std::iter::FromIterator;
 
-use crate::{error::SfError, state::StreamInstruction};
+use crate::{error::SfError, state::CreateParams};
 
 /// Do a sanity check with given Unix timestamps.
 pub fn duration_sanity(now: u64, start: u64, end: u64, cliff: u64) -> ProgramResult {
@@ -60,7 +46,7 @@ pub fn pretty_time(t: u64) -> String {
 }
 
 // TODO: Test units, be robust against possible overflows.
-pub fn calculate_available(now: u64, ix: StreamInstruction, total: u64, withdrawn: u64) -> u64 {
+pub fn calculate_available(now: u64, ix: CreateParams, total: u64, withdrawn: u64) -> u64 {
     if ix.start_time > now || ix.cliff > now || total == 0 || total == withdrawn {
         return 0
     }
@@ -78,7 +64,7 @@ pub fn calculate_available(now: u64, ix: StreamInstruction, total: u64, withdraw
     let period_amount = if ix.release_rate > 0 {
         ix.release_rate as f64
     } else {
-        (ix.total_amount - cliff_amount) as f64 / num_periods
+        (ix.amount_deposited - cliff_amount) as f64 / num_periods
     };
 
     let periods_passed = (now - cliff) / ix.period;
@@ -101,7 +87,17 @@ pub fn calculate_fee_from_amount(amount: u64, percentage: f32) -> u64 {
     }
 
     // TODO: Test units
+    //todo: is something lost in this calculation? floats are imprecise.
     (amount as f64 * (percentage / 100.0) as f64) as u64
+}
+
+/// Encode given amount to a string with given decimal places.
+pub fn format(amount: u64, decimal_places: usize) -> String {
+    let mut s: Vec<char> =
+        format!("{:0width$}", amount, width = 1 + decimal_places).chars().collect();
+    s.insert(s.len() - decimal_places, '.');
+
+    String::from_iter(&s).trim_end_matches('0').trim_end_matches('.').to_string()
 }
 
 pub enum Invoker {
@@ -133,7 +129,7 @@ impl Invoker {
         }
     }
 
-    pub fn can_cancel(&self, ix: &StreamInstruction) -> bool {
+    pub fn can_cancel(&self, ix: &CreateParams) -> bool {
         match self {
             Self::Sender => ix.cancelable_by_sender,
             Self::Recipient => ix.cancelable_by_recipient,
@@ -143,7 +139,7 @@ impl Invoker {
         }
     }
 
-    pub fn can_transfer(&self, ix: &StreamInstruction) -> bool {
+    pub fn can_transfer(&self, ix: &CreateParams) -> bool {
         match self {
             Self::Sender => ix.transferable_by_sender,
             Self::Recipient => ix.transferable_by_recipient,
@@ -153,7 +149,7 @@ impl Invoker {
         }
     }
 
-    pub fn can_withdraw(&self, ix: &StreamInstruction) -> bool {
+    pub fn can_withdraw(&self, ix: &CreateParams, requested_amount: u64) -> bool {
         if ix.withdrawal_public {
             return true
         }
@@ -161,8 +157,8 @@ impl Invoker {
         match self {
             Self::Sender => false,
             Self::Recipient => true,
-            Self::StreamflowTreasury => ix.deposited_amount == 0,
-            Self::Partner => ix.deposited_amount == 0,
+            Self::StreamflowTreasury => requested_amount == 0,
+            Self::Partner => requested_amount == 0,
             Self::None => false,
         }
     }

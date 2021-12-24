@@ -16,7 +16,7 @@ use solana_sdk::{
 use spl_associated_token_account::get_associated_token_address;
 use test_sdk::tools::clone_keypair;
 
-use streamflow_timelock::state::{StreamInstruction, TokenStreamData, PROGRAM_VERSION};
+use streamflow_timelock::state::{Contract, CreateParams, PROGRAM_VERSION};
 
 mod fascilities;
 
@@ -67,11 +67,10 @@ async fn test_sender_not_cancellable_should_not_be_cancelled() -> Result<()> {
 
     let create_stream_ix = CreateStreamIx {
         ix: 0,
-        metadata: StreamInstruction {
+        metadata: CreateParams {
             start_time: now + 10,
             end_time: now + 1010,
-            deposited_amount: spl_token::ui_amount_to_amount(10.0, 8),
-            total_amount: spl_token::ui_amount_to_amount(20.0, 8),
+            amount_deposited: spl_token::ui_amount_to_amount(10.0, 8),
             period: 200,
             cliff: 0,
             cliff_amount: 0,
@@ -105,7 +104,7 @@ async fn test_sender_not_cancellable_should_not_be_cancelled() -> Result<()> {
 
     tt.bench.process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp])).await?;
 
-    let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
+    let metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
 
     assert_eq!(metadata_data.ix.stream_name, "Recurring".to_string());
     assert_eq!(metadata_data.ix.release_rate, 100000000);
@@ -182,11 +181,10 @@ async fn test_sender_cancellable_should_be_cancelled() -> Result<()> {
 
     let create_stream_ix = CreateStreamIx {
         ix: 0,
-        metadata: StreamInstruction {
+        metadata: CreateParams {
             start_time: now + 10,
             end_time: now + 1010,
-            deposited_amount: spl_token::ui_amount_to_amount(10.0, 8),
-            total_amount: spl_token::ui_amount_to_amount(20.0, 8),
+            amount_deposited: spl_token::ui_amount_to_amount(10.0, 8),
             period: 200,
             cliff: 0,
             cliff_amount: 0,
@@ -220,7 +218,7 @@ async fn test_sender_cancellable_should_be_cancelled() -> Result<()> {
 
     tt.bench.process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp])).await?;
 
-    let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
+    let metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
 
     assert_eq!(metadata_data.ix.stream_name, "Recurring".to_string());
     assert_eq!(metadata_data.ix.release_rate, 100000000);
@@ -297,11 +295,10 @@ async fn test_recipient_cancellable_should_be_cancelled() -> Result<()> {
 
     let create_stream_ix = CreateStreamIx {
         ix: 0,
-        metadata: StreamInstruction {
+        metadata: CreateParams {
             start_time: now + 10,
             end_time: now + 1010,
-            deposited_amount: spl_token::ui_amount_to_amount(10.0, 8),
-            total_amount: spl_token::ui_amount_to_amount(20.0, 8),
+            amount_deposited: spl_token::ui_amount_to_amount(10.0, 8),
             period: 200,
             cliff: 0,
             cliff_amount: 0,
@@ -335,7 +332,7 @@ async fn test_recipient_cancellable_should_be_cancelled() -> Result<()> {
 
     tt.bench.process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp])).await?;
 
-    let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
+    let metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
 
     assert_eq!(metadata_data.ix.stream_name, "Recurring".to_string());
     assert_eq!(metadata_data.ix.release_rate, 100000000);
@@ -412,11 +409,10 @@ async fn test_recipient_not_cancellable_should_not_be_cancelled() -> Result<()> 
 
     let create_stream_ix = CreateStreamIx {
         ix: 0,
-        metadata: StreamInstruction {
+        metadata: CreateParams {
             start_time: now + 10,
             end_time: now + 1010,
-            deposited_amount: spl_token::ui_amount_to_amount(10.0, 8),
-            total_amount: spl_token::ui_amount_to_amount(20.0, 8),
+            amount_deposited: spl_token::ui_amount_to_amount(10.0, 8),
             period: 200,
             cliff: 0,
             cliff_amount: 0,
@@ -450,7 +446,7 @@ async fn test_recipient_not_cancellable_should_not_be_cancelled() -> Result<()> 
 
     tt.bench.process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp])).await?;
 
-    let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
+    let metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
 
     assert_eq!(metadata_data.ix.stream_name, "Recurring".to_string());
     assert_eq!(metadata_data.ix.release_rate, 100000000);

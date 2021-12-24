@@ -16,7 +16,7 @@ use solana_sdk::{
 use spl_associated_token_account::get_associated_token_address;
 use test_sdk::tools::clone_keypair;
 
-use streamflow_timelock::state::{StreamInstruction, TokenStreamData, PROGRAM_VERSION};
+use streamflow_timelock::state::{Contract, CreateParams, PROGRAM_VERSION};
 
 mod fascilities;
 
@@ -65,11 +65,10 @@ async fn timelock_program_test() -> Result<()> {
 
     let create_stream_ix = CreateStreamIx {
         ix: 0,
-        metadata: StreamInstruction {
+        metadata: CreateParams {
             start_time: now + 5,
             end_time: now + 605,
-            deposited_amount: spl_token::ui_amount_to_amount(20.0, 8),
-            total_amount: spl_token::ui_amount_to_amount(20.0, 8),
+            amount_deposited: spl_token::ui_amount_to_amount(20.0, 8),
             period: 1,
             cliff: 0,
             cliff_amount: 0,
@@ -104,11 +103,11 @@ async fn timelock_program_test() -> Result<()> {
     tt.bench.process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp])).await?;
 
     let metadata_acc = tt.bench.get_account(&metadata_kp.pubkey()).await.unwrap();
-    let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
+    let metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
 
     assert_eq!(metadata_acc.owner, tt.program_id);
     assert_eq!(metadata_data.magic, PROGRAM_VERSION);
-    assert_eq!(metadata_data.withdrawn_amount, 0);
+    assert_eq!(metadata_data.amount_withdrawn, 0);
     assert_eq!(metadata_data.canceled_at, 0);
     assert_eq!(metadata_data.closable_at, now + 605);
     assert_eq!(metadata_data.last_withdrawn_at, 0);
@@ -120,8 +119,7 @@ async fn timelock_program_test() -> Result<()> {
     assert_eq!(metadata_data.escrow_tokens, escrow_tokens_pubkey);
     assert_eq!(metadata_data.ix.start_time, now + 5);
     assert_eq!(metadata_data.ix.end_time, now + 605);
-    assert_eq!(metadata_data.ix.deposited_amount, spl_token::ui_amount_to_amount(20.0, 8));
-    assert_eq!(metadata_data.ix.total_amount, spl_token::ui_amount_to_amount(20.0, 8));
+    assert_eq!(metadata_data.ix.amount_deposited, spl_token::ui_amount_to_amount(20.0, 8));
     assert_eq!(metadata_data.ix.stream_name, "TheTestoooooooooor".to_string());
 
     // Let's warp ahead and try withdrawing some of the stream.
@@ -146,8 +144,8 @@ async fn timelock_program_test() -> Result<()> {
 
     tt.bench.process_transaction(&[withdraw_stream_ix_bytes], Some(&[&bob])).await?;
 
-    let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
-    assert_eq!(metadata_data.withdrawn_amount, 1180000000);
+    let metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
+    assert_eq!(metadata_data.amount_withdrawn, 1180000000);
 
     println!("{:#?}", metadata_data);
     Ok(())
@@ -196,11 +194,10 @@ async fn timelock_program_test2() -> Result<()> {
 
     let create_stream_ix = CreateStreamIx {
         ix: 0,
-        metadata: StreamInstruction {
+        metadata: CreateParams {
             start_time: now + 10,
             end_time: now + 1010,
-            deposited_amount: spl_token::ui_amount_to_amount(10.0, 8),
-            total_amount: spl_token::ui_amount_to_amount(20.0, 8),
+            amount_deposited: spl_token::ui_amount_to_amount(10.0, 8),
             period: 1,
             cliff: 0,
             cliff_amount: 0,
@@ -235,15 +232,14 @@ async fn timelock_program_test2() -> Result<()> {
     tt.bench.process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp])).await?;
 
     let metadata_acc = tt.bench.get_account(&metadata_kp.pubkey()).await.unwrap();
-    let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
+    let metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
 
     assert_eq!(metadata_acc.owner, tt.program_id);
     assert_eq!(metadata_data.closable_at, now + 510 + 1); // 1 after, like in function
 
     assert_eq!(metadata_data.ix.start_time, now + 10);
     assert_eq!(metadata_data.ix.end_time, now + 1010);
-    assert_eq!(metadata_data.ix.deposited_amount, spl_token::ui_amount_to_amount(10.0, 8));
-    assert_eq!(metadata_data.ix.total_amount, spl_token::ui_amount_to_amount(20.0, 8));
+    assert_eq!(metadata_data.ix.amount_deposited, spl_token::ui_amount_to_amount(10.0, 8));
     assert_eq!(metadata_data.ix.stream_name, "Test2".to_string());
 
     // Test if recipient can be transfered, should return error
@@ -285,8 +281,8 @@ async fn timelock_program_test2() -> Result<()> {
     );
     tt.bench.process_transaction(&[topupix_bytes], Some(&[&alice])).await?;
     // let metadata_acc = tt.bench.get_account(&metadata_kp.pubkey()).await.unwrap();
-    let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
-    assert_eq!(metadata_data.ix.deposited_amount, spl_token::ui_amount_to_amount(20.0, 8));
+    let metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
+    assert_eq!(metadata_data.ix.amount_deposited, spl_token::ui_amount_to_amount(20.0, 8));
     // Closable to end_date, closable fn would return 1010 + 1
     assert_eq!(metadata_data.closable_at, now + 1010);
 
@@ -417,11 +413,10 @@ async fn timelock_program_test_transfer() -> Result<()> {
 
     let create_stream_ix = CreateStreamIx {
         ix: 0,
-        metadata: StreamInstruction {
+        metadata: CreateParams {
             start_time: now + 10,
             end_time: now + 1010,
-            deposited_amount: spl_token::ui_amount_to_amount(10.0, 8),
-            total_amount: spl_token::ui_amount_to_amount(20.0, 8),
+            amount_deposited: spl_token::ui_amount_to_amount(10.0, 8),
             period: 1,
             cliff: 0,
             cliff_amount: 0,
@@ -455,7 +450,7 @@ async fn timelock_program_test_transfer() -> Result<()> {
 
     tt.bench.process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp])).await?;
 
-    let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
+    let metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
 
     assert_eq!(metadata_data.ix.stream_name, "TransferStream".to_string());
     assert!(metadata_data.ix.transferable_by_recipient);
@@ -479,7 +474,7 @@ async fn timelock_program_test_transfer() -> Result<()> {
         ],
     );
     tt.bench.process_transaction(&[transfer_ix_bytes], Some(&[&bob])).await?;
-    let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
+    let metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
     // Check new recipient
     assert_eq!(metadata_data.recipient, alice.pubkey());
     // Check new recipient token account
@@ -531,11 +526,10 @@ async fn timelock_program_test_recurring() -> Result<()> {
 
     let create_stream_ix = CreateStreamIx {
         ix: 0,
-        metadata: StreamInstruction {
+        metadata: CreateParams {
             start_time: now + 10,
             end_time: now + 1010,
-            deposited_amount: spl_token::ui_amount_to_amount(10.0, 8),
-            total_amount: spl_token::ui_amount_to_amount(20.0, 8),
+            amount_deposited: spl_token::ui_amount_to_amount(10.0, 8),
             period: 200,
             cliff: 0,
             cliff_amount: 0,
@@ -570,13 +564,13 @@ async fn timelock_program_test_recurring() -> Result<()> {
     tt.bench.process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp])).await?;
 
     let metadata_acc = tt.bench.get_account(&metadata_kp.pubkey()).await.unwrap();
-    let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
+    let metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
 
     assert_eq!(metadata_acc.owner, tt.program_id);
     assert_eq!(metadata_data.closable_at, now + 10 + 2000 + 1); // 1 after, like in function
     assert_eq!(metadata_data.ix.start_time, now + 10);
     assert_eq!(metadata_data.ix.end_time, now + 1010);
-    assert_eq!(metadata_data.ix.deposited_amount, spl_token::ui_amount_to_amount(10.0, 8));
+    assert_eq!(metadata_data.ix.amount_deposited, spl_token::ui_amount_to_amount(10.0, 8));
     assert_eq!(metadata_data.ix.stream_name, "Recurring".to_string());
     assert_eq!(metadata_data.ix.release_rate, 100000000);
 
@@ -596,8 +590,8 @@ async fn timelock_program_test_recurring() -> Result<()> {
     );
     tt.bench.process_transaction(&[topupix_bytes], Some(&[&alice])).await?;
     // let metadata_acc = tt.bench.get_account(&metadata_kp.pubkey()).await.unwrap();
-    let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
-    assert_eq!(metadata_data.ix.deposited_amount, spl_token::ui_amount_to_amount(30.0, 8));
+    let metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
+    assert_eq!(metadata_data.ix.amount_deposited, spl_token::ui_amount_to_amount(30.0, 8));
     // Closable to end_date, closable fn would return 1010 + 1
     assert_eq!(metadata_data.closable_at, now + 10 + 6000 + 1);
 
@@ -685,8 +679,8 @@ async fn timelock_program_test_recurring() -> Result<()> {
 
     tt.bench.process_transaction(&[withdraw_stream_ix_bytes], Some(&[&bob])).await?;
 
-    let metadata_data: TokenStreamData = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
-    assert_eq!(metadata_data.withdrawn_amount, spl_token::ui_amount_to_amount(25.0, 8));
+    let metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
+    assert_eq!(metadata_data.amount_withdrawn, spl_token::ui_amount_to_amount(25.0, 8));
     assert_eq!(metadata_data.last_withdrawn_at, new_now);
 
     // Try to topup, stream expired, shouldn't succeed

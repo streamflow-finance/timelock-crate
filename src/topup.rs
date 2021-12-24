@@ -12,7 +12,7 @@ use spl_token::amount_to_ui_amount;
 
 use crate::{
     error::SfError,
-    state::TokenStreamData,
+    state::Contract,
     utils::{calculate_fee_from_amount, unpack_mint_account},
 };
 
@@ -41,7 +41,7 @@ pub fn topup(_program_id: &Pubkey, acc: TopupAccounts, amount: u64) -> ProgramRe
     }
 
     let mut data = acc.metadata.try_borrow_mut_data()?;
-    let mut metadata: TokenStreamData = match solana_borsh::try_from_slice_unchecked(&data) {
+    let mut metadata: Contract = match solana_borsh::try_from_slice_unchecked(&data) {
         Ok(v) => v,
         Err(_) => return Err(SfError::InvalidMetadata.into()),
     };
@@ -80,7 +80,7 @@ pub fn topup(_program_id: &Pubkey, acc: TopupAccounts, amount: u64) -> ProgramRe
     // TODO: Do we request topup + fees, or take fees from the topup?
     metadata.streamflow_fee_total += uint_fee_for_strm;
     metadata.partner_fee_total += uint_fee_for_partner;
-    metadata.ix.deposited_amount += amount - uint_fee_for_strm - uint_fee_for_partner;
+    metadata.ix.amount_deposited += amount - uint_fee_for_strm - uint_fee_for_partner;
     metadata.closable_at = metadata.closable();
 
     let bytes = metadata.try_to_vec()?;

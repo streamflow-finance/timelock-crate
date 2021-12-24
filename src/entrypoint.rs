@@ -1,18 +1,3 @@
-// Copyright (c) 2021 Ivan Jelincic <parazyd@dyne.org>
-//
-// This file is part of streamflow-finance/timelock-crate
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License version 3
-// as published by the Free Software Foundation.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with this program. If not, see <https://www.gnu.org/licenses/>.
 use std::convert::TryInto;
 
 use borsh::BorshDeserialize;
@@ -25,12 +10,12 @@ use solana_program::{
 };
 
 use crate::{
-    cancel_stream::{cancel, CancelAccounts},
-    create_stream::{create, CreateAccounts},
-    state::StreamInstruction,
-    topup_stream::{topup, TopupAccounts},
-    transfer_recipient::{transfer_recipient, TransferAccounts},
-    withdraw_stream::{withdraw, WithdrawAccounts},
+    cancel::{cancel, CancelAccounts},
+    create::{create, CreateAccounts},
+    state::CreateParams,
+    topup::{topup, TopupAccounts},
+    transfer::{transfer_recipient, TransferAccounts},
+    withdraw::{withdraw, WithdrawAccounts},
 };
 
 entrypoint!(process_instruction);
@@ -57,14 +42,12 @@ pub fn process_instruction(pid: &Pubkey, acc: &[AccountInfo], ix: &[u8]) -> Prog
                 associated_token_program: next_account_info(ai)?.clone(),
                 system_program: next_account_info(ai)?.clone(),
             };
-            let si = StreamInstruction::try_from_slice(&ix[1..])?;
+            let si = CreateParams::try_from_slice(&ix[1..])?;
             return create(pid, ia, si)
         }
         1 => {
             let ia = WithdrawAccounts {
                 authority: next_account_info(ai)?.clone(),
-                sender: next_account_info(ai)?.clone(),
-                sender_tokens: next_account_info(ai)?.clone(),
                 recipient: next_account_info(ai)?.clone(),
                 recipient_tokens: next_account_info(ai)?.clone(),
                 metadata: next_account_info(ai)?.clone(),

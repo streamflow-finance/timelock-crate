@@ -1,43 +1,24 @@
-// Copyright (c) 2021 Ivan Jelincic <parazyd@dyne.org>
-//               2021 imprfekt <imprfekt@icloud.com>
-//               2021 Ivan Britvic <ivbritvic@gmail.com>
-//
-// This file is part of streamflow-finance/timelock-crate
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License version 3
-// as published by the Free Software Foundation.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with this program. If not, see <https://www.gnu.org/licenses/>.
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{msg, pubkey::Pubkey};
 
-use crate::create_stream::CreateAccounts;
+use crate::create::CreateAccounts;
 
 // Hardcoded program version
-pub const PROGRAM_VERSION: u64 = 2;
-
-pub const STRM_TREASURY: &str = "Ht5G1RhkcKnpLVLMhqJc5aqZ4wYUEbxbtZwGCVbgU7DL";
+pub const PROGRAM_VERSION: u8 = 2;
+pub const STRM_TREASURY: &str = "Ht5G1RhkcKnpLVLMhqJc5aqZ4wYUEbxbtZwGCVbgU7DL"; //todo: update
+pub const MAX_STRING_SIZE: usize = 200;
+pub const STRM_FEE_DEFAULT_PERCENT: f32 = 0.25;
 
 /// The struct containing instructions for initializing a stream
 #[derive(BorshDeserialize, BorshSerialize, Clone, Debug)]
 #[repr(C)]
-pub struct StreamInstruction {
+pub struct CreateParams {
     /// Timestamp when the tokens start vesting
     pub start_time: u64,
     /// Timestamp when all tokens are fully vested
     pub end_time: u64,
-    /// Deposited amount of tokens (should be <= total_amount)
-    pub deposited_amount: u64,
-    /// Total amount of the tokens in the escrow account if
-    /// contract is fully vested
-    pub total_amount: u64,
+    /// Deposited amount of tokens
+    pub amount_deposited: u64,
     /// Time step (period) in seconds per which the vesting occurs
     pub period: u64,
     /// Amount released per period
@@ -65,19 +46,21 @@ pub struct StreamInstruction {
 /// TokenStreamData is the struct containing metadata for an SPL token stream.
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug)]
 #[repr(C)]
-pub struct TokenStreamData {
-    /// Magic bytes, will be used for version of the contract
+pub struct Contract {
+    /// Magic bytes
     pub magic: u64,
+    /// Version of the program
+    pub version: u8,
     /// Timestamp when stream was created
     pub created_at: u64,
     /// Amount of funds withdrawn
-    pub withdrawn_amount: u64,
+    pub amount_withdrawn: u64,
     /// Timestamp when stream was canceled (if canceled)
     pub canceled_at: u64,
     /// Timestamp at which stream can be safely canceled by a 3rd party
     /// (Stream is either fully vested or there isn't enough capital to
     /// keep it active)
-    pub closable_at: u64,
+    pub closable_at: u64, //TODO: remove, calculate end date and use that as closable_date
     /// Timestamp of the last withdrawal
     pub last_withdrawn_at: u64,
     /// Pubkey of the stream initializer
@@ -113,27 +96,28 @@ pub struct TokenStreamData {
     /// Fee percentage for partner
     pub partner_fee_percent: f32,
     /// The stream instruction
-    pub ix: StreamInstruction,
+    pub ix: CreateParams,
 }
 
-impl TokenStreamData {
+impl Contract {
     /// Initialize a new `TokenStreamData` struct.
     pub fn new(
         now: u64,
         acc: CreateAccounts,
-        ix: StreamInstruction,
-        partner_fee: u64,
-        partner_pct: f32,
-        strm_fee: u64,
-        strm_pct: f32,
+        ix: CreateParams,
+        partner_fee_total: u64,
+        partner_fee_percent: f32,
+        streamflow_fee_total: u64,
+        streamflow_fee_percent: f32,
     ) -> Self {
-        // TODO: calculate cancel_time based on other parameters (incl. deposited_amount)
+        // TODO: calculate cancel_time based on other parameters (incl. amount_deposited)
         Self {
-            magic: PROGRAM_VERSION,
-            created_at: now, // TODO: is oke?
-            withdrawn_amount: 0,
+            magic: 0,
+            version: PROGRAM_VERSION,
+            created_at: now,
+            amount_withdrawn: 0,
             canceled_at: 0,
-            closable_at: ix.end_time, // TODO: is oke?
+            closable_at: ix.end_time,
             last_withdrawn_at: 0,
             sender: *acc.sender.key,
             sender_tokens: *acc.sender_tokens.key,
@@ -143,14 +127,14 @@ impl TokenStreamData {
             escrow_tokens: *acc.escrow_tokens.key,
             streamflow_treasury: *acc.streamflow_treasury.key,
             streamflow_treasury_tokens: *acc.streamflow_treasury_tokens.key,
-            streamflow_fee_total: strm_fee,
+            streamflow_fee_total,
             streamflow_fee_withdrawn: 0,
-            streamflow_fee_percent: strm_pct,
+            streamflow_fee_percent,
             partner: *acc.partner.key,
             partner_tokens: *acc.partner_tokens.key,
-            partner_fee_total: partner_fee,
+            partner_fee_total,
             partner_fee_withdrawn: 0,
-            partner_fee_percent: partner_pct,
+            partner_fee_percent,
             ix,
         }
     }
@@ -162,7 +146,7 @@ impl TokenStreamData {
 
         let cliff_amount = if self.ix.cliff_amount > 0 { self.ix.cliff_amount } else { 0 };
         // Deposit smaller then cliff amount, cancelable at cliff
-        if self.ix.deposited_amount < cliff_amount {
+        if self.ix.amount_deposited < cliff_amount {
             return cliff_time
         }
         // Nr of seconds after the cliff
@@ -172,10 +156,10 @@ impl TokenStreamData {
             self.ix.release_rate / self.ix.period
         } else {
             // stream per second
-            ((self.ix.total_amount - cliff_amount) / seconds_nr) as u64
+            ((self.ix.amount_deposited - cliff_amount) / seconds_nr) as u64
         };
         // Seconds till account runs out of available funds, +1 as ceil (integer)
-        let seconds_left = ((self.ix.deposited_amount - cliff_amount) / amount_per_second) + 1;
+        let seconds_left = ((self.ix.amount_deposited - cliff_amount) / amount_per_second) + 1;
 
         msg!(
             "Release {}, Period {}, seconds left {}",

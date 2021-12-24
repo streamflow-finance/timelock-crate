@@ -1,10 +1,5 @@
 use std::str::FromStr;
 
-use crate::{
-    error::SfError,
-    state::{TokenStreamData, STRM_TREASURY},
-    utils::{calculate_available, unpack_mint_account, Invoker},
-};
 use borsh::BorshSerialize;
 use solana_program::{
     account_info::AccountInfo,
@@ -19,24 +14,45 @@ use solana_program::{
 use spl_associated_token_account::get_associated_token_address;
 use spl_token::amount_to_ui_amount;
 
+use crate::{
+    error::SfError,
+    state::{Contract, STRM_TREASURY},
+    utils::{calculate_available, unpack_mint_account, Invoker},
+};
+
 #[derive(Clone, Debug)]
-pub struct WithdrawAccounts<'a> {
+pub struct CancelAccounts<'a> {
+    /// Account invoking cancel. Can be either stream sender or recipient, depending on the value
+    /// of `cancelable_by_sender` and `cancelable_by_recipient`
+    /// But when stream expires anyone can cancel
     pub authority: AccountInfo<'a>,
+    /// The main wallet address of the initializer
     pub sender: AccountInfo<'a>,
+    /// The associated token account address of `sender`
     pub sender_tokens: AccountInfo<'a>,
+    /// The main wallet address of the recipient
     pub recipient: AccountInfo<'a>,
+    /// The associated token account address of `recipient`
     pub recipient_tokens: AccountInfo<'a>,
+    /// The account holding the stream parameters
     pub metadata: AccountInfo<'a>,
+    /// The escrow account holding the funds.
     pub escrow_tokens: AccountInfo<'a>,
+    /// Streamflow treasury account
     pub streamflow_treasury: AccountInfo<'a>,
+    /// Streamflow treasury's associated token account
     pub streamflow_treasury_tokens: AccountInfo<'a>,
+    /// Partner treasury account
     pub partner: AccountInfo<'a>,
+    /// Partner's associated token account
     pub partner_tokens: AccountInfo<'a>,
+    /// The SPL token mint account
     pub mint: AccountInfo<'a>,
+    /// The SPL token program
     pub token_program: AccountInfo<'a>,
 }
 
-fn account_sanity_check(pid: &Pubkey, a: WithdrawAccounts) -> ProgramResult {
+fn account_sanity_check(pid: &Pubkey, a: CancelAccounts) -> ProgramResult {
     msg!("Checking if all given accounts are correct");
 
     // These accounts must not be empty, and need to have correct ownership
@@ -95,7 +111,7 @@ fn account_sanity_check(pid: &Pubkey, a: WithdrawAccounts) -> ProgramResult {
     Ok(())
 }
 
-fn metadata_sanity_check(acc: WithdrawAccounts, metadata: TokenStreamData) -> ProgramResult {
+fn metadata_sanity_check(acc: CancelAccounts, metadata: Contract) -> ProgramResult {
     // Compare that all the given accounts match the ones inside our metadata.
     if acc.recipient.key != &metadata.recipient ||
         acc.recipient_tokens.key != &metadata.recipient_tokens ||
@@ -115,50 +131,51 @@ fn metadata_sanity_check(acc: WithdrawAccounts, metadata: TokenStreamData) -> Pr
     Ok(())
 }
 
-/// Withdraw from an SPL Token stream
+/// Cancel an SPL Token stream
 ///
 /// The function will read the instructions from the metadata account and see
-/// if there are any unlocked funds. If so, they will be transferred from the
-/// escrow account to the stream recipient.
-pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResult {
-    msg!("Withdrawing from SPL token stream");
+/// if there are any unlocked funds. If so, they will be transferred to the
+/// stream recipient.
+pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
+    msg!("Cancelling SPL token stream");
 
     let now = Clock::get()?.unix_timestamp as u64;
     let mint_info = unpack_mint_account(&acc.mint)?;
 
-    if !acc.authority.is_signer {
-        return Err(ProgramError::MissingRequiredSignature)
-    }
-
+    // Sanity checks
     account_sanity_check(pid, acc.clone())?;
 
     let mut data = acc.metadata.try_borrow_mut_data()?;
-    let mut metadata: TokenStreamData = match solana_borsh::try_from_slice_unchecked(&data) {
+    let mut metadata: Contract = match solana_borsh::try_from_slice_unchecked(&data) {
         Ok(v) => v,
         Err(_) => return Err(SfError::InvalidMetadata.into()),
     };
 
     metadata_sanity_check(acc.clone(), metadata.clone())?;
 
-    // Confirm the signer is actually authorized for this instruction
-    let withdraw_authority = Invoker::new(
-        acc.authority.key,
-        &metadata.sender,
-        &metadata.recipient,
-        &metadata.streamflow_treasury,
-        &metadata.partner,
-    );
-
-    if !withdraw_authority.can_withdraw(&metadata.ix) {
-        return Err(ProgramError::InvalidAccountData)
+    // If stream is expired, anyone can close it
+    if now < metadata.closable_at {
+        msg!("Stream not yet expired, checking authorization");
+        if !acc.authority.is_signer {
+            return Err(ProgramError::MissingRequiredSignature)
+        }
+        let cancel_authority = Invoker::new(
+            acc.authority.key,
+            &metadata.sender,
+            &metadata.recipient,
+            &metadata.streamflow_treasury,
+            &metadata.partner,
+        );
+        if !cancel_authority.can_cancel(&metadata.ix) {
+            return Err(ProgramError::InvalidAccountData)
+        }
     }
 
-    // Check what has been unlocked so far
     let recipient_available = calculate_available(
         now,
         metadata.ix.clone(),
-        metadata.ix.deposited_amount,
-        metadata.withdrawn_amount,
+        metadata.ix.amount_deposited,
+        metadata.amount_withdrawn,
     );
 
     let streamflow_available = calculate_available(
@@ -175,15 +192,16 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
         metadata.partner_fee_withdrawn,
     );
 
-    if amount > recipient_available {
-        msg!("Available for recipient: {}", recipient_available);
-        return Err(SfError::AmountMoreThanAvailable.into())
-    }
+    // TODO: Handle requested amounts.
+
+    let recipient_remains = metadata.ix.amount_deposited - recipient_available;
+    let streamflow_remains = metadata.streamflow_fee_total - streamflow_available;
+    let partner_remains = metadata.partner_fee_total - partner_available;
 
     let escrow_tokens_bump = Pubkey::find_program_address(&[acc.metadata.key.as_ref()], pid).1;
     let seeds = [acc.metadata.key.as_ref(), &[escrow_tokens_bump]];
 
-    if amount > 0 {
+    if recipient_available > 0 {
         msg!("Transferring unlocked tokens to recipient");
         invoke_signed(
             &spl_token::instruction::transfer(
@@ -192,7 +210,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
                 acc.recipient_tokens.key,
                 acc.escrow_tokens.key,
                 &[],
-                amount,
+                recipient_available,
             )?,
             &[
                 acc.escrow_tokens.clone(),    // src
@@ -203,17 +221,17 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
             &[&seeds],
         )?;
 
-        metadata.withdrawn_amount += amount;
+        metadata.amount_withdrawn += recipient_available;
         metadata.last_withdrawn_at = now;
         msg!(
             "Withdrawn: {} {} tokens",
-            amount_to_ui_amount(amount, mint_info.decimals),
+            amount_to_ui_amount(recipient_available, mint_info.decimals),
             metadata.mint
         );
         msg!(
             "Remaining: {} {} tokens",
             amount_to_ui_amount(
-                metadata.ix.deposited_amount - metadata.withdrawn_amount,
+                metadata.ix.amount_deposited - metadata.amount_withdrawn,
                 mint_info.decimals
             ),
             metadata.mint
@@ -240,7 +258,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
             &[&seeds],
         )?;
 
-        metadata.streamflow_fee_withdrawn += streamflow_available;
+        metadata.streamflow_fee_withdrawn += streamflow_available; // TODO: FIXME
         metadata.last_withdrawn_at = now;
         msg!(
             "Withdrawn: {} {} tokens",
@@ -294,40 +312,51 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
         );
     }
 
-    // Write the metadata to the account
-    let bytes = metadata.try_to_vec()?;
-    data[0..bytes.len()].clone_from_slice(&bytes);
-
-    // When everything is withdrawn, close the accounts.
-    // TODO: Should we really be comparing to deposited amount?
-    if metadata.withdrawn_amount == metadata.ix.deposited_amount &&
-        metadata.partner_fee_withdrawn == metadata.partner_fee_total &&
-        metadata.streamflow_fee_withdrawn == metadata.streamflow_fee_total
-    {
-        // TODO: Close metadata account once there is an alternative storage solution
-        // for historical data.
-        // msg!("Closing metadata account");
-        // let rent = acc.metadata.lamports();
-        // **acc.metadata.try_borrow_mut_lamports()? -= rent;
-        // **acc.streamflow_treasury.try_borrow_mut_lamports()? += rent;
-
-        msg!("Closing escrow SPL token account");
+    if recipient_remains > 0 || streamflow_remains > 0 || partner_remains > 0 {
+        msg!("Transferring remains back to sender");
         invoke_signed(
-            &spl_token::instruction::close_account(
+            &spl_token::instruction::transfer(
                 acc.token_program.key,
                 acc.escrow_tokens.key,
-                acc.streamflow_treasury.key,
+                acc.sender_tokens.key,
                 acc.escrow_tokens.key,
                 &[],
+                recipient_remains + streamflow_remains + partner_remains,
             )?,
             &[
-                acc.escrow_tokens.clone(),
-                acc.streamflow_treasury.clone(),
-                acc.escrow_tokens.clone(),
+                acc.escrow_tokens.clone(), // src
+                acc.sender_tokens.clone(), // dest
+                acc.escrow_tokens.clone(), // auth
+                acc.token_program.clone(), // program
             ],
             &[&seeds],
         )?;
     }
+
+    // TODO: Close metadata account once there is an alternative storage
+    // solution for historical data.
+    msg!("Closing escrow account");
+    invoke_signed(
+        &spl_token::instruction::close_account(
+            acc.token_program.key,
+            acc.escrow_tokens.key,
+            acc.streamflow_treasury.key,
+            acc.escrow_tokens.key,
+            &[],
+        )?,
+        &[acc.escrow_tokens.clone(), acc.streamflow_treasury.clone(), acc.escrow_tokens.clone()],
+        &[&seeds],
+    )?;
+
+    // TODO: What's with the if clause here?
+    if now < metadata.closable_at {
+        metadata.last_withdrawn_at = now;
+        metadata.canceled_at = now;
+    }
+
+    // Write the metadata to the account
+    let bytes = metadata.try_to_vec()?;
+    data[0..bytes.len()].clone_from_slice(&bytes);
 
     Ok(())
 }

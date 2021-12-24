@@ -8,13 +8,13 @@ use solana_sdk::{
 use partner_oracle::fees::{Partner, Partners};
 use solana_program_test::ProgramTest;
 
-use streamflow_timelock::{entrypoint::process_instruction, state::StreamInstruction};
+use streamflow_timelock::{entrypoint::process_instruction, state::CreateParams};
 use test_sdk::{tools::clone_keypair, ProgramTestBench};
 
 #[derive(BorshSerialize, BorshDeserialize, Clone)]
 pub struct CreateStreamIx {
     pub ix: u8,
-    pub metadata: StreamInstruction,
+    pub metadata: CreateParams,
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone)]
