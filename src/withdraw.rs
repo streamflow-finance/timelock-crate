@@ -158,11 +158,11 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
         &metadata.partner,
     );
 
-    if !withdraw_authority.can_withdraw(&metadata.ix, requested_amount) {
+    if !withdraw_authority.can_withdraw(&metadata.ix, amount) {
         return Err(ProgramError::InvalidAccountData)
     }
 
-    let escrow_tokens = spl_token::state::Account::unpack_from_slice(**acc.escrow_tokens.data)?;
+    let escrow_tokens = spl_token::state::Account::unpack_from_slice(&acc.escrow_tokens.data.borrow())?;
 
     metadata.sync_balance(escrow_tokens.amount);
 

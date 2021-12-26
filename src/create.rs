@@ -190,7 +190,7 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
 
     let gross_amount = ix.amount_deposited + partner_fee_amount + strm_fee_amount;
 
-    let sender_tokens = spl_token::state::Account::unpack_from_slice(*acc.sender_tokens.data)?;
+    let sender_tokens = spl_token::state::Account::unpack_from_slice(&acc.sender_tokens.data.borrow())?;
     if sender_tokens.amount < gross_amount {
         return Err(SfError::AmountMoreThanAvailable.into());
     }

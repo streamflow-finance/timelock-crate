@@ -47,7 +47,7 @@ pub fn topup(_program_id: &Pubkey, acc: TopupAccounts, amount: u64) -> ProgramRe
         Err(_) => return Err(SfError::InvalidMetadata.into()),
     };
 
-    let escrow_tokens = spl_token::state::Account::unpack_from_slice(**acc.escrow_tokens.data)?;
+    let escrow_tokens = spl_token::state::Account::unpack_from_slice(&acc.escrow_tokens.data.borrow())?;
 
     metadata.sync_balance(escrow_tokens.amount);
 
