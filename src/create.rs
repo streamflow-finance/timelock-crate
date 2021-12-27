@@ -188,7 +188,7 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
 
     let sender_tokens = unpack_token_account(&acc.sender_tokens)?;
     if sender_tokens.amount < gross_amount {
-        return Err(SfError::AmountMoreThanAvailable.into())
+        return Err(ProgramError::InsufficientFunds)
     }
 
     let mut metadata = Contract::new(
@@ -227,6 +227,7 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
     // }
 
     // Move closable_at (from third party), when recurring ignore end_date
+    //todo: delete when removing release_rate if end_time is calculated within Contract::new()
     if ix.release_rate > 0 {
         metadata.closable_at = metadata.closable();
         msg!("Closable at: {}", metadata.closable_at);
@@ -234,6 +235,7 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
 
     let metadata_bytes = metadata.try_to_vec()?;
     let mut metadata_struct_size = metadata_bytes.len();
+
     // We pad % 8 for size, since that's what has to be allocated
     while metadata_struct_size % 8 > 0 {
         metadata_struct_size += 1;
@@ -272,13 +274,13 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
         &[&seeds],
     )?;
 
-    msg!("Initializing stream escrow account for SPL token");
+    msg!("Initializing stream escrow SPL token account ");
     invoke(
         &spl_token::instruction::initialize_account(
             acc.token_program.key,
             acc.escrow_tokens.key,
             acc.mint.key,
-            acc.escrow_tokens.key,
+            acc.escrow_tokens.key, //todo: sam svoj gazda? why owner of itself?
         )?,
         &[
             acc.token_program.clone(),
@@ -307,7 +309,6 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
         ],
     )?;
 
-    // (all around the codebase)
     if acc.recipient_tokens.data_is_empty() {
         msg!("Initializing recipient's associated token account");
         invoke(
@@ -325,7 +326,7 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
     }
 
     if partner_fee_percent > 0.0 && acc.partner_tokens.data_is_empty() {
-        msg!("Initializing parther's associated token account");
+        msg!("Initializing partner's associated token account");
         invoke(
             &create_associated_token_account(acc.sender.key, acc.partner.key, acc.mint.key),
             &[
