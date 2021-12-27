@@ -21,6 +21,7 @@ use crate::{
     state::{Contract, CreateParams, MAX_STRING_SIZE, STRM_FEE_DEFAULT_PERCENT, STRM_TREASURY},
     utils::{calculate_fee_from_amount, duration_sanity, format, pretty_time, unpack_mint_account},
 };
+use crate::utils::unpack_token_account;
 
 #[derive(Clone, Debug)]
 pub struct CreateAccounts<'a> {
@@ -190,7 +191,7 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
 
     let gross_amount = ix.amount_deposited + partner_fee_amount + strm_fee_amount;
 
-    let sender_tokens = spl_token::state::Account::unpack_from_slice(&acc.sender_tokens.data.borrow())?;
+    let sender_tokens = unpack_token_account(&acc.sender_tokens)?;
     if sender_tokens.amount < gross_amount {
         return Err(SfError::AmountMoreThanAvailable.into());
     }
