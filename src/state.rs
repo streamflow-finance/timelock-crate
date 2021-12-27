@@ -38,10 +38,30 @@ pub struct CreateParams {
     pub transferable_by_sender: bool,
     /// Whether or not the recipient can transfer the stream
     pub transferable_by_recipient: bool,
-    /// Release rate of recurring payment
-    pub release_rate: u64,
     /// The name of this stream
     pub stream_name: String,
+}
+
+impl CreateParams {
+
+    /// Calculate timestamp when stream is closable
+    pub fn closable_at(&self) -> u64 {
+        let cliff_time = if self.cliff > 0 { self.cliff } else { self.start_time };
+
+        let cliff_amount = self.cliff_amount;
+
+        if self.amount_deposited < cliff_amount {
+            return cliff_time
+        }
+        // Nr of periods after the cliff
+        let periods_left = (self.amount_deposited - cliff_amount) / self.amount_per_period;
+
+        // Seconds till account runs out of available funds, +1 as ceil (integer)
+        let seconds_left = periods_left * self.period + 1;
+
+        cliff_time + seconds_left
+    }
+
 }
 
 /// TokenStreamData is the struct containing metadata for an SPL token stream.
@@ -61,7 +81,7 @@ pub struct Contract {
     /// Timestamp at which stream can be safely canceled by a 3rd party
     /// (Stream is either fully vested or there isn't enough capital to
     /// keep it active)
-    pub closable_at: u64, //TODO: remove, calculate end date and use that as closable_date
+    pub closable_at: u64,
     /// Timestamp of the last withdrawal
     pub last_withdrawn_at: u64,
     /// Pubkey of the stream initializer
@@ -111,14 +131,13 @@ impl Contract {
         streamflow_fee_total: u64,
         streamflow_fee_percent: f32,
     ) -> Self {
-        // TODO: calculate cancel_time based on other parameters (incl. amount_deposited)
         Self {
             magic: 0,
             version: PROGRAM_VERSION,
             created_at: now,
             amount_withdrawn: 0,
             canceled_at: 0,
-            closable_at: ix.end_time,
+            closable_at: ix.closable_at(),
             last_withdrawn_at: 0,
             sender: *acc.sender.key,
             sender_tokens: *acc.sender_tokens.key,
@@ -140,41 +159,7 @@ impl Contract {
         }
     }
 
-    /// Calculate timestamp when stream is closable
-    /// end_time when deposit == total else time when funds run out
-    pub fn closable(&self) -> u64 {
-        let cliff_time = if self.ix.cliff > 0 { self.ix.cliff } else { self.ix.start_time };
 
-        let cliff_amount = if self.ix.cliff_amount > 0 { self.ix.cliff_amount } else { 0 };
-        // Deposit smaller then cliff amount, cancelable at cliff
-        if self.ix.amount_deposited < cliff_amount {
-            return cliff_time
-        }
-        // Nr of seconds after the cliff
-        let seconds_nr = self.ix.end_time - cliff_time;
-
-        let amount_per_second = if self.ix.release_rate > 0 {
-            self.ix.release_rate / self.ix.period
-        } else {
-            // stream per second
-            ((self.ix.amount_deposited - cliff_amount) / seconds_nr) as u64
-        };
-        // Seconds till account runs out of available funds, +1 as ceil (integer)
-        let seconds_left = ((self.ix.amount_deposited - cliff_amount) / amount_per_second) + 1;
-
-        msg!(
-            "Release {}, Period {}, seconds left {}",
-            self.ix.release_rate,
-            self.ix.period,
-            seconds_left
-        );
-        // closable_at time, ignore end_time when recurring
-        if cliff_time + seconds_left > self.ix.end_time && self.ix.release_rate == 0 {
-            self.ix.end_time
-        } else {
-            cliff_time + seconds_left
-        }
-    }
 
     pub fn sync_balance(&mut self, balance: u64){
 

@@ -207,12 +207,6 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
         strm_fee_percent,
     );
 
-    // Move closable_at (from third party), when recurring ignore end_date
-    if ix.release_rate > 0 {
-        metadata.closable_at = metadata.closable();
-        msg!("Closable at: {}", metadata.closable_at);
-    }
-
     let metadata_bytes = metadata.try_to_vec()?;
     let mut metadata_struct_size = metadata_bytes.len();
     // We pad % 8 for size, since that's what has to be allocated

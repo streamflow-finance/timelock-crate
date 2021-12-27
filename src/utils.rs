@@ -51,24 +51,16 @@ pub fn calculate_available(now: u64, ix: CreateParams, total: u64, withdrawn: u6
         return 0
     }
 
-    // Ignore end date when recurring
-    if now > ix.end_time && ix.release_rate == 0 {
+    if now > ix.end_time {
         return total - withdrawn
     }
 
-    let cliff = if ix.cliff > 0 { ix.cliff } else { ix.start_time };
-    let cliff_amount = if ix.cliff_amount > 0 { ix.cliff_amount } else { 0 };
+    let start = if ix.cliff > 0 { ix.cliff } else { ix.start_time };
 
     // TODO: Use uint arithmetics
-    let num_periods = (ix.end_time - cliff) as f64 / ix.period as f64;
-    let period_amount = if ix.release_rate > 0 {
-        ix.release_rate as f64
-    } else {
-        (ix.amount_deposited - cliff_amount) as f64 / num_periods
-    };
-
-    let periods_passed = (now - cliff) / ix.period;
-    (periods_passed as f64 * period_amount) as u64 + cliff_amount - withdrawn
+    let periods_passed = (now - start) / ix.period;
+    let available = (periods_passed as f64 * ix.amount_per_period) as u64 ;
+     available - withdrawn + ix.cliff_amount
 }
 
 // TODO: impl calculations from ix
