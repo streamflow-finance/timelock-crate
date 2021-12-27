@@ -64,7 +64,7 @@ pub fn calculate_available(now: u64, ix: CreateParams, total: u64, withdrawn: u6
     let period_amount = if ix.release_rate > 0 {
         ix.release_rate as f64
     } else {
-        (ix.amount_deposited - cliff_amount) as f64 / num_periods
+        (ix.net_amount_deposited - cliff_amount) as f64 / num_periods
     };
 
     let periods_passed = (now - cliff) / ix.period;
