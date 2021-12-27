@@ -1,8 +1,10 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{msg, pubkey::Pubkey};
 
-use crate::create::CreateAccounts;
-use crate::utils::{calculate_external_deposit, calculate_fee_from_amount};
+use crate::{
+    create::CreateAccounts,
+    utils::{calculate_external_deposit, calculate_fee_from_amount},
+};
 
 // Hardcoded program version
 pub const PROGRAM_VERSION: u8 = 2;
@@ -19,7 +21,7 @@ pub struct CreateParams {
     /// Timestamp when all tokens are fully vested
     pub end_time: u64,
     /// Deposited amount of tokens
-    pub amount_deposited: u64,
+    pub net_amount_deposited: u64,
     /// Time step (period) in seconds per which the vesting occurs
     pub period: u64,
     /// Amount released per period
@@ -81,7 +83,7 @@ pub struct Contract {
     /// Timestamp at which stream can be safely canceled by a 3rd party
     /// (Stream is either fully vested or there isn't enough capital to
     /// keep it active)
-    pub closable_at: u64,
+    pub closable_at: u64, //TODO: remove, calculate end_date and use that as closable_at
     /// Timestamp of the last withdrawal
     pub last_withdrawn_at: u64,
     /// Pubkey of the stream initializer
@@ -161,10 +163,11 @@ impl Contract {
 
 
 
-    pub fn sync_balance(&mut self, balance: u64){
-
+    pub fn sync_balance(&mut self, balance: u64) {
         let external_deposit = calculate_external_deposit(
-            balance, self.ix.amount_deposited, self.amount_withdrawn
+            balance,
+            self.ix.net_amount_deposited,
+            self.amount_withdrawn,
         );
 
         if external_deposit > 0 {
@@ -175,7 +178,7 @@ impl Contract {
     pub fn deposit(&mut self, amount: u64) {
         let partner_fee_addition = calculate_fee_from_amount(amount, self.partner_fee_percent);
         let strm_fee_addition = calculate_fee_from_amount(amount, self.partner_fee_percent);
-        self.ix.amount_deposited += (amount - partner_fee_addition - strm_fee_addition);
+        self.ix.net_amount_deposited += (amount - partner_fee_addition - strm_fee_addition);
         self.partner_fee_total += partner_fee_addition;
         self.streamflow_fee_total += strm_fee_addition;
     }

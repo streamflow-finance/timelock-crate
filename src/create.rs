@@ -19,9 +19,11 @@ use spl_token::amount_to_ui_amount;
 use crate::{
     error::SfError,
     state::{Contract, CreateParams, MAX_STRING_SIZE, STRM_FEE_DEFAULT_PERCENT, STRM_TREASURY},
-    utils::{calculate_fee_from_amount, duration_sanity, format, pretty_time, unpack_mint_account},
+    utils::{
+        calculate_fee_from_amount, duration_sanity, pretty_time, unpack_mint_account,
+        unpack_token_account,
+    },
 };
-use crate::utils::unpack_token_account;
 
 #[derive(Clone, Debug)]
 pub struct CreateAccounts<'a> {
@@ -133,21 +135,15 @@ fn instruction_sanity_check(ix: CreateParams, now: u64) -> ProgramResult {
     }
 
     // Check if timestamps are all in order and valid
+    //todo: end is now calculated, not an input parameter
     duration_sanity(now, ix.start_time, ix.end_time, ix.cliff)?;
 
     // Can't deposit less than what's needed for one period
-    if ix.amount_deposited < ix.amount_per_period {
+    if ix.net_amount_deposited < ix.amount_per_period {
         return Err(SfError::InvalidDeposit.into())
     }
 
-    // TODO: We have 2 conflicting parameter fields:
-    // Check how contract.amount_per_period vibes with
-    // num_periods = (end - cliff) / period;
-    // amount_per_period = amount_deposited / num_periods
-    // i.e.
-    // - if we set the end date, then release rate is calculated based on the end date
-    // - if we set the release rate, then the end date is calculated based on this
-    //TODO: Solution: input only release rate and calculate end_date based upon that.
+    //TODO: input only release rate and calculate end_date based upon that.
 
     // TODO: Anything else?
 
@@ -172,9 +168,7 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
     account_sanity_check(pid, acc.clone())?;
     instruction_sanity_check(ix.clone(), now)?;
 
-
     // Check partner accounts are legit
-    // TODO: How to enforce correct partner account?
     //Todo: can we do a CPI (invoke) here to further obfuscate internal structure of fees account?
     let (partner_fee_percent, strm_fee_percent) =
         match fetch_partner_fee_data(&acc.fee_oracle, acc.partner.key) {
@@ -184,18 +178,18 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
         };
 
     // Calculate fees
-    let partner_fee_amount = calculate_fee_from_amount(ix.amount_deposited, partner_fee_percent);
-    let strm_fee_amount = calculate_fee_from_amount(ix.amount_deposited, strm_fee_percent);
-    msg!("Partner fee: {}", format(partner_fee_amount, mint_info.decimals as usize));
-    msg!("Streamflow fee: {}", format(strm_fee_amount, mint_info.decimals as usize));
+    let partner_fee_amount =
+        calculate_fee_from_amount(ix.net_amount_deposited, partner_fee_percent);
+    let strm_fee_amount = calculate_fee_from_amount(ix.net_amount_deposited, strm_fee_percent);
+    msg!("Partner fee: {}", amount_to_ui_amount(partner_fee_amount, mint_info.decimals));
+    msg!("Streamflow fee: {}", amount_to_ui_amount(strm_fee_amount, mint_info.decimals));
 
-    let gross_amount = ix.amount_deposited + partner_fee_amount + strm_fee_amount;
+    let gross_amount = ix.net_amount_deposited + partner_fee_amount + strm_fee_amount;
 
     let sender_tokens = unpack_token_account(&acc.sender_tokens)?;
     if sender_tokens.amount < gross_amount {
-        return Err(SfError::AmountMoreThanAvailable.into());
+        return Err(ProgramError::InsufficientFunds)
     }
-
 
     let mut metadata = Contract::new(
         now,
@@ -207,8 +201,41 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
         strm_fee_percent,
     );
 
+    //todo: check if enough lamports to pay for the account rent and tx fee
+    // We also transfer enough to be rent-exempt on the metadata account.
+    // let metadata_bytes = metadata.try_to_vec()?;
+    // // We pad % 8 for size , since that's what has to be allocated.
+    // let mut metadata_struct_size = metadata_bytes.len();
+    // while metadata_struct_size % 8 > 0 {
+    //     metadata_struct_size += 1;
+    // }
+    // let tokens_struct_size = spl_token::state::Account::LEN;
+    //
+    // let cluster_rent = Rent::get()?;
+    // let metadata_rent = cluster_rent.minimum_balance(metadata_struct_size);
+    // let mut tokens_rent = cluster_rent.minimum_balance(tokens_struct_size);
+    // if acc.recipient_tokens.data_is_empty() {
+    //     tokens_rent += cluster_rent.minimum_balance(tokens_struct_size);
+    // }
+    //
+    // let fees = Fees::get()?;
+    // let lps = fees.fee_calculator.lamports_per_signature;
+    //
+    // if acc.sender.lamports() < metadata_rent + tokens_rent + (2 * lps) {
+    //     msg!("Error: Insufficient funds in {}", acc.sender.key);
+    //     return Err(ProgramError::InsufficientFunds);
+    // }
+
+    // Move closable_at (from third party), when recurring ignore end_date
+    //todo: delete when removing release_rate if end_time is calculated within Contract::new()
+    if ix.release_rate > 0 {
+        metadata.closable_at = metadata.closable();
+        msg!("Closable at: {}", metadata.closable_at);
+    }
+
     let metadata_bytes = metadata.try_to_vec()?;
     let mut metadata_struct_size = metadata_bytes.len();
+
     // We pad % 8 for size, since that's what has to be allocated
     while metadata_struct_size % 8 > 0 {
         metadata_struct_size += 1;
@@ -247,13 +274,13 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
         &[&seeds],
     )?;
 
-    msg!("Initializing stream escrow account for SPL token");
+    msg!("Initializing stream escrow SPL token account ");
     invoke(
         &spl_token::instruction::initialize_account(
             acc.token_program.key,
             acc.escrow_tokens.key,
             acc.mint.key,
-            acc.escrow_tokens.key,
+            acc.escrow_tokens.key, //todo: sam svoj gazda? why owner of itself?
         )?,
         &[
             acc.token_program.clone(),
@@ -272,7 +299,7 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
             acc.escrow_tokens.key,
             acc.sender.key,
             &[],
-            ix.amount_deposited + partner_fee_amount + strm_fee_amount,
+            gross_amount,
         )?,
         &[
             acc.sender_tokens.clone(),
@@ -282,8 +309,6 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
         ],
     )?;
 
-    // TODO: Check unpack_token_account for ATA if we decide they shouldn't be initialized
-    // (all around the codebase)
     if acc.recipient_tokens.data_is_empty() {
         msg!("Initializing recipient's associated token account");
         invoke(
@@ -301,7 +326,7 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
     }
 
     if partner_fee_percent > 0.0 && acc.partner_tokens.data_is_empty() {
-        msg!("Initializing parther's associated token account");
+        msg!("Initializing partner's associated token account");
         invoke(
             &create_associated_token_account(acc.sender.key, acc.partner.key, acc.mint.key),
             &[
@@ -338,7 +363,7 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
 
     msg!(
         "Success initializing {} {} token_stream for {}",
-        amount_to_ui_amount(ix.amount_deposited, mint_info.decimals),
+        amount_to_ui_amount(ix.net_amount_deposited, mint_info.decimals),
         acc.mint.key,
         acc.recipient.key
     );

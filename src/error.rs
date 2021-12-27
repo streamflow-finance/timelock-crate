@@ -33,7 +33,7 @@ pub(crate) enum SfError {
     #[error("Invalid Streamflow Treasury accounts supplied")]
     InvalidTreasury,
 
-    #[error("Stream name too long")]
+    #[error("Stream name/memo too long")]
     StreamNameTooLong,
 
     #[error("Given timestamps are invalid")]

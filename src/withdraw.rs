@@ -2,8 +2,11 @@ use std::str::FromStr;
 
 use crate::{
     error::SfError,
-    state::{Contract, STRM_TREASURY},
-    utils::{calculate_available, unpack_mint_account, Invoker},
+    state::{Contract, STRM_FEE_DEFAULT_PERCENT, STRM_TREASURY},
+    utils::{
+        calculate_available, calculate_external_deposit, calculate_fee_from_amount,
+        unpack_mint_account, unpack_token_account, Invoker,
+    },
 };
 use borsh::BorshSerialize;
 use partner_oracle::fees::fetch_partner_fee_data;
@@ -12,16 +15,14 @@ use solana_program::{
     borsh as solana_borsh,
     entrypoint::ProgramResult,
     msg,
-    program_pack::Pack,
     program::invoke_signed,
     program_error::ProgramError,
+    program_pack::Pack,
     pubkey::Pubkey,
     sysvar::{clock::Clock, Sysvar},
 };
 use spl_associated_token_account::get_associated_token_address;
 use spl_token::amount_to_ui_amount;
-use crate::state::STRM_FEE_DEFAULT_PERCENT;
-use crate::utils::{calculate_external_deposit, calculate_fee_from_amount, unpack_token_account};
 
 #[derive(Clone, Debug)]
 pub struct WithdrawAccounts<'a> {
@@ -169,7 +170,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
     let recipient_available = calculate_available(
         now,
         metadata.ix.clone(),
-        metadata.ix.amount_deposited,
+        metadata.ix.net_amount_deposited,
         metadata.amount_withdrawn,
     );
 
@@ -225,7 +226,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
         msg!(
             "Remaining: {} {} tokens",
             amount_to_ui_amount(
-                metadata.ix.amount_deposited - metadata.amount_withdrawn,
+                metadata.ix.net_amount_deposited - metadata.amount_withdrawn,
                 mint_info.decimals
             ),
             metadata.mint
@@ -311,11 +312,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
     data[0..bytes.len()].clone_from_slice(&bytes);
 
     // When everything is withdrawn, close the accounts.
-    // TODO: Should we really be comparing to deposited amount?
-    if metadata.amount_withdrawn == metadata.ix.amount_deposited &&
-        metadata.partner_fee_withdrawn == metadata.partner_fee_total &&
-        metadata.streamflow_fee_withdrawn == metadata.streamflow_fee_total
-    {
+    if now >= metadata.ix.end_time {
         // TODO: Close metadata account once there is an alternative storage solution
         // for historical data.
         // msg!("Closing metadata account");

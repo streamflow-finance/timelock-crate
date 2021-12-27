@@ -68,7 +68,7 @@ async fn timelock_program_test() -> Result<()> {
         metadata: CreateParams {
             start_time: now + 5,
             end_time: now + 605,
-            amount_deposited: spl_token::ui_amount_to_amount(20.0, 8),
+            net_amount_deposited: spl_token::ui_amount_to_amount(20.0, 8),
             period: 1,
             cliff: 0,
             cliff_amount: 0,
@@ -119,7 +119,7 @@ async fn timelock_program_test() -> Result<()> {
     assert_eq!(metadata_data.escrow_tokens, escrow_tokens_pubkey);
     assert_eq!(metadata_data.ix.start_time, now + 5);
     assert_eq!(metadata_data.ix.end_time, now + 605);
-    assert_eq!(metadata_data.ix.amount_deposited, spl_token::ui_amount_to_amount(20.0, 8));
+    assert_eq!(metadata_data.ix.net_amount_deposited, spl_token::ui_amount_to_amount(20.0, 8));
     assert_eq!(metadata_data.ix.stream_name, "TheTestoooooooooor".to_string());
 
     // Let's warp ahead and try withdrawing some of the stream.
@@ -197,7 +197,7 @@ async fn timelock_program_test2() -> Result<()> {
         metadata: CreateParams {
             start_time: now + 10,
             end_time: now + 1010,
-            amount_deposited: spl_token::ui_amount_to_amount(10.0, 8),
+            net_amount_deposited: spl_token::ui_amount_to_amount(10.0, 8),
             period: 1,
             cliff: 0,
             cliff_amount: 0,
@@ -239,7 +239,7 @@ async fn timelock_program_test2() -> Result<()> {
 
     assert_eq!(metadata_data.ix.start_time, now + 10);
     assert_eq!(metadata_data.ix.end_time, now + 1010);
-    assert_eq!(metadata_data.ix.amount_deposited, spl_token::ui_amount_to_amount(10.0, 8));
+    assert_eq!(metadata_data.ix.net_amount_deposited, spl_token::ui_amount_to_amount(10.0, 8));
     assert_eq!(metadata_data.ix.stream_name, "Test2".to_string());
 
     // Test if recipient can be transfered, should return error
@@ -282,7 +282,7 @@ async fn timelock_program_test2() -> Result<()> {
     tt.bench.process_transaction(&[topupix_bytes], Some(&[&alice])).await?;
     // let metadata_acc = tt.bench.get_account(&metadata_kp.pubkey()).await.unwrap();
     let metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
-    assert_eq!(metadata_data.ix.amount_deposited, spl_token::ui_amount_to_amount(20.0, 8));
+    assert_eq!(metadata_data.ix.net_amount_deposited, spl_token::ui_amount_to_amount(20.0, 8));
     // Closable to end_date, closable fn would return 1010 + 1
     assert_eq!(metadata_data.closable_at, now + 1010);
 
@@ -416,7 +416,7 @@ async fn timelock_program_test_transfer() -> Result<()> {
         metadata: CreateParams {
             start_time: now + 10,
             end_time: now + 1010,
-            amount_deposited: spl_token::ui_amount_to_amount(10.0, 8),
+            net_amount_deposited: spl_token::ui_amount_to_amount(10.0, 8),
             period: 1,
             cliff: 0,
             cliff_amount: 0,
@@ -529,7 +529,7 @@ async fn timelock_program_test_recurring() -> Result<()> {
         metadata: CreateParams {
             start_time: now + 10,
             end_time: now + 1010,
-            amount_deposited: spl_token::ui_amount_to_amount(10.0, 8),
+            net_amount_deposited: spl_token::ui_amount_to_amount(10.0, 8),
             period: 200,
             cliff: 0,
             cliff_amount: 0,
@@ -570,7 +570,7 @@ async fn timelock_program_test_recurring() -> Result<()> {
     assert_eq!(metadata_data.closable_at, now + 10 + 2000 + 1); // 1 after, like in function
     assert_eq!(metadata_data.ix.start_time, now + 10);
     assert_eq!(metadata_data.ix.end_time, now + 1010);
-    assert_eq!(metadata_data.ix.amount_deposited, spl_token::ui_amount_to_amount(10.0, 8));
+    assert_eq!(metadata_data.ix.net_amount_deposited, spl_token::ui_amount_to_amount(10.0, 8));
     assert_eq!(metadata_data.ix.stream_name, "Recurring".to_string());
     assert_eq!(metadata_data.ix.release_rate, 100000000);
 
@@ -591,7 +591,7 @@ async fn timelock_program_test_recurring() -> Result<()> {
     tt.bench.process_transaction(&[topupix_bytes], Some(&[&alice])).await?;
     // let metadata_acc = tt.bench.get_account(&metadata_kp.pubkey()).await.unwrap();
     let metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
-    assert_eq!(metadata_data.ix.amount_deposited, spl_token::ui_amount_to_amount(30.0, 8));
+    assert_eq!(metadata_data.ix.net_amount_deposited, spl_token::ui_amount_to_amount(30.0, 8));
     // Closable to end_date, closable fn would return 1010 + 1
     assert_eq!(metadata_data.closable_at, now + 10 + 6000 + 1);
 
