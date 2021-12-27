@@ -16,6 +16,7 @@ use crate::{
     state::Contract,
     utils::{calculate_fee_from_amount, unpack_mint_account},
 };
+use crate::utils::unpack_token_account;
 
 #[derive(Clone, Debug)]
 pub struct TopupAccounts<'a> {
@@ -47,8 +48,7 @@ pub fn topup(_program_id: &Pubkey, acc: TopupAccounts, amount: u64) -> ProgramRe
         Err(_) => return Err(SfError::InvalidMetadata.into()),
     };
 
-    let escrow_tokens = spl_token::state::Account::unpack_from_slice(**acc.escrow_tokens.data)?;
-
+    let escrow_tokens = unpack_token_account(&acc.escrow_tokens)?;
     metadata.sync_balance(escrow_tokens.amount);
 
     //metadata_sanity_check(acc.clone())?;

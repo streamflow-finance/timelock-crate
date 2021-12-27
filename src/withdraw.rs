@@ -21,7 +21,7 @@ use solana_program::{
 use spl_associated_token_account::get_associated_token_address;
 use spl_token::amount_to_ui_amount;
 use crate::state::STRM_FEE_DEFAULT_PERCENT;
-use crate::utils::{calculate_external_deposit, calculate_fee_from_amount};
+use crate::utils::{calculate_external_deposit, calculate_fee_from_amount, unpack_token_account};
 
 #[derive(Clone, Debug)]
 pub struct WithdrawAccounts<'a> {
@@ -158,12 +158,11 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
         &metadata.partner,
     );
 
-    if !withdraw_authority.can_withdraw(&metadata.ix, requested_amount) {
+    if !withdraw_authority.can_withdraw(&metadata.ix, amount) {
         return Err(ProgramError::InvalidAccountData)
     }
 
-    let escrow_tokens = spl_token::state::Account::unpack_from_slice(**acc.escrow_tokens.data)?;
-
+    let escrow_tokens = unpack_token_account(&acc.escrow_tokens)?;
     metadata.sync_balance(escrow_tokens.amount);
 
     // Check what has been unlocked so far
