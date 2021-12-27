@@ -52,11 +52,11 @@ impl CreateParams {
 
         let cliff_amount = self.cliff_amount;
 
-        if self.amount_deposited < cliff_amount {
+        if self.net_amount_deposited < cliff_amount {
             return cliff_time
         }
         // Nr of periods after the cliff
-        let periods_left = (self.amount_deposited - cliff_amount) / self.amount_per_period;
+        let periods_left = (self.net_amount_deposited - cliff_amount) / self.amount_per_period;
 
         // Seconds till account runs out of available funds, +1 as ceil (integer)
         let seconds_left = periods_left * self.period + 1;
@@ -181,5 +181,6 @@ impl Contract {
         self.ix.net_amount_deposited += (amount - partner_fee_addition - strm_fee_addition);
         self.partner_fee_total += partner_fee_addition;
         self.streamflow_fee_total += strm_fee_addition;
+        self.closable_at = self.ix.closable_at();
     }
 }

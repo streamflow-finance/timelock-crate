@@ -54,7 +54,7 @@ pub fn topup(_program_id: &Pubkey, acc: TopupAccounts, amount: u64) -> ProgramRe
     //metadata_sanity_check(acc.clone())?;
 
     let now = Clock::get()?.unix_timestamp as u64;
-    if metadata.closable() < now {
+    if metadata.closable_at < now {
         return Err(SfError::StreamClosed.into())
     }
 
@@ -77,8 +77,6 @@ pub fn topup(_program_id: &Pubkey, acc: TopupAccounts, amount: u64) -> ProgramRe
     )?;
 
     metadata.deposit(amount);
-    metadata.closable_at = metadata.closable();
-
     let bytes = metadata.try_to_vec()?;
     data[0..bytes.len()].clone_from_slice(&bytes);
 
