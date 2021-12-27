@@ -59,7 +59,7 @@ pub fn calculate_available(now: u64, ix: CreateParams, total: u64, withdrawn: u6
 
     // TODO: Use uint arithmetics
     let periods_passed = (now - start) / ix.period;
-    let available = (periods_passed as f64 * ix.amount_per_period as f64) as u64 ;
+    let available = (periods_passed as f64 * ix.amount_per_period as f64) as u64;
      available - withdrawn + ix.cliff_amount
 }
 

@@ -83,7 +83,7 @@ pub struct Contract {
     /// Timestamp at which stream can be safely canceled by a 3rd party
     /// (Stream is either fully vested or there isn't enough capital to
     /// keep it active)
-    pub closable_at: u64, //TODO: remove, calculate end_date and use that as closable_at
+    pub closable_at: u64,
     /// Timestamp of the last withdrawal
     pub last_withdrawn_at: u64,
     /// Pubkey of the stream initializer
@@ -175,10 +175,10 @@ impl Contract {
         }
     }
 
-    pub fn deposit(&mut self, amount: u64) {
-        let partner_fee_addition = calculate_fee_from_amount(amount, self.partner_fee_percent);
-        let strm_fee_addition = calculate_fee_from_amount(amount, self.partner_fee_percent);
-        self.ix.net_amount_deposited += (amount - partner_fee_addition - strm_fee_addition);
+    pub fn deposit(&mut self, gross_amount: u64) {
+        let partner_fee_addition = calculate_fee_from_amount(gross_amount, self.partner_fee_percent);
+        let strm_fee_addition = calculate_fee_from_amount(gross_amount, self.partner_fee_percent);
+        self.ix.net_amount_deposited += (gross_amount - partner_fee_addition - strm_fee_addition);
         self.partner_fee_total += partner_fee_addition;
         self.streamflow_fee_total += strm_fee_addition;
         self.closable_at = self.ix.closable_at();
