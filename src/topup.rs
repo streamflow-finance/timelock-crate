@@ -8,15 +8,13 @@ use solana_program::{
     pubkey::Pubkey,
     sysvar::{clock::Clock, Sysvar},
 };
-use spl_token::amount_to_ui_amount;
-use spl_token::solana_program::program_pack::Pack;
+use spl_token::{amount_to_ui_amount, solana_program::program_pack::Pack};
 
 use crate::{
     error::SfError,
     state::Contract,
-    utils::{calculate_fee_from_amount, unpack_mint_account},
+    utils::{calculate_fee_from_amount, unpack_mint_account, unpack_token_account},
 };
-use crate::utils::unpack_token_account;
 
 #[derive(Clone, Debug)]
 pub struct TopupAccounts<'a> {
@@ -54,7 +52,7 @@ pub fn topup(_program_id: &Pubkey, acc: TopupAccounts, amount: u64) -> ProgramRe
     //metadata_sanity_check(acc.clone())?;
 
     let now = Clock::get()?.unix_timestamp as u64;
-    if metadata.closable_at < now {
+    if metadata.end_time < now {
         return Err(SfError::StreamClosed.into())
     }
 

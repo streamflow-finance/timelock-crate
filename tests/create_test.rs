@@ -116,8 +116,10 @@ async fn test_create_stream_success() -> Result<()> {
             AccountMeta::new_readonly(system_program::id(), false),
         ],
     );
-    let transaction = tt.bench.process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp])).await;
-
+    let transaction = tt
+        .bench
+        .process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp]))
+        .await;
 
     assert!(!transaction.is_err());
     Ok(())
@@ -129,7 +131,7 @@ async fn test_create_stream_success() -> Result<()> {
     // assert_eq!(metadata_data.magic, PROGRAM_VERSION);
     // assert_eq!(metadata_data.withdrawn_amount, 0);
     // assert_eq!(metadata_data.canceled_at, 0);
-    // assert_eq!(metadata_data.closable_at, now + 605);
+    // assert_eq!(metadata_data.end_time, now + 605);
     // assert_eq!(metadata_data.last_withdrawn_at, 0);
     // assert_eq!(metadata_data.sender, alice.pubkey());
     // assert_eq!(metadata_data.sender_tokens, alice_ass_token);

@@ -109,7 +109,7 @@ async fn timelock_program_test() -> Result<()> {
     assert_eq!(metadata_data.magic, PROGRAM_VERSION);
     assert_eq!(metadata_data.amount_withdrawn, 0);
     assert_eq!(metadata_data.canceled_at, 0);
-    assert_eq!(metadata_data.closable_at, now + 605);
+    assert_eq!(metadata_data.end_time, now + 605);
     assert_eq!(metadata_data.last_withdrawn_at, 0);
     assert_eq!(metadata_data.sender, alice.pubkey());
     assert_eq!(metadata_data.sender_tokens, alice_ass_token);
@@ -235,7 +235,7 @@ async fn timelock_program_test2() -> Result<()> {
     let metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
 
     assert_eq!(metadata_acc.owner, tt.program_id);
-    assert_eq!(metadata_data.closable_at, now + 510 + 1); // 1 after, like in function
+    assert_eq!(metadata_data.end_time, now + 510 + 1); // 1 after, like in function
 
     assert_eq!(metadata_data.ix.start_time, now + 10);
     assert_eq!(metadata_data.ix.end_time, now + 1010);
@@ -284,7 +284,7 @@ async fn timelock_program_test2() -> Result<()> {
     let metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
     assert_eq!(metadata_data.ix.net_amount_deposited, spl_token::ui_amount_to_amount(20.0, 8));
     // Closable to end_date, closable fn would return 1010 + 1
-    assert_eq!(metadata_data.closable_at, now + 1010);
+    assert_eq!(metadata_data.end_time, now + 1010);
 
     // Warp ahead
     tt.advance_clock_past_timestamp(now as i64 + 200).await;
@@ -567,7 +567,7 @@ async fn timelock_program_test_recurring() -> Result<()> {
     let metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
 
     assert_eq!(metadata_acc.owner, tt.program_id);
-    assert_eq!(metadata_data.closable_at, now + 10 + 2000 + 1); // 1 after, like in function
+    assert_eq!(metadata_data.end_time, now + 10 + 2000 + 1); // 1 after, like in function
     assert_eq!(metadata_data.ix.start_time, now + 10);
     assert_eq!(metadata_data.ix.end_time, now + 1010);
     assert_eq!(metadata_data.ix.net_amount_deposited, spl_token::ui_amount_to_amount(10.0, 8));
@@ -593,7 +593,7 @@ async fn timelock_program_test_recurring() -> Result<()> {
     let metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
     assert_eq!(metadata_data.ix.net_amount_deposited, spl_token::ui_amount_to_amount(30.0, 8));
     // Closable to end_date, closable fn would return 1010 + 1
-    assert_eq!(metadata_data.closable_at, now + 10 + 6000 + 1);
+    assert_eq!(metadata_data.end_time, now + 10 + 6000 + 1);
 
     let some_other_kp = Keypair::new();
     let cancel_ix = CancelIx { ix: 2 };

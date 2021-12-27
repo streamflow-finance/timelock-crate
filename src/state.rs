@@ -45,9 +45,8 @@ pub struct CreateParams {
 }
 
 impl CreateParams {
-
-    /// Calculate timestamp when stream is closable
-    pub fn closable_at(&self) -> u64 {
+    // Calculate timestamp when stream is closable
+    pub fn calculate_end_time(&self) -> u64 {
         let cliff_time = if self.cliff > 0 { self.cliff } else { self.start_time };
 
         let cliff_amount = self.cliff_amount;
@@ -63,7 +62,6 @@ impl CreateParams {
 
         cliff_time + seconds_left
     }
-
 }
 
 /// TokenStreamData is the struct containing metadata for an SPL token stream.
@@ -83,7 +81,7 @@ pub struct Contract {
     /// Timestamp at which stream can be safely canceled by a 3rd party
     /// (Stream is either fully vested or there isn't enough capital to
     /// keep it active)
-    pub closable_at: u64,
+    pub end_time: u64,
     /// Timestamp of the last withdrawal
     pub last_withdrawn_at: u64,
     /// Pubkey of the stream initializer
@@ -139,7 +137,7 @@ impl Contract {
             created_at: now,
             amount_withdrawn: 0,
             canceled_at: 0,
-            closable_at: ix.closable_at(),
+            end_time: ix.calculate_end_time(),
             last_withdrawn_at: 0,
             sender: *acc.sender.key,
             sender_tokens: *acc.sender_tokens.key,
@@ -161,8 +159,6 @@ impl Contract {
         }
     }
 
-
-
     pub fn sync_balance(&mut self, balance: u64) {
         let external_deposit = calculate_external_deposit(
             balance,
@@ -176,11 +172,12 @@ impl Contract {
     }
 
     pub fn deposit(&mut self, gross_amount: u64) {
-        let partner_fee_addition = calculate_fee_from_amount(gross_amount, self.partner_fee_percent);
+        let partner_fee_addition =
+            calculate_fee_from_amount(gross_amount, self.partner_fee_percent);
         let strm_fee_addition = calculate_fee_from_amount(gross_amount, self.partner_fee_percent);
         self.ix.net_amount_deposited += (gross_amount - partner_fee_addition - strm_fee_addition);
         self.partner_fee_total += partner_fee_addition;
         self.streamflow_fee_total += strm_fee_addition;
-        self.closable_at = self.ix.closable_at();
+        self.end_time = self.ix.calculate_end_time();
     }
 }
