@@ -200,38 +200,24 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
         strm_fee_percent,
     );
 
-    //todo: check if enough lamports to pay for the account rent and tx fee
-    // We also transfer enough to be rent-exempt on the metadata account.
-    // let metadata_bytes = metadata.try_to_vec()?;
-    // // We pad % 8 for size , since that's what has to be allocated.
-    // let mut metadata_struct_size = metadata_bytes.len();
-    // while metadata_struct_size % 8 > 0 {
-    //     metadata_struct_size += 1;
-    // }
-    // let tokens_struct_size = spl_token::state::Account::LEN;
-    //
-    // let cluster_rent = Rent::get()?;
-    // let metadata_rent = cluster_rent.minimum_balance(metadata_struct_size);
-    // let mut tokens_rent = cluster_rent.minimum_balance(tokens_struct_size);
-    // if acc.recipient_tokens.data_is_empty() {
-    //     tokens_rent += cluster_rent.minimum_balance(tokens_struct_size);
-    // }
-    //
-    // let fees = Fees::get()?;
-    // let lps = fees.fee_calculator.lamports_per_signature;
-    //
-    // if acc.sender.lamports() < metadata_rent + tokens_rent + (2 * lps) {
-    //     msg!("Error: Insufficient funds in {}", acc.sender.key);
-    //     return Err(ProgramError::InsufficientFunds);
-    // }
-
-
     let metadata_bytes = metadata.try_to_vec()?;
+    // We pad % 8 for size , since that's what has to be allocated.
     let mut metadata_struct_size = metadata_bytes.len();
-
-    // We pad % 8 for size, since that's what has to be allocated
     while metadata_struct_size % 8 > 0 {
         metadata_struct_size += 1;
+    }
+    let tokens_struct_size = spl_token::state::Account::LEN;
+
+    let cluster_rent = Rent::get()?;
+    let metadata_rent = cluster_rent.minimum_balance(metadata_struct_size);
+    let mut tokens_rent = cluster_rent.minimum_balance(tokens_struct_size);
+    if acc.recipient_tokens.data_is_empty() {
+        tokens_rent *= cluster_rent.minimum_balance(tokens_struct_size);;
+    }
+
+    if acc.sender.lamports() < metadata_rent + tokens_rent {
+        msg!("Error: Insufficient funds in {}", acc.sender.key);
+        return Err(ProgramError::InsufficientFunds);
     }
 
     msg!("Creating stream metadata account");
@@ -239,7 +225,7 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
         &system_instruction::create_account(
             acc.sender.key,
             acc.metadata.key,
-            cluster_rent.minimum_balance(metadata_struct_size),
+            metadata_rent,
             metadata_struct_size as u64,
             pid,
         ),
@@ -248,7 +234,7 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
 
     msg!("Writing metadata into the account");
     let mut data = acc.metadata.try_borrow_mut_data()?;
-    data[0..metadata_bytes.len()].clone_from_slice(&metadata_bytes);
+    data[0..metadata_struct_size].clone_from_slice(&metadata_bytes);
 
     msg!("Creating stream escrow account");
     // TODO: This seed should be deterministic and metadata should be PDA
@@ -259,8 +245,8 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
         &system_instruction::create_account(
             acc.sender.key,
             acc.escrow_tokens.key,
-            cluster_rent.minimum_balance(spl_token::state::Account::LEN),
-            spl_token::state::Account::LEN as u64,
+            tokens_rent,
+            tokens_struct_size as u64,
             &spl_token::id(),
         ),
         &[acc.sender.clone(), acc.escrow_tokens.clone(), acc.system_program.clone()],
