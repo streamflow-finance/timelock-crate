@@ -1,8 +1,10 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{msg, pubkey::Pubkey};
 
-use crate::create::CreateAccounts;
-use crate::utils::{calculate_external_deposit, calculate_fee_from_amount};
+use crate::{
+    create::CreateAccounts,
+    utils::{calculate_external_deposit, calculate_fee_from_amount},
+};
 
 // Hardcoded program version
 pub const PROGRAM_VERSION: u8 = 2;
@@ -20,7 +22,7 @@ pub struct CreateParams {
     pub end_time: u64, /* todo: move to metadata, calculate based on cliff, period,
                         * amount_per_period (not Create stream input params) */
     /// Deposited amount of tokens
-    pub amount_deposited: u64,
+    pub net_amount_deposited: u64,
     /// Time step (period) in seconds per which the vesting occurs
     pub period: u64,
     /// Amount released per period
@@ -112,7 +114,7 @@ impl Contract {
         streamflow_fee_total: u64,
         streamflow_fee_percent: f32,
     ) -> Self {
-        // TODO: calculate end_time based on other parameters (incl. amount_deposited)
+        // TODO: calculate end_time based on other parameters (incl. net_amount_deposited)
         Self {
             magic: 0,
             version: PROGRAM_VERSION,
@@ -148,7 +150,7 @@ impl Contract {
 
         let cliff_amount = if self.ix.cliff_amount > 0 { self.ix.cliff_amount } else { 0 };
         // Deposit smaller then cliff amount, cancelable at cliff
-        if self.ix.amount_deposited < cliff_amount {
+        if self.ix.net_amount_deposited < cliff_amount {
             return cliff_time
         }
         // Nr of seconds after the cliff
@@ -158,10 +160,10 @@ impl Contract {
             self.ix.release_rate / self.ix.period
         } else {
             // stream per second
-            ((self.ix.amount_deposited - cliff_amount) / seconds_nr) as u64
+            ((self.ix.net_amount_deposited - cliff_amount) / seconds_nr) as u64
         };
         // Seconds till account runs out of available funds, +1 as ceil (integer)
-        let seconds_left = ((self.ix.amount_deposited - cliff_amount) / amount_per_second) + 1;
+        let seconds_left = ((self.ix.net_amount_deposited - cliff_amount) / amount_per_second) + 1;
 
         msg!(
             "Release {}, Period {}, seconds left {}",
@@ -177,10 +179,11 @@ impl Contract {
         }
     }
 
-    pub fn sync_balance(&mut self, balance: u64){
-
+    pub fn sync_balance(&mut self, balance: u64) {
         let external_deposit = calculate_external_deposit(
-            balance, self.ix.amount_deposited, self.amount_withdrawn
+            balance,
+            self.ix.net_amount_deposited,
+            self.amount_withdrawn,
         );
 
         if external_deposit > 0 {
@@ -191,7 +194,7 @@ impl Contract {
     pub fn deposit(&mut self, amount: u64) {
         let partner_fee_addition = calculate_fee_from_amount(amount, self.partner_fee_percent);
         let strm_fee_addition = calculate_fee_from_amount(amount, self.partner_fee_percent);
-        self.ix.amount_deposited += (amount - partner_fee_addition - strm_fee_addition);
+        self.ix.net_amount_deposited += (amount - partner_fee_addition - strm_fee_addition);
         self.partner_fee_total += partner_fee_addition;
         self.streamflow_fee_total += strm_fee_addition;
     }

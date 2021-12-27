@@ -19,9 +19,11 @@ use spl_token::amount_to_ui_amount;
 use crate::{
     error::SfError,
     state::{Contract, CreateParams, MAX_STRING_SIZE, STRM_FEE_DEFAULT_PERCENT, STRM_TREASURY},
-    utils::{calculate_fee_from_amount, duration_sanity, format, pretty_time, unpack_mint_account},
+    utils::{
+        calculate_fee_from_amount, duration_sanity, format, pretty_time, unpack_mint_account,
+        unpack_token_account,
+    },
 };
-use crate::utils::unpack_token_account;
 
 #[derive(Clone, Debug)]
 pub struct CreateAccounts<'a> {
@@ -137,7 +139,7 @@ fn instruction_sanity_check(ix: CreateParams, now: u64) -> ProgramResult {
     duration_sanity(now, ix.start_time, ix.end_time, ix.cliff)?;
 
     // Can't deposit less than what's needed for one period
-    if ix.amount_deposited < ix.amount_per_period {
+    if ix.net_amount_deposited < ix.amount_per_period {
         return Err(SfError::InvalidDeposit.into())
     }
 
@@ -164,11 +166,9 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
 
     // Sanity checks
     account_sanity_check(pid, acc.clone())?;
-
     instruction_sanity_check(ix.clone(), now)?;
 
     // Check partner accounts are legit
-    // TODO: How to enforce correct partner account?
     //Todo: can we do a CPI (invoke) here to further obfuscate internal structure of fees account?
     let (partner_fee_percent, strm_fee_percent) =
         match fetch_partner_fee_data(&acc.fee_oracle, acc.partner.key) {
@@ -178,12 +178,13 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
         };
 
     // Calculate fees
-    let partner_fee_amount = calculate_fee_from_amount(ix.amount_deposited, partner_fee_percent);
-    let strm_fee_amount = calculate_fee_from_amount(ix.amount_deposited, strm_fee_percent);
+    let partner_fee_amount =
+        calculate_fee_from_amount(ix.net_amount_deposited, partner_fee_percent);
+    let strm_fee_amount = calculate_fee_from_amount(ix.net_amount_deposited, strm_fee_percent);
     msg!("Partner fee: {}", format(partner_fee_amount, mint_info.decimals as usize));
     msg!("Streamflow fee: {}", format(strm_fee_amount, mint_info.decimals as usize));
 
-    let gross_amount = ix.amount_deposited + partner_fee_amount + strm_fee_amount;
+    let gross_amount = ix.net_amount_deposited + partner_fee_amount + strm_fee_amount;
 
     let sender_tokens = unpack_token_account(&acc.sender_tokens)?;
     if sender_tokens.amount < gross_amount {
@@ -296,7 +297,7 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
             acc.escrow_tokens.key,
             acc.sender.key,
             &[],
-            ix.amount_deposited + partner_fee_amount + strm_fee_amount,
+            ix.net_amount_deposited + partner_fee_amount + strm_fee_amount,
         )?,
         &[
             acc.sender_tokens.clone(),
@@ -362,7 +363,7 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
 
     msg!(
         "Success initializing {} {} token_stream for {}",
-        amount_to_ui_amount(ix.amount_deposited, mint_info.decimals),
+        amount_to_ui_amount(ix.net_amount_deposited, mint_info.decimals),
         acc.mint.key,
         acc.recipient.key
     );
