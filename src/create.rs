@@ -132,6 +132,7 @@ fn instruction_sanity_check(ix: CreateParams, now: u64) -> ProgramResult {
     }
 
     // Check if timestamps are all in order and valid
+    //todo: end is now calculated, not an input parameter
     duration_sanity(now, ix.start_time, ix.end_time, ix.cliff)?;
 
     // Can't deposit less than what's needed for one period
@@ -185,9 +186,8 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
 
     let sender_tokens = spl_token::state::Account::unpack_from_slice(*acc.sender_tokens.data)?;
     if sender_tokens.amount < gross_amount {
-        return Err(SfError::AmountMoreThanAvailable.into());
+        return Err(SfError::AmountMoreThanAvailable.into())
     }
-
 
     let mut metadata = Contract::new(
         now,
