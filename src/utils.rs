@@ -91,15 +91,6 @@ pub fn calculate_fee_from_amount(amount: u64, percentage: f32) -> u64 {
     (amount as f64 * (percentage / 100.0) as f64) as u64
 }
 
-/// Encode given amount to a string with given decimal places.
-pub fn format(amount: u64, decimal_places: usize) -> String {
-    let mut s: Vec<char> =
-        format!("{:0width$}", amount, width = 1 + decimal_places).chars().collect();
-    s.insert(s.len() - decimal_places, '.');
-
-    String::from_iter(&s).trim_end_matches('0').trim_end_matches('.').to_string()
-}
-
 pub enum Invoker {
     Sender,
     Recipient,
