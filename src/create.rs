@@ -143,7 +143,6 @@ fn instruction_sanity_check(ix: CreateParams, now: u64) -> ProgramResult {
         return Err(SfError::InvalidDeposit.into())
     }
 
-    //TODO: input only release rate and calculate end_date based upon that.
 
     // TODO: Anything else?
 
@@ -226,12 +225,6 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
     //     return Err(ProgramError::InsufficientFunds);
     // }
 
-    // Move closable_at (from third party), when recurring ignore end_date
-    //todo: delete when removing release_rate if end_time is calculated within Contract::new()
-    if ix.release_rate > 0 {
-        metadata.closable_at = metadata.closable();
-        msg!("Closable at: {}", metadata.closable_at);
-    }
 
     let metadata_bytes = metadata.try_to_vec()?;
     let mut metadata_struct_size = metadata_bytes.len();
