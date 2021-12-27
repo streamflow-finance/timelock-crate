@@ -297,7 +297,7 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
             acc.escrow_tokens.key,
             acc.sender.key,
             &[],
-            ix.net_amount_deposited + partner_fee_amount + strm_fee_amount,
+            gross_amount,
         )?,
         &[
             acc.sender_tokens.clone(),
