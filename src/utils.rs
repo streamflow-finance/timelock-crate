@@ -7,10 +7,10 @@ use std::iter::FromIterator;
 use crate::{error::SfError, state::CreateParams};
 
 /// Do a sanity check with given Unix timestamps.
-pub fn duration_sanity(now: u64, start: u64, end: u64, cliff: u64) -> ProgramResult {
-    let cliff_cond = if cliff == 0 { true } else { start <= cliff && cliff <= end };
+pub fn duration_sanity(now: u64, start: u64, cliff: u64) -> ProgramResult {
+    let cliff_cond = if cliff == 0 { true } else { start < cliff };
 
-    if now < start && start < end && cliff_cond {
+    if now < start && cliff_cond {
         return Ok(())
     }
 
@@ -163,12 +163,12 @@ mod tests {
     #[test]
     fn test_duration_sanity() {
         // now, start, end, cliff
-        assert!(duration_sanity(100, 110, 130, 120).is_ok());
-        assert!(duration_sanity(100, 110, 130, 0).is_ok());
-        assert!(duration_sanity(100, 140, 130, 130).is_err());
-        assert!(duration_sanity(100, 130, 130, 130).is_err());
-        assert!(duration_sanity(130, 130, 130, 130).is_err());
-        assert!(duration_sanity(100, 110, 130, 140).is_err());
+        assert!(duration_sanity(100, 110, 120).is_ok());
+        assert!(duration_sanity(100, 110, 0).is_ok());
+        assert!(duration_sanity(100, 140, 130).is_err());
+        assert!(duration_sanity(100, 130, 130).is_err());
+        assert!(duration_sanity(130, 130, 130).is_err());
+        assert!(duration_sanity(100, 110, 140).is_ok());
     }
 
     #[test]
