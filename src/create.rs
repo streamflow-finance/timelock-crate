@@ -20,7 +20,7 @@ use crate::{
     error::SfError,
     state::{Contract, CreateParams, MAX_STRING_SIZE, STRM_FEE_DEFAULT_PERCENT, STRM_TREASURY},
     utils::{
-        calculate_fee_from_amount, duration_sanity, format, pretty_time, unpack_mint_account,
+        calculate_fee_from_amount, duration_sanity, pretty_time, unpack_mint_account,
         unpack_token_account,
     },
 };
