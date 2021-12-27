@@ -307,7 +307,6 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
         ],
     )?;
 
-    // TODO: Check unpack_token_account for ATA if we decide they shouldn't be initialized
     // (all around the codebase)
     if acc.recipient_tokens.data_is_empty() {
         msg!("Initializing recipient's associated token account");
