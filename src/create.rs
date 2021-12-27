@@ -163,8 +163,8 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
 
     // Sanity checks
     account_sanity_check(pid, acc.clone())?;
-    instruction_sanity_check(ix.clone(), now)?;
 
+    instruction_sanity_check(ix.clone(), now)?;
 
     // Check partner accounts are legit
     // TODO: How to enforce correct partner account?
@@ -198,6 +198,31 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
         strm_fee_amount,
         strm_fee_percent,
     );
+
+    //todo: check if enough lamports to pay for the account rent and tx fee
+    // We also transfer enough to be rent-exempt on the metadata account.
+    // let metadata_bytes = metadata.try_to_vec()?;
+    // // We pad % 8 for size , since that's what has to be allocated.
+    // let mut metadata_struct_size = metadata_bytes.len();
+    // while metadata_struct_size % 8 > 0 {
+    //     metadata_struct_size += 1;
+    // }
+    // let tokens_struct_size = spl_token::state::Account::LEN;
+    //
+    // let cluster_rent = Rent::get()?;
+    // let metadata_rent = cluster_rent.minimum_balance(metadata_struct_size);
+    // let mut tokens_rent = cluster_rent.minimum_balance(tokens_struct_size);
+    // if acc.recipient_tokens.data_is_empty() {
+    //     tokens_rent += cluster_rent.minimum_balance(tokens_struct_size);
+    // }
+    //
+    // let fees = Fees::get()?;
+    // let lps = fees.fee_calculator.lamports_per_signature;
+    //
+    // if acc.sender.lamports() < metadata_rent + tokens_rent + (2 * lps) {
+    //     msg!("Error: Insufficient funds in {}", acc.sender.key);
+    //     return Err(ProgramError::InsufficientFunds);
+    // }
 
     // Move closable_at (from third party), when recurring ignore end_date
     if ix.release_rate > 0 {
