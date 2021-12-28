@@ -86,7 +86,7 @@ fn account_sanity_check(pid: &Pubkey, a: WithdrawAccounts) -> ProgramResult {
     }
 
     if a.recipient_tokens.key != &recipient_tokens || a.partner_tokens.key != &partner_tokens {
-        return Err(SfError::MintMismatch.into())
+        return Err(ProgramError::InvalidAccountData)
     }
 
     // Check escrow token account is legit
@@ -159,7 +159,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
         &metadata.partner,
     );
 
-    if !withdraw_authority.can_withdraw(&metadata.ix, amount) {
+    if !withdraw_authority.can_withdraw(metadata.ix.withdrawal_public, amount) {
         return Err(ProgramError::InvalidAccountData)
     }
 
@@ -245,7 +245,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
                 acc.streamflow_treasury_tokens.key,
                 acc.escrow_tokens.key,
                 &[],
-                streamflow_available,
+                streamflow_available, //always max available
             )?,
             &[
                 acc.escrow_tokens.clone(),              // src
@@ -257,7 +257,6 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
         )?;
 
         metadata.streamflow_fee_withdrawn += streamflow_available;
-        metadata.last_withdrawn_at = now;
         msg!(
             "Withdrawn: {} {} tokens",
             amount_to_ui_amount(streamflow_available, mint_info.decimals),
@@ -282,7 +281,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
                 acc.partner_tokens.key,
                 acc.escrow_tokens.key,
                 &[],
-                partner_available,
+                partner_available, //always max available for partner
             )?,
             &[
                 acc.escrow_tokens.clone(),  // src
@@ -294,7 +293,6 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
         )?;
 
         metadata.partner_fee_withdrawn += partner_available;
-        metadata.last_withdrawn_at = now;
         msg!(
             "Withdrawn: {} {} tokens",
             amount_to_ui_amount(partner_available, mint_info.decimals),
@@ -311,6 +309,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
     }
 
     // Write the metadata to the account
+    //todo: refactor: move to helper function metadata.save();
     let bytes = metadata.try_to_vec()?;
     data[0..bytes.len()].clone_from_slice(&bytes);
 
@@ -322,6 +321,16 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
         // let rent = acc.metadata.lamports();
         // **acc.metadata.try_borrow_mut_lamports()? -= rent;
         // **acc.streamflow_treasury.try_borrow_mut_lamports()? += rent;
+
+        if escrow_tokens.amount > 0 {
+            //todo: transfer what's left (escrow_tokens.amount) to streamflow_treasury_tokens
+            // address
+            msg!(
+                "Transferred remaining {} {} tokens to the Streamflow treasury",
+                amount_to_ui_amount(escrow_tokens.amount, mint_info.decimals),
+                metadata.mint
+            );
+        }
 
         msg!("Closing escrow SPL token account");
         invoke_signed(

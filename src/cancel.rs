@@ -155,7 +155,7 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
     metadata_sanity_check(acc.clone(), metadata.clone())?;
 
     // If stream is expired, anyone can close it
-    if now < metadata.closable_at {
+    if now < metadata.end_time {
         msg!("Stream not yet expired, checking authorization");
         if !acc.authority.is_signer {
             return Err(ProgramError::MissingRequiredSignature)
@@ -362,7 +362,7 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
     )?;
 
     // TODO: What's with the if clause here?
-    if now < metadata.closable_at {
+    if now < metadata.end_time {
         metadata.last_withdrawn_at = now;
         metadata.canceled_at = now;
     }

@@ -136,13 +136,12 @@ fn instruction_sanity_check(ix: CreateParams, now: u64) -> ProgramResult {
 
     // Check if timestamps are all in order and valid
     //todo: end is now calculated, not an input parameter
-    duration_sanity(now, ix.start_time,ix.cliff)?;
+    duration_sanity(now, ix.start_time, ix.cliff)?;
 
     // Can't deposit less than what's needed for one period
     if ix.net_amount_deposited < ix.amount_per_period {
         return Err(SfError::InvalidDeposit.into())
     }
-
 
     // TODO: Anything else?
 
@@ -168,7 +167,6 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
     instruction_sanity_check(ix.clone(), now)?;
 
     // Check partner accounts are legit
-    //Todo: can we do a CPI (invoke) here to further obfuscate internal structure of fees account?
     let (partner_fee_percent, strm_fee_percent) =
         match fetch_partner_fee_data(&acc.fee_oracle, acc.partner.key) {
             Ok(v) => v,
@@ -212,12 +210,12 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
     let metadata_rent = cluster_rent.minimum_balance(metadata_struct_size);
     let mut tokens_rent = cluster_rent.minimum_balance(tokens_struct_size);
     if acc.recipient_tokens.data_is_empty() {
-        tokens_rent *= cluster_rent.minimum_balance(tokens_struct_size);;
+        tokens_rent *= cluster_rent.minimum_balance(tokens_struct_size);
     }
 
     if acc.sender.lamports() < metadata_rent + tokens_rent {
         msg!("Error: Insufficient funds in {}", acc.sender.key);
-        return Err(ProgramError::InsufficientFunds);
+        return Err(ProgramError::InsufficientFunds)
     }
 
     msg!("Creating stream metadata account");

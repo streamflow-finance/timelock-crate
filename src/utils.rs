@@ -60,7 +60,7 @@ pub fn calculate_available(now: u64, ix: CreateParams, total: u64, withdrawn: u6
     // TODO: Use uint arithmetics
     let periods_passed = (now - start) / ix.period;
     let available = (periods_passed as f64 * ix.amount_per_period as f64) as u64;
-     available - withdrawn + ix.cliff_amount
+    available - withdrawn + ix.cliff_amount
 }
 
 // TODO: impl calculations from ix
@@ -141,8 +141,8 @@ impl Invoker {
         }
     }
 
-    pub fn can_withdraw(&self, ix: &CreateParams, requested_amount: u64) -> bool {
-        if ix.withdrawal_public {
+    pub fn can_withdraw(&self, withdrawal_public: bool, requested_amount: u64) -> bool {
+        if withdrawal_public {
             return true
         }
 
