@@ -159,7 +159,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
         &metadata.partner,
     );
 
-    if !withdraw_authority.can_withdraw(&metadata.ix, amount) {
+    if !withdraw_authority.can_withdraw(metadata.ix.withdrawal_public, amount) {
         return Err(ProgramError::InvalidAccountData)
     }
 
@@ -242,7 +242,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
                 acc.streamflow_treasury_tokens.key,
                 acc.escrow_tokens.key,
                 &[],
-                streamflow_available,
+                streamflow_available, //always max available
             )?,
             &[
                 acc.escrow_tokens.clone(),              // src
@@ -279,7 +279,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
                 acc.partner_tokens.key,
                 acc.escrow_tokens.key,
                 &[],
-                partner_available,
+                partner_available, //always max available for partner
             )?,
             &[
                 acc.escrow_tokens.clone(),  // src
