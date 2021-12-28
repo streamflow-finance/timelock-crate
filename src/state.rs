@@ -22,9 +22,9 @@ pub struct CreateParams {
     pub end_time: u64,
     /// Deposited amount of tokens
     pub net_amount_deposited: u64,
-    /// Time step (period) in seconds per which the vesting occurs
+    /// Time step (period) in seconds per which the vesting/release occurs
     pub period: u64,
-    /// Amount released per period
+    /// Amount released per period. Combined with `period`, we get a release rate.
     pub amount_per_period: u64,
     /// Vesting contract "cliff" timestamp
     pub cliff: u64,
