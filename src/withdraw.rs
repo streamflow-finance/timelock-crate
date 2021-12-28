@@ -306,6 +306,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
     }
 
     // Write the metadata to the account
+    //todo: refactor: move to helper function metadata.save();
     let bytes = metadata.try_to_vec()?;
     data[0..bytes.len()].clone_from_slice(&bytes);
 
@@ -318,8 +319,16 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
         // **acc.metadata.try_borrow_mut_lamports()? -= rent;
         // **acc.streamflow_treasury.try_borrow_mut_lamports()? += rent;
 
-        //todo: what happens if there are tokens left which are being ignored
-        // (e.g. metadata.ix.can_topup == true and someone deposits)
+        if escrow_tokens.amount > 0 {
+            //todo: transfer what's left (escrow_tokens.amount) to streamflow_treasury_tokens
+            // address
+            msg!(
+                "Transferred remaining {} {} tokens to the Streamflow treasury",
+                amount_to_ui_amount(escrow_tokens.amount, mint_info.decimals),
+                metadata.mint
+            );
+        }
+
         msg!("Closing escrow SPL token account");
         invoke_signed(
             &spl_token::instruction::close_account(
