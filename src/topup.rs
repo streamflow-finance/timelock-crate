@@ -35,6 +35,8 @@ pub struct TopupAccounts<'a> {
 pub fn topup(_program_id: &Pubkey, acc: TopupAccounts, amount: u64) -> ProgramResult {
     msg!("Topping up escrow account");
 
+
+
     // Sanity checks
     //account_sanity_check
 
@@ -47,6 +49,10 @@ pub fn topup(_program_id: &Pubkey, acc: TopupAccounts, amount: u64) -> ProgramRe
         Ok(v) => v,
         Err(_) => return Err(SfError::InvalidMetadata.into()),
     };
+
+    if !metadata.ix.can_topup {
+        return Err(SfError::InvalidMetadata.into())
+    }
 
     let escrow_tokens = unpack_token_account(&acc.escrow_tokens)?;
     metadata.sync_balance(escrow_tokens.amount);

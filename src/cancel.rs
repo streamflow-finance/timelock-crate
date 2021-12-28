@@ -19,6 +19,7 @@ use crate::{
     state::{Contract, STRM_TREASURY},
     utils::{calculate_available, unpack_mint_account, Invoker},
 };
+use crate::utils::{calculate_external_deposit, unpack_token_account};
 
 #[derive(Clone, Debug)]
 pub struct CancelAccounts<'a> {
@@ -170,6 +171,9 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
             return Err(ProgramError::InvalidAccountData)
         }
     }
+    if metadata.ix.can_topup {
+        metadata.sync_balance(escrow_tokens.amount);
+    }
 
     let recipient_available = calculate_available(
         now,
@@ -238,7 +242,13 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         );
     }
 
-    if streamflow_available > 0 {
+    let escrow_tokens = unpack_token_account(&acc.escrow_tokens)?;
+    // if stream is topabable - external deposits will be settled, so this ext deposit will be 0
+    let external_deposit = calculate_external_deposit(
+        escrow_tokens.amount, metadata.ix.net_amount_deposited, metadata.amount_withdrawn
+    );
+    let transferable_to_strm = streamflow_available + external_deposit;
+    if transferable_to_strm > 0 {
         msg!("Transferring unlocked tokens to Streamflow treasury");
         invoke_signed(
             &spl_token::instruction::transfer(
@@ -247,7 +257,7 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
                 acc.streamflow_treasury_tokens.key,
                 acc.escrow_tokens.key,
                 &[],
-                streamflow_available,
+                transferable_to_strm,
             )?,
             &[
                 acc.escrow_tokens.clone(),              // src
@@ -262,6 +272,11 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         msg!(
             "Withdrawn: {} {} tokens",
             amount_to_ui_amount(streamflow_available, mint_info.decimals),
+            metadata.mint
+        );
+        msg!(
+            "Withdrawn external deposit for non-topabale stream to strm: {} {} tokens",
+            amount_to_ui_amount(external_deposit, mint_info.decimals),
             metadata.mint
         );
         msg!(

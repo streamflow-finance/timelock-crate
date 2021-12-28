@@ -40,6 +40,8 @@ pub struct CreateParams {
     pub transferable_by_sender: bool,
     /// Whether or not the recipient can transfer the stream
     pub transferable_by_recipient: bool,
+    /// Whether topup is enabled
+    pub can_topup: bool,
     /// The name of this stream
     pub stream_name: String,
 }
@@ -164,9 +166,11 @@ impl Contract {
 
 
     pub fn sync_balance(&mut self, balance: u64) {
+        let gross_amount = (
+            self.ix.net_amount_deposited + self.streamflow_fee_total + self.partner_fee_total);
         let external_deposit = calculate_external_deposit(
             balance,
-            self.ix.net_amount_deposited,
+            gross_amount,
             self.amount_withdrawn,
         );
 
