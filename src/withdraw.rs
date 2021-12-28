@@ -86,7 +86,7 @@ fn account_sanity_check(pid: &Pubkey, a: WithdrawAccounts) -> ProgramResult {
     }
 
     if a.recipient_tokens.key != &recipient_tokens || a.partner_tokens.key != &partner_tokens {
-        return Err(SfError::MintMismatch.into())
+        return Err(ProgramError::InvalidAccountData)
     }
 
     // Check escrow token account is legit
