@@ -320,6 +320,8 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
         // **acc.metadata.try_borrow_mut_lamports()? -= rent;
         // **acc.streamflow_treasury.try_borrow_mut_lamports()? += rent;
 
+        //todo: what happens if there are tokens left which are being ignored
+        // (e.g. metadata.ix.can_topup == true and someone deposits)
         msg!("Closing escrow SPL token account");
         invoke_signed(
             &spl_token::instruction::close_account(

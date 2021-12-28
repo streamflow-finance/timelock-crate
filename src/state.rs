@@ -160,6 +160,7 @@ impl Contract {
     }
 
     pub fn sync_balance(&mut self, balance: u64) {
+        //todo: if metadata.ix.can_topup == true then proceed
         let external_deposit = calculate_external_deposit(
             balance,
             self.ix.net_amount_deposited,
