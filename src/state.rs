@@ -1,5 +1,5 @@
 use borsh::{BorshDeserialize, BorshSerialize};
-use solana_program::{program_error::ProgramError, pubkey::Pubkey};
+use solana_program::{entrypoint::ProgramResult, pubkey::Pubkey};
 use std::cell::RefMut;
 
 use crate::{
@@ -188,10 +188,7 @@ impl Contract {
     }
 }
 
-pub fn save_account_info(
-    metadata: &Contract,
-    mut data: RefMut<&mut [u8]>,
-) -> Result<(), ProgramError> {
+pub fn save_account_info(metadata: &Contract, mut data: RefMut<&mut [u8]>) -> ProgramResult {
     let bytes = metadata.try_to_vec()?;
     data[0..bytes.len()].clone_from_slice(&bytes);
     Ok(())
