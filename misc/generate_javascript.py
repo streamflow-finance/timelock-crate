@@ -13,6 +13,7 @@ instruction_accounts = {
 }
 
 lifetimes = ["<'a>"]
+structs = {}
 
 header = """// Program interaction library
 const borsh = require("borsh");
@@ -27,6 +28,77 @@ class Assignable {
 
 class Struct extends Assignable {}
 """
+
+
+def camel_to_snake(name):
+    name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()
+
+
+def lookup_layout(t, n):
+    if t == "u32":
+        return f"['{n}', 'u32'],"
+    if t == "u64":
+        return f"['{n}', 'u64'],"
+    if t == "f32":
+        return f"['{n}', 'f32'],"
+    if t == "Pubkey":
+        return f"['{n}', [32]],"
+    if t == "bool" or t == "u8":
+        return f"['{n}', 'u8'],"
+    if t == "String":
+        return f"['{n}', 'string'],"
+    if t == "[u8; 64]":
+        return f"['{n}', [64]],"
+
+    return None
+
+
+def generate_schema(struct_name):
+    for i in structs[struct_name]:
+        bl = lookup_layout(i[1], i[0])
+
+        if bl:
+            print(f"        {bl}")
+            continue
+
+        if i[1] in structs:
+            generate_schema(i[1])
+            continue
+
+        raise Exception(f"Unknown schema for {i[1]}")
+
+
+def parse_structs(lines):
+    found = False
+    struct_name = None
+
+    for i in lines:
+        if found and not i.strip().startswith(
+                "//") and not i.strip().startswith("}"):
+            element = i.strip()[4:-1]
+
+            # Remove Rust lifetimes
+            for life in lifetimes:
+                if element.endswith(life):
+                    element = element[:-len(life)]
+
+            elem_name, elem_type = element.split(": ")
+            structs[struct_name].append((elem_name, elem_type))
+
+        if i.startswith("pub struct"):
+            found = True
+            struct_name = i.split()[2]
+
+            # Remove Rust lifetimes
+            for life in lifetimes:
+                if struct_name.endswith(life):
+                    struct_name = struct_name[:-len(life)]
+
+            structs[struct_name] = []
+
+        if i.startswith("}"):
+            found = False
 
 
 def parse_instruction_accounts(lines, struct_name):
@@ -76,7 +148,6 @@ def main():
     print(header)
 
     print("program_instructions: [")
-
     for ix in instruction_accounts:
         print("  {")
         print(f"    // {ix} stream instruction")
@@ -89,8 +160,21 @@ def main():
         parse_instruction_accounts(lines, instruction_accounts[ix][1])
         print('    ]')
         print('  },')
+    print(']\n')
 
-    print(']')
+    print("// data serialization")
+    f = open(join(toplevel, "src/state.rs"), "r")
+    lines = f.readlines()
+    f.close()
+    parse_structs(lines)
+
+    for i in structs:
+        print(f"const {i} = new Map([[Struct, {{")
+        print("    kind: 'struct',")
+        print("    fields: [")
+        generate_schema(i)
+        print("    ]")
+        print("}]]);\n")
 
     return 0
 
