@@ -164,16 +164,13 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
     }
 
     // Check partner accounts are legit
-    let (mut partner_fee_percent, mut strm_fee_percent) = (0.0, STRM_FEE_DEFAULT_PERCENT);
-    //TODO: unlock once deployed.
-    // match fetch_partner_fee_data(&acc.fee_oracle, acc.partner.key) {
-    //     Ok(v) => v,
-    //     // In case the partner is not found, we fallback to default.
-    //     Err(_) => (0.0, STRM_FEE_DEFAULT_PERCENT),
-    // };
-
-    partner_fee_percent = max(partner_fee_percent, 0.5); //this way we ensure that fee can't be larger than 0.5%
-    strm_fee_percent = max(strm_fee_percent, 0.5); //this way we ensure that fee can't be larger than 0.5%
+    let (mut partner_fee_percent, mut strm_fee_percent) =
+        match fetch_partner_fee_data(&acc.fee_oracle, acc.partner.key) {
+            // this way we ensure that no matter what fee can't be larger than 0.5%
+            Ok(v) => (if v.0 > 0.5 { 0.5 } else { v.0 }, if v.1 > 0.5 { 0.5 } else { v.1 }),
+            // In case the partner is not found, we fallback to default.
+            Err(_) => (0.0, STRM_FEE_DEFAULT_PERCENT),
+        };
 
     // Calculate fees
     let partner_fee_amount =
