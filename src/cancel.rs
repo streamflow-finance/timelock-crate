@@ -1,3 +1,4 @@
+use std::cell::RefMut;
 use std::str::FromStr;
 
 use borsh::BorshSerialize;
@@ -14,12 +15,13 @@ use solana_program::{
 use spl_associated_token_account::get_associated_token_address;
 use spl_token::amount_to_ui_amount;
 
+use crate::state::save_account_info;
+use crate::utils::{calculate_external_deposit, unpack_token_account};
 use crate::{
     error::SfError,
     state::{Contract, STRM_TREASURY},
     utils::{calculate_available, unpack_mint_account, Invoker},
 };
-use crate::utils::{calculate_external_deposit, unpack_token_account};
 
 #[derive(Clone, Debug)]
 pub struct CancelAccounts<'a> {
@@ -58,22 +60,22 @@ fn account_sanity_check(pid: &Pubkey, a: CancelAccounts) -> ProgramResult {
 
     // These accounts must not be empty, and need to have correct ownership
     if a.escrow_tokens.data_is_empty() || a.escrow_tokens.owner != &spl_token::id() {
-        return Err(SfError::InvalidEscrowAccount.into())
+        return Err(SfError::InvalidEscrowAccount.into());
     }
 
     if a.metadata.data_is_empty() || a.metadata.owner != pid {
-        return Err(SfError::InvalidMetadataAccount.into())
+        return Err(SfError::InvalidMetadataAccount.into());
     }
 
     // We want these accounts to be writable
-    if !a.authority.is_writable ||
-        !a.recipient_tokens.is_writable ||
-        !a.metadata.is_writable ||
-        !a.escrow_tokens.is_writable ||
-        !a.streamflow_treasury_tokens.is_writable ||
-        !a.partner_tokens.is_writable
+    if !a.authority.is_writable
+        || !a.recipient_tokens.is_writable
+        || !a.metadata.is_writable
+        || !a.escrow_tokens.is_writable
+        || !a.streamflow_treasury_tokens.is_writable
+        || !a.partner_tokens.is_writable
     {
-        return Err(SfError::AccountsNotWritable.into())
+        return Err(SfError::AccountsNotWritable.into());
     }
 
     // Check if the associated token accounts are legit
@@ -83,29 +85,29 @@ fn account_sanity_check(pid: &Pubkey, a: CancelAccounts) -> ProgramResult {
     let recipient_tokens = get_associated_token_address(a.recipient.key, a.mint.key);
     let partner_tokens = get_associated_token_address(a.partner.key, a.mint.key);
 
-    if a.streamflow_treasury.key != &strm_treasury_pubkey ||
-        a.streamflow_treasury_tokens.key != &strm_treasury_tokens
+    if a.streamflow_treasury.key != &strm_treasury_pubkey
+        || a.streamflow_treasury_tokens.key != &strm_treasury_tokens
     {
-        return Err(SfError::InvalidTreasury.into())
+        return Err(SfError::InvalidTreasury.into());
     }
 
-    if a.sender_tokens.key != &sender_tokens ||
-        a.recipient_tokens.key != &recipient_tokens ||
-        a.partner_tokens.key != &partner_tokens
+    if a.sender_tokens.key != &sender_tokens
+        || a.recipient_tokens.key != &recipient_tokens
+        || a.partner_tokens.key != &partner_tokens
     {
-        return Err(SfError::MintMismatch.into())
+        return Err(SfError::MintMismatch.into());
     }
 
     // Check escrow token account is legit
     // TODO: Needs a deterministic seed and metadata should become a PDA
     let escrow_tokens_pubkey = Pubkey::find_program_address(&[a.metadata.key.as_ref()], pid).0;
     if &escrow_tokens_pubkey != a.escrow_tokens.key {
-        return Err(ProgramError::InvalidAccountData)
+        return Err(ProgramError::InvalidAccountData);
     }
 
     // On-chain program ID checks
     if a.token_program.key != &spl_token::id() {
-        return Err(ProgramError::InvalidAccountData)
+        return Err(ProgramError::InvalidAccountData);
     }
 
     // Passed without touching the lasers
@@ -114,16 +116,16 @@ fn account_sanity_check(pid: &Pubkey, a: CancelAccounts) -> ProgramResult {
 
 fn metadata_sanity_check(acc: CancelAccounts, metadata: Contract) -> ProgramResult {
     // Compare that all the given accounts match the ones inside our metadata.
-    if acc.recipient.key != &metadata.recipient ||
-        acc.recipient_tokens.key != &metadata.recipient_tokens ||
-        acc.mint.key != &metadata.mint ||
-        acc.escrow_tokens.key != &metadata.escrow_tokens ||
-        acc.streamflow_treasury.key != &metadata.streamflow_treasury ||
-        acc.streamflow_treasury_tokens.key != &metadata.streamflow_treasury_tokens ||
-        acc.partner.key != &metadata.partner ||
-        acc.partner_tokens.key != &metadata.partner_tokens
+    if acc.recipient.key != &metadata.recipient
+        || acc.recipient_tokens.key != &metadata.recipient_tokens
+        || acc.mint.key != &metadata.mint
+        || acc.escrow_tokens.key != &metadata.escrow_tokens
+        || acc.streamflow_treasury.key != &metadata.streamflow_treasury
+        || acc.streamflow_treasury_tokens.key != &metadata.streamflow_treasury_tokens
+        || acc.partner.key != &metadata.partner
+        || acc.partner_tokens.key != &metadata.partner_tokens
     {
-        return Err(SfError::MetadataAccountMismatch.into())
+        return Err(SfError::MetadataAccountMismatch.into());
     }
 
     // TODO: What else?
@@ -158,7 +160,7 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
     if now < metadata.end_time {
         msg!("Stream not yet expired, checking authorization");
         if !acc.authority.is_signer {
-            return Err(ProgramError::MissingRequiredSignature)
+            return Err(ProgramError::MissingRequiredSignature);
         }
         let cancel_authority = Invoker::new(
             acc.authority.key,
@@ -168,10 +170,12 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
             &metadata.partner,
         );
         if !cancel_authority.can_cancel(&metadata.ix) {
-            return Err(ProgramError::InvalidAccountData)
+            return Err(ProgramError::InvalidAccountData);
         }
     }
+
     if metadata.ix.can_topup {
+        let escrow_tokens = unpack_token_account(&acc.escrow_tokens)?;
         metadata.sync_balance(escrow_tokens.amount);
     }
 
@@ -245,7 +249,9 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
     let escrow_tokens = unpack_token_account(&acc.escrow_tokens)?;
     // if stream is topabable - external deposits will be settled, so this ext deposit will be 0
     let external_deposit = calculate_external_deposit(
-        escrow_tokens.amount, metadata.ix.net_amount_deposited, metadata.amount_withdrawn
+        escrow_tokens.amount,
+        metadata.ix.net_amount_deposited,
+        metadata.amount_withdrawn,
     );
     let transferable_to_strm = streamflow_available + external_deposit;
     if transferable_to_strm > 0 {
@@ -367,9 +373,7 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         metadata.canceled_at = now;
     }
 
-    // Write the metadata to the account
-    let bytes = metadata.try_to_vec()?;
-    data[0..bytes.len()].clone_from_slice(&bytes);
+    save_account_info(&metadata, data)?;
 
     Ok(())
 }

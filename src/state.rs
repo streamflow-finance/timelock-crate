@@ -1,5 +1,7 @@
 use borsh::{BorshDeserialize, BorshSerialize};
+use solana_program::program_error::ProgramError;
 use solana_program::{msg, pubkey::Pubkey};
+use std::cell::RefMut;
 
 use crate::{
     create::CreateAccounts,
@@ -54,7 +56,7 @@ impl CreateParams {
         let cliff_amount = self.cliff_amount;
 
         if self.net_amount_deposited < cliff_amount {
-            return cliff_time
+            return cliff_time;
         }
         // Nr of periods after the cliff
         let periods_left = (self.net_amount_deposited - cliff_amount) / self.amount_per_period;
@@ -162,13 +164,10 @@ impl Contract {
     }
 
     pub fn sync_balance(&mut self, balance: u64) {
-        let gross_amount = (
-            self.ix.net_amount_deposited + self.streamflow_fee_total + self.partner_fee_total);
-        let external_deposit = calculate_external_deposit(
-            balance,
-            gross_amount,
-            self.amount_withdrawn,
-        );
+        let gross_amount =
+            (self.ix.net_amount_deposited + self.streamflow_fee_total + self.partner_fee_total);
+        let external_deposit =
+            calculate_external_deposit(balance, gross_amount, self.amount_withdrawn);
 
         if external_deposit > 0 {
             self.deposit(external_deposit);
@@ -184,4 +183,13 @@ impl Contract {
         self.streamflow_fee_total += strm_fee_addition;
         self.end_time = self.ix.calculate_end_time();
     }
+}
+
+pub fn save_account_info(
+    metadata: &Contract,
+    mut data: RefMut<&mut [u8]>,
+) -> Result<(), ProgramError> {
+    let bytes = metadata.try_to_vec()?;
+    data[0..bytes.len()].clone_from_slice(&bytes);
+    Ok(())
 }

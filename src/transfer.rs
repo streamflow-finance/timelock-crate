@@ -5,7 +5,11 @@ use solana_program::{
 };
 use spl_associated_token_account::{create_associated_token_account, get_associated_token_address};
 
-use crate::{error::SfError, state::Contract, utils::Invoker};
+use crate::{
+    error::SfError,
+    state::{save_account_info, Contract},
+    utils::Invoker,
+};
 
 #[derive(Clone, Debug)]
 pub struct TransferAccounts<'a> {
@@ -35,28 +39,28 @@ fn account_sanity_check(pid: &Pubkey, a: TransferAccounts) -> ProgramResult {
 
     // These accounts must not be empty, and need to have correct ownership
     if a.metadata.data_is_empty() || a.metadata.owner != pid {
-        return Err(SfError::InvalidMetadataAccount.into())
+        return Err(SfError::InvalidMetadataAccount.into());
     }
 
     // We want these accounts to be writable
     if !a.authority.is_writable || !a.recipient_tokens.is_writable || !a.metadata.is_writable {
-        return Err(SfError::AccountsNotWritable.into())
+        return Err(SfError::AccountsNotWritable.into());
     }
 
     // Check if the associated token accounts are legit
     let recipient_tokens = get_associated_token_address(a.recipient.key, a.mint.key);
 
     if a.recipient_tokens.key != &recipient_tokens {
-        return Err(SfError::MintMismatch.into())
+        return Err(SfError::MintMismatch.into());
     }
 
     // On-chain program ID checks
-    if a.rent.key != &sysvar::rent::id() ||
-        a.token_program.key != &spl_token::id() ||
-        a.associated_token_program.key != &spl_associated_token_account::id() ||
-        a.system_program.key != &system_program::id()
+    if a.rent.key != &sysvar::rent::id()
+        || a.token_program.key != &spl_token::id()
+        || a.associated_token_program.key != &spl_associated_token_account::id()
+        || a.system_program.key != &system_program::id()
     {
-        return Err(ProgramError::InvalidAccountData)
+        return Err(ProgramError::InvalidAccountData);
     }
 
     // Passed without touching the lasers
@@ -67,7 +71,7 @@ fn metadata_sanity_check(acc: TransferAccounts, metadata: Contract) -> ProgramRe
     msg!("Checking metadata for correctness");
 
     if acc.mint.key != &metadata.mint {
-        return Err(SfError::MintMismatch.into())
+        return Err(SfError::MintMismatch.into());
     }
 
     // TODO: What else?
@@ -98,7 +102,7 @@ pub fn transfer_recipient(pid: &Pubkey, acc: TransferAccounts) -> ProgramResult 
         &metadata.partner,
     );
     if !transfer_authority.can_transfer(&metadata.ix) {
-        return Err(SfError::TransferNotAllowed.into())
+        return Err(SfError::TransferNotAllowed.into());
     }
 
     metadata.recipient = *acc.recipient.key;
@@ -120,8 +124,7 @@ pub fn transfer_recipient(pid: &Pubkey, acc: TransferAccounts) -> ProgramResult 
         )?;
     }
 
-    let bytes = metadata.try_to_vec()?;
-    data[0..bytes.len()].clone_from_slice(&bytes);
+    save_account_info(&metadata, data)?;
 
     msg!("Successfully transferred stream recipient");
     Ok(())
