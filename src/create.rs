@@ -29,44 +29,44 @@ use crate::{
 };
 
 #[derive(Clone, Debug)]
+// TODO: Add liquidator account (think of a better name for it too)
 pub struct CreateAccounts<'a> {
     /// Wallet of the stream creator.
-    pub sender: AccountInfo<'a>,
+    pub sender: AccountInfo<'a>, // [writable, signer]
     /// Associated token account address of `sender`.
-    pub sender_tokens: AccountInfo<'a>,
+    pub sender_tokens: AccountInfo<'a>, // [writable]
     /// Wallet address of the recipient.
-    pub recipient: AccountInfo<'a>,
+    pub recipient: AccountInfo<'a>, // []
     /// Associated token account address of `recipient`.
-    pub recipient_tokens: AccountInfo<'a>,
+    pub recipient_tokens: AccountInfo<'a>, // [writable]
     /// The account holding the stream parameters.
     /// Expects empty (non-initialized) account.
-    pub metadata: AccountInfo<'a>,
+    pub metadata: AccountInfo<'a>, // [writable, signer]
     /// The escrow account holding the funds.
     /// Expects empty (non-initialized) account.
-    pub escrow_tokens: AccountInfo<'a>,
+    pub escrow_tokens: AccountInfo<'a>, // [writable]
     /// Streamflow treasury account
-    pub streamflow_treasury: AccountInfo<'a>,
+    pub streamflow_treasury: AccountInfo<'a>, // []
     /// Streamflow treasury's associated token account
-    pub streamflow_treasury_tokens: AccountInfo<'a>,
+    pub streamflow_treasury_tokens: AccountInfo<'a>, // [writable]
     /// Partner treasury account
-    pub partner: AccountInfo<'a>,
+    pub partner: AccountInfo<'a>, // []
     /// Partner's associated token account
-    pub partner_tokens: AccountInfo<'a>,
+    pub partner_tokens: AccountInfo<'a>, // [writable]
     /// The SPL token mint account
-    pub mint: AccountInfo<'a>,
+    pub mint: AccountInfo<'a>, // []
     /// Internal program that handles fees for specified partners
-    pub fee_oracle: AccountInfo<'a>,
+    pub fee_oracle: AccountInfo<'a>, // []
     /// The Rent Sysvar account
-    pub rent: AccountInfo<'a>,
+    pub rent: AccountInfo<'a>, // []
     /// The SPL program needed in case an associated account
     /// for the new recipient is being created.
-    pub token_program: AccountInfo<'a>,
+    pub token_program: AccountInfo<'a>, // []
     /// The Associated Token program needed in case associated
     /// account for the new recipient is being created.
-    pub associated_token_program: AccountInfo<'a>,
+    pub associated_token_program: AccountInfo<'a>, // []
     /// The Solana system program needed for account creation
-    pub system_program: AccountInfo<'a>,
-    //todo: add "liquidator" (think of better name, too)
+    pub system_program: AccountInfo<'a>, // []
 }
 
 fn account_sanity_check(pid: &Pubkey, a: CreateAccounts) -> ProgramResult {

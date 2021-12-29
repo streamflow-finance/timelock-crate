@@ -13,24 +13,24 @@ use crate::{
 #[derive(Clone, Debug)]
 pub struct TransferAccounts<'a> {
     /// Account invoking cancel.
-    pub authority: AccountInfo<'a>,
+    pub authority: AccountInfo<'a>, // [writable, signer]
     /// Wallet address of a new recipient
-    pub new_recipient: AccountInfo<'a>,
+    pub new_recipient: AccountInfo<'a>, // [writable]
     /// The associated token account address of a `new_recipient`
-    pub new_recipient_tokens: AccountInfo<'a>,
+    pub new_recipient_tokens: AccountInfo<'a>, // [writable]
     /// The account holding the stream parameters
-    pub metadata: AccountInfo<'a>,
+    pub metadata: AccountInfo<'a>, // [writable]
     /// The SPL token mint account
-    pub mint: AccountInfo<'a>,
+    pub mint: AccountInfo<'a>, // []
     /// The system Rent account
-    pub rent: AccountInfo<'a>,
+    pub rent: AccountInfo<'a>, // []
     /// The SPL token program
-    pub token_program: AccountInfo<'a>,
+    pub token_program: AccountInfo<'a>, // []
     /// The Associated Token program needed in case associated
     /// account for the new recipient is being created.
-    pub associated_token_program: AccountInfo<'a>,
+    pub associated_token_program: AccountInfo<'a>, // []
     /// The Solana system program needed for account creation
-    pub system_program: AccountInfo<'a>,
+    pub system_program: AccountInfo<'a>, // []
 }
 
 fn account_sanity_check(pid: &Pubkey, a: TransferAccounts) -> ProgramResult {

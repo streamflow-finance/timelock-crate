@@ -18,16 +18,16 @@ use crate::{
 
 #[derive(Clone, Debug)]
 pub struct TopupAccounts<'a> {
-    pub sender: AccountInfo<'a>,
-    pub sender_tokens: AccountInfo<'a>,
-    pub metadata: AccountInfo<'a>,
-    pub escrow_tokens: AccountInfo<'a>,
-    pub streamflow_treasury: AccountInfo<'a>,
-    pub streamflow_treasury_tokens: AccountInfo<'a>,
-    pub partner: AccountInfo<'a>,
-    pub partner_tokens: AccountInfo<'a>,
-    pub mint: AccountInfo<'a>,
-    pub token_program: AccountInfo<'a>,
+    pub sender: AccountInfo<'a>,                     // [writable, signer]
+    pub sender_tokens: AccountInfo<'a>,              // [writable]
+    pub metadata: AccountInfo<'a>,                   // [writable]
+    pub escrow_tokens: AccountInfo<'a>,              // [writable]
+    pub streamflow_treasury: AccountInfo<'a>,        // []
+    pub streamflow_treasury_tokens: AccountInfo<'a>, // [writable]
+    pub partner: AccountInfo<'a>,                    // []
+    pub partner_tokens: AccountInfo<'a>,             // [writable]
+    pub mint: AccountInfo<'a>,                       // []
+    pub token_program: AccountInfo<'a>,              // []
 }
 
 pub fn topup(pid: &Pubkey, acc: TopupAccounts, amount: u64) -> ProgramResult {

@@ -30,27 +30,27 @@ use crate::{
 #[derive(Clone, Debug)]
 pub struct WithdrawAccounts<'a> {
     /// Account invoking transaction.
-    pub authority: AccountInfo<'a>,
+    pub authority: AccountInfo<'a>, // [writable, signer]
     /// Recipient's wallet address
-    pub recipient: AccountInfo<'a>,
+    pub recipient: AccountInfo<'a>, // []
     /// The associated token account address of a stream `recipient`
-    pub recipient_tokens: AccountInfo<'a>,
+    pub recipient_tokens: AccountInfo<'a>, // [writable]
     /// The account holding the stream parameters
-    pub metadata: AccountInfo<'a>,
+    pub metadata: AccountInfo<'a>, // [writable]
     /// The escrow account holding the stream funds
-    pub escrow_tokens: AccountInfo<'a>,
+    pub escrow_tokens: AccountInfo<'a>, // [writable]
     /// Streamflow treasury account
-    pub streamflow_treasury: AccountInfo<'a>,
+    pub streamflow_treasury: AccountInfo<'a>, // [writable]
     /// Streamflow treasury's associated token account
-    pub streamflow_treasury_tokens: AccountInfo<'a>,
+    pub streamflow_treasury_tokens: AccountInfo<'a>, // [writable]
     /// Partner treasury account
-    pub partner: AccountInfo<'a>,
+    pub partner: AccountInfo<'a>, // []
     /// Partner's associated token account
-    pub partner_tokens: AccountInfo<'a>,
+    pub partner_tokens: AccountInfo<'a>, // [writable]
     /// The SPL token mint account
-    pub mint: AccountInfo<'a>,
+    pub mint: AccountInfo<'a>, // []
     /// The SPL token program
-    pub token_program: AccountInfo<'a>,
+    pub token_program: AccountInfo<'a>, // []
 }
 
 fn account_sanity_check(pid: &Pubkey, a: WithdrawAccounts) -> ProgramResult {
