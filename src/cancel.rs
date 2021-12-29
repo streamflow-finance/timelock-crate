@@ -172,6 +172,10 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         if !cancel_authority.can_cancel(&metadata.ix) {
             return Err(ProgramError::InvalidAccountData)
         }
+
+        //we update the following value only in case of a real cancellation
+        //(that is, not when account is closed after end_time)
+        metadata.canceled_at = now;
     }
 
     if metadata.ix.can_topup {
@@ -366,12 +370,6 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         &[acc.escrow_tokens.clone(), acc.streamflow_treasury.clone(), acc.escrow_tokens.clone()],
         &[&seeds],
     )?;
-
-    // TODO: What's with the if clause here?
-    if now < metadata.end_time {
-        metadata.last_withdrawn_at = now;
-        metadata.canceled_at = now;
-    }
 
     save_account_info(&metadata, data)?;
 
