@@ -28,31 +28,31 @@ pub struct CancelAccounts<'a> {
     /// Account invoking cancel. Can be either stream sender or recipient, depending on the value
     /// of `cancelable_by_sender` and `cancelable_by_recipient`
     /// But when stream expires anyone can cancel
-    pub authority: AccountInfo<'a>,
+    pub authority: AccountInfo<'a>, // [writable, signer]
     /// The main wallet address of the initializer
-    pub sender: AccountInfo<'a>,
+    pub sender: AccountInfo<'a>, // []
     /// The associated token account address of `sender`
-    pub sender_tokens: AccountInfo<'a>,
+    pub sender_tokens: AccountInfo<'a>, // [writable]
     /// The main wallet address of the recipient
-    pub recipient: AccountInfo<'a>,
+    pub recipient: AccountInfo<'a>, // []
     /// The associated token account address of `recipient`
-    pub recipient_tokens: AccountInfo<'a>,
+    pub recipient_tokens: AccountInfo<'a>, // [writable]
     /// The account holding the stream parameters
-    pub metadata: AccountInfo<'a>,
+    pub metadata: AccountInfo<'a>, // [writable]
     /// The escrow account holding the funds.
-    pub escrow_tokens: AccountInfo<'a>,
+    pub escrow_tokens: AccountInfo<'a>, // [writable]
     /// Streamflow treasury account
-    pub streamflow_treasury: AccountInfo<'a>,
+    pub streamflow_treasury: AccountInfo<'a>, // [writable]
     /// Streamflow treasury's associated token account
-    pub streamflow_treasury_tokens: AccountInfo<'a>,
+    pub streamflow_treasury_tokens: AccountInfo<'a>, // [writable]
     /// Partner treasury account
-    pub partner: AccountInfo<'a>,
+    pub partner: AccountInfo<'a>, // []
     /// Partner's associated token account
-    pub partner_tokens: AccountInfo<'a>,
+    pub partner_tokens: AccountInfo<'a>, // [writable]
     /// The SPL token mint account
-    pub mint: AccountInfo<'a>,
+    pub mint: AccountInfo<'a>, // []
     /// The SPL token program
-    pub token_program: AccountInfo<'a>,
+    pub token_program: AccountInfo<'a>, // []
 }
 
 fn account_sanity_check(pid: &Pubkey, a: CancelAccounts) -> ProgramResult {
