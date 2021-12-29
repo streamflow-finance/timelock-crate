@@ -147,7 +147,7 @@ def main():
 
     print(header)
 
-    print("program_instructions: [")
+    print("const program_instructions = [")
     for ix in instruction_accounts:
         print("  {")
         print(f"    // {ix} stream instruction")
@@ -160,7 +160,7 @@ def main():
         parse_instruction_accounts(lines, instruction_accounts[ix][1])
         print('    ]')
         print('  },')
-    print(']\n')
+    print('];\n')
 
     print("// data serialization")
     f = open(join(toplevel, "src/state.rs"), "r")
