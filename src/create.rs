@@ -19,8 +19,8 @@ use spl_token::amount_to_ui_amount;
 use crate::{
     error::SfError,
     state::{
-        find_escrow_account, save_account_info, Contract, CreateParams, MAX_STRING_SIZE,
-        PROGRAM_VERSION, STRM_FEE_DEFAULT_PERCENT, STRM_TREASURY,
+        find_escrow_account, save_account_info, Contract, CreateParams, ESCROW_SEED_PREFIX,
+        MAX_STRING_SIZE, PROGRAM_VERSION, STRM_FEE_DEFAULT_PERCENT, STRM_TREASURY,
     },
     utils::{
         calculate_fee_from_amount, duration_sanity, pretty_time, unpack_mint_account,
@@ -111,12 +111,6 @@ fn account_sanity_check(pid: &Pubkey, a: CreateAccounts) -> ProgramResult {
         return Err(SfError::NotAssociated.into())
     }
 
-    // Check escrow token account is legit
-    if &find_escrow_account(PROGRAM_VERSION, a.metadata.key.as_ref(), pid).0 != a.escrow_tokens.key
-    {
-        return Err(ProgramError::InvalidAccountData)
-    }
-
     // On-chain program ID checks
     if a.rent.key != &sysvar::rent::id() ||
         a.token_program.key != &spl_token::id() ||
@@ -155,7 +149,6 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
     msg!("Initializing SPL token stream");
 
     // The stream initializer, and the keypair for creating the metadata account must sign this.
-    // TODO: Metadata should be a PDA
     if !acc.sender.is_signer || !acc.metadata.is_signer {
         return Err(ProgramError::MissingRequiredSignature)
     }
@@ -166,6 +159,13 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
     // Sanity checks
     account_sanity_check(pid, acc.clone())?;
     instruction_sanity_check(ix.clone(), now)?;
+
+    // Check escrow token account is legit
+    let (escrow_tokens_pubkey, stream_escrow_bump) =
+        find_escrow_account(PROGRAM_VERSION, acc.metadata.key.as_ref(), pid);
+    if &escrow_tokens_pubkey != acc.escrow_tokens.key {
+        return Err(ProgramError::InvalidAccountData)
+    }
 
     // Check partner accounts are legit
     let (partner_fee_percent, strm_fee_percent) =
@@ -236,9 +236,7 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
     save_account_info(&metadata, data)?;
 
     msg!("Creating stream escrow account");
-    // TODO: This seed should be deterministic and metadata should be PDA
-    let stream_escrow_bump = Pubkey::find_program_address(&[acc.metadata.key.as_ref()], pid).1;
-    let seeds = [acc.metadata.key.as_ref(), &[stream_escrow_bump]];
+    let seeds = [ESCROW_SEED_PREFIX, acc.metadata.key.as_ref(), &[stream_escrow_bump]];
 
     invoke_signed(
         &system_instruction::create_account(

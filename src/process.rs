@@ -8,7 +8,7 @@ use solana_program::{
 
 pub fn close_escrow<'a>(
     metadata: &Contract,
-    seeds: &[&[u8]; 2],
+    seeds: &[&[u8]],
     token_program: &AccountInfo<'a>,
     escrow_tokens: &AccountInfo<'a>,
     streamflow_treasury: &AccountInfo<'a>,

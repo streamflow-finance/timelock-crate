@@ -17,7 +17,9 @@ use spl_token::amount_to_ui_amount;
 use crate::{
     error::SfError,
     process,
-    state::{find_escrow_account, Contract, STRM_FEE_DEFAULT_PERCENT, STRM_TREASURY},
+    state::{
+        find_escrow_account, Contract, ESCROW_SEED_PREFIX, STRM_FEE_DEFAULT_PERCENT, STRM_TREASURY,
+    },
     utils::{
         calculate_available, calculate_external_deposit, calculate_fee_from_amount,
         unpack_mint_account, unpack_token_account, Invoker,
@@ -143,9 +145,9 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
 
     // Taking the protocol version from the metadata, we check that the token
     // escrow account is correct:
-    if &find_escrow_account(metadata.version, acc.metadata.key.as_ref(), pid).0 !=
-        acc.escrow_tokens.key
-    {
+    let (escrow_tokens_pubkey, escrow_tokens_bump) =
+        find_escrow_account(metadata.version, acc.metadata.key.as_ref(), pid);
+    if &escrow_tokens_pubkey != acc.escrow_tokens.key {
         return Err(ProgramError::InvalidAccountData)
     }
 
@@ -196,8 +198,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
         return Err(SfError::AmountMoreThanAvailable.into())
     }
 
-    let escrow_tokens_bump = Pubkey::find_program_address(&[acc.metadata.key.as_ref()], pid).1;
-    let seeds = [acc.metadata.key.as_ref(), &[escrow_tokens_bump]];
+    let seeds = [ESCROW_SEED_PREFIX, acc.metadata.key.as_ref(), &[escrow_tokens_bump]];
 
     if amount > 0 {
         msg!("Transferring unlocked tokens to recipient");

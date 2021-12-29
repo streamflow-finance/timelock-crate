@@ -16,7 +16,7 @@ use spl_token::amount_to_ui_amount;
 use crate::{
     error::SfError,
     process,
-    state::{find_escrow_account, save_account_info, Contract, STRM_TREASURY},
+    state::{find_escrow_account, save_account_info, Contract, ESCROW_SEED_PREFIX, STRM_TREASURY},
     utils::{
         calculate_available, calculate_external_deposit, unpack_mint_account, unpack_token_account,
         Invoker,
@@ -149,9 +149,10 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
 
     // Taking the protocol version from the metadata, we check that the token
     // escrow account is correct:
-    if &find_escrow_account(metadata.version, acc.metadata.key.as_ref(), pid).0 !=
-        acc.escrow_tokens.key
-    {
+
+    let (escrow_tokens_pubkey, escrow_tokens_bump) =
+        find_escrow_account(metadata.version, acc.metadata.key.as_ref(), pid);
+    if &escrow_tokens_pubkey != acc.escrow_tokens.key {
         return Err(ProgramError::InvalidAccountData)
     }
 
@@ -207,8 +208,7 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
     let streamflow_remains = metadata.streamflow_fee_total - streamflow_available;
     let partner_remains = metadata.partner_fee_total - partner_available;
 
-    let escrow_tokens_bump = Pubkey::find_program_address(&[acc.metadata.key.as_ref()], pid).1;
-    let seeds = [acc.metadata.key.as_ref(), &[escrow_tokens_bump]];
+    let seeds = [ESCROW_SEED_PREFIX, acc.metadata.key.as_ref(), &[escrow_tokens_bump]];
 
     if recipient_available > 0 {
         msg!("Transferring unlocked tokens to recipient");
