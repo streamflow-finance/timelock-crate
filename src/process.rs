@@ -21,27 +21,29 @@ pub fn close_escrow<'a>(
         metadata.amount_withdrawn,
     );
 
-    msg!(
-        "Transferring leftover external deposit: {} tokens to Streamflow treasury",
-        metadata.gross_amount()
-    );
-    invoke_signed(
-        &spl_token::instruction::transfer(
-            token_program.key,
-            escrow_tokens.key,
-            streamflow_treasury_tokens.key,
-            escrow_tokens.key,
-            &[],
-            external_deposit,
-        )?,
-        &[
-            escrow_tokens.clone(),              // src
-            streamflow_treasury_tokens.clone(), // dest
-            escrow_tokens.clone(),              // auth
-            token_program.clone(),              // program
-        ],
-        &[seeds],
-    )?;
+    if external_deposit > 0 {
+        msg!(
+            "Transferring leftover external deposit: {} tokens to Streamflow treasury",
+            metadata.gross_amount()
+        );
+        invoke_signed(
+            &spl_token::instruction::transfer(
+                token_program.key,
+                escrow_tokens.key,
+                streamflow_treasury_tokens.key,
+                escrow_tokens.key,
+                &[],
+                external_deposit,
+            )?,
+            &[
+                escrow_tokens.clone(),              // src
+                streamflow_treasury_tokens.clone(), // dest
+                escrow_tokens.clone(),              // auth
+                token_program.clone(),              // program
+            ],
+            &[seeds],
+        )?;
+    }
 
     msg!("Closing escrow SPL token account");
     invoke_signed(

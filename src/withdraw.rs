@@ -18,7 +18,8 @@ use crate::{
     error::SfError,
     process,
     state::{
-        find_escrow_account, Contract, ESCROW_SEED_PREFIX, STRM_FEE_DEFAULT_PERCENT, STRM_TREASURY,
+        find_escrow_account, save_account_info, Contract, ESCROW_SEED_PREFIX,
+        STRM_FEE_DEFAULT_PERCENT, STRM_TREASURY,
     },
     utils::{
         calculate_available, calculate_external_deposit, calculate_fee_from_amount,
@@ -309,10 +310,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
         );
     }
 
-    // Write the metadata to the account
-    //todo: refactor: move to helper function metadata.save();
-    let bytes = metadata.try_to_vec()?;
-    data[0..bytes.len()].clone_from_slice(&bytes);
+    save_account_info(&metadata, data)?;
 
     // When everything is withdrawn, close the accounts.
     if now >= metadata.ix.end_time {
