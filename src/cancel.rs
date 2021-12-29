@@ -247,7 +247,15 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         );
     }
 
-    if streamflow_available > 0 {
+    let escrow_tokens = unpack_token_account(&acc.escrow_tokens)?;
+    // if stream can_setup - external deposits will be settled, so this ext deposit will be 0
+    let external_deposit = calculate_external_deposit(
+        escrow_tokens.amount,
+        metadata.ix.net_amount_deposited,
+        metadata.amount_withdrawn,
+    );
+    let transferable_to_strm = streamflow_available + external_deposit;
+    if transferable_to_strm > 0 {
         msg!("Transferring unlocked tokens to Streamflow treasury");
         invoke_signed(
             &spl_token::instruction::transfer(
