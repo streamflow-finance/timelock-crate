@@ -11,7 +11,7 @@ pub fn duration_sanity(now: u64, start: u64, cliff: u64) -> ProgramResult {
     let cliff_cond = if cliff == 0 { true } else { start < cliff };
 
     if now < start && cliff_cond {
-        return Ok(());
+        return Ok(())
     }
 
     Err(SfError::InvalidTimestamps.into())
@@ -22,7 +22,7 @@ pub fn unpack_token_account(
     account_info: &AccountInfo,
 ) -> Result<spl_token::state::Account, ProgramError> {
     if account_info.owner != &spl_token::id() {
-        return Err(ProgramError::InvalidAccountData);
+        return Err(ProgramError::InvalidAccountData)
     }
 
     spl_token::state::Account::unpack(&account_info.data.borrow())
@@ -48,11 +48,11 @@ pub fn pretty_time(t: u64) -> String {
 // TODO: Test units, be robust against possible overflows.
 pub fn calculate_available(now: u64, ix: CreateParams, total: u64, withdrawn: u64) -> u64 {
     if ix.start_time > now || ix.cliff > now || total == 0 || total == withdrawn {
-        return 0;
+        return 0
     }
 
     if now > ix.end_time {
-        return total - withdrawn;
+        return total - withdrawn
     }
 
     let start = if ix.cliff > 0 { ix.cliff } else { ix.start_time };
@@ -66,7 +66,7 @@ pub fn calculate_available(now: u64, ix: CreateParams, total: u64, withdrawn: u6
 // TODO: impl calculations from ix
 pub fn calculate_external_deposit(balance: u64, deposited: u64, withdrawn: u64) -> u64 {
     if deposited - withdrawn == balance {
-        return 0;
+        return 0
     }
 
     balance - (deposited - withdrawn)
@@ -75,7 +75,7 @@ pub fn calculate_external_deposit(balance: u64, deposited: u64, withdrawn: u64) 
 /// Given amount and percentage, return the u64 of that percentage.
 pub fn calculate_fee_from_amount(amount: u64, percentage: f32) -> u64 {
     if percentage <= 0.0 {
-        return 0;
+        return 0
     }
 
     // TODO: Test units
@@ -143,7 +143,7 @@ impl Invoker {
 
     pub fn can_withdraw(&self, withdrawal_public: bool, requested_amount: u64) -> bool {
         if withdrawal_public {
-            return true;
+            return true
         }
 
         match self {

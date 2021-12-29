@@ -37,7 +37,7 @@ pub fn topup(_program_id: &Pubkey, acc: TopupAccounts, amount: u64) -> ProgramRe
     //account_sanity_check
 
     if amount == 0 {
-        return Err(SfError::AmountIsZero.into());
+        return Err(SfError::AmountIsZero.into())
     }
 
     let mut data = acc.metadata.try_borrow_mut_data()?;
@@ -47,7 +47,7 @@ pub fn topup(_program_id: &Pubkey, acc: TopupAccounts, amount: u64) -> ProgramRe
     };
 
     if !metadata.ix.can_topup {
-        return Err(SfError::InvalidMetadata.into());
+        return Err(SfError::InvalidMetadata.into())
     }
 
     let escrow_tokens = unpack_token_account(&acc.escrow_tokens)?;
@@ -57,7 +57,7 @@ pub fn topup(_program_id: &Pubkey, acc: TopupAccounts, amount: u64) -> ProgramRe
 
     let now = Clock::get()?.unix_timestamp as u64;
     if metadata.end_time < now {
-        return Err(SfError::StreamClosed.into());
+        return Err(SfError::StreamClosed.into())
     }
 
     msg!("Transferring funds into escrow account");

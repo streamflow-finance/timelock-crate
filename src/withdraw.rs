@@ -168,7 +168,6 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
         metadata.sync_balance(escrow_tokens.amount);
     }
 
-
     // Check what has been unlocked so far
     let recipient_available = calculate_available(
         now,

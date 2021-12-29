@@ -1,6 +1,5 @@
 use borsh::{BorshDeserialize, BorshSerialize};
-use solana_program::program_error::ProgramError;
-use solana_program::{msg, pubkey::Pubkey};
+use solana_program::{msg, program_error::ProgramError, pubkey::Pubkey};
 use std::cell::RefMut;
 
 use crate::{
@@ -56,7 +55,7 @@ impl CreateParams {
         let cliff_amount = self.cliff_amount;
 
         if self.net_amount_deposited < cliff_amount {
-            return cliff_time;
+            return cliff_time
         }
         // Nr of periods after the cliff
         let periods_left = (self.net_amount_deposited - cliff_amount) / self.amount_per_period;
