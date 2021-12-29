@@ -3,18 +3,18 @@ use crate::{
     utils::{calculate_external_deposit, unpack_token_account},
 };
 use solana_program::{
-    account_info::AccountInfo, msg, program::invoke_signed, program_error::ProgramError,
+    account_info::AccountInfo, entrypoint::ProgramResult, msg, program::invoke_signed,
 };
 
 pub fn close_escrow<'a>(
     metadata: &Contract,
     seeds: &[&[u8]],
-    token_program: &AccountInfo<'a>,
-    escrow_tokens: &AccountInfo<'a>,
-    streamflow_treasury: &AccountInfo<'a>,
-    streamflow_treasury_tokens: &AccountInfo<'a>,
-) -> Result<(), ProgramError> {
-    let escrow_tokens_spl_account = unpack_token_account(escrow_tokens)?;
+    token_program: AccountInfo<'a>,
+    escrow_tokens: AccountInfo<'a>,
+    streamflow_treasury: AccountInfo<'a>,
+    streamflow_treasury_tokens: AccountInfo<'a>,
+) -> ProgramResult {
+    let escrow_tokens_spl_account = unpack_token_account(&escrow_tokens)?;
     let external_deposit = calculate_external_deposit(
         escrow_tokens_spl_account.amount,
         metadata.gross_amount(),

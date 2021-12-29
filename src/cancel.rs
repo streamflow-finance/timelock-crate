@@ -346,10 +346,10 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
     process::close_escrow(
         &metadata,
         &seeds,
-        &acc.token_program,
-        &acc.escrow_tokens,
-        &acc.streamflow_treasury,
-        &acc.streamflow_treasury_tokens,
+        acc.token_program,
+        acc.escrow_tokens,
+        acc.streamflow_treasury,
+        acc.streamflow_treasury_tokens,
     )?;
 
     // TODO: What's with the if clause here?

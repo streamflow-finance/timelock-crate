@@ -324,10 +324,10 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
         process::close_escrow(
             &metadata,
             &seeds,
-            &acc.token_program,
-            &acc.escrow_tokens,
-            &acc.streamflow_treasury,
-            &acc.streamflow_treasury_tokens,
+            acc.token_program,
+            acc.escrow_tokens,
+            acc.streamflow_treasury,
+            acc.streamflow_treasury_tokens,
         )?;
     }
 
