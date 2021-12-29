@@ -20,7 +20,7 @@ use crate::{
     error::SfError,
     state::{
         find_escrow_account, save_account_info, Contract, CreateParams, ESCROW_SEED_PREFIX,
-        MAX_STRING_SIZE, PROGRAM_VERSION, STRM_FEE_DEFAULT_PERCENT, STRM_TREASURY,
+        PROGRAM_VERSION, STRM_FEE_DEFAULT_PERCENT, STRM_TREASURY,
     },
     utils::{
         calculate_fee_from_amount, duration_sanity, pretty_time, unpack_mint_account,
