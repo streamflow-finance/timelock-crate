@@ -1,6 +1,5 @@
 use borsh::{BorshDeserialize, BorshSerialize};
-use solana_program::program_error::ProgramError;
-use solana_program::{msg, pubkey::Pubkey};
+use solana_program::{program_error::ProgramError, pubkey::Pubkey};
 use std::cell::RefMut;
 
 use crate::{
@@ -56,7 +55,7 @@ impl CreateParams {
         let cliff_amount = self.cliff_amount;
 
         if self.net_amount_deposited < cliff_amount {
-            return cliff_time;
+            return cliff_time
         }
         // Nr of periods after the cliff
         let periods_left = (self.net_amount_deposited - cliff_amount) / self.amount_per_period;
@@ -163,9 +162,12 @@ impl Contract {
         }
     }
 
+    pub fn gross_amount(&self) -> u64 {
+        self.ix.net_amount_deposited + self.streamflow_fee_total + self.partner_fee_total
+    }
+
     pub fn sync_balance(&mut self, balance: u64) {
-        let gross_amount =
-            (self.ix.net_amount_deposited + self.streamflow_fee_total + self.partner_fee_total);
+        let gross_amount = self.gross_amount();
         let external_deposit =
             calculate_external_deposit(balance, gross_amount, self.amount_withdrawn);
 
@@ -178,7 +180,7 @@ impl Contract {
         let partner_fee_addition =
             calculate_fee_from_amount(gross_amount, self.partner_fee_percent);
         let strm_fee_addition = calculate_fee_from_amount(gross_amount, self.partner_fee_percent);
-        self.ix.net_amount_deposited += (gross_amount - partner_fee_addition - strm_fee_addition);
+        self.ix.net_amount_deposited += gross_amount - partner_fee_addition - strm_fee_addition;
         self.partner_fee_total += partner_fee_addition;
         self.streamflow_fee_total += strm_fee_addition;
         self.end_time = self.ix.calculate_end_time();

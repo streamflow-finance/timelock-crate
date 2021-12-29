@@ -2,14 +2,11 @@ use std::str::FromStr;
 
 use crate::{
     error::SfError,
-    state::{Contract, STRM_FEE_DEFAULT_PERCENT, STRM_TREASURY},
-    utils::{
-        calculate_available, calculate_external_deposit, calculate_fee_from_amount,
-        unpack_mint_account, unpack_token_account, Invoker,
-    },
+    process,
+    state::{Contract, STRM_TREASURY},
+    utils::{calculate_available, unpack_mint_account, unpack_token_account, Invoker},
 };
 use borsh::BorshSerialize;
-use partner_oracle::fees::fetch_partner_fee_data;
 use solana_program::{
     account_info::AccountInfo,
     borsh as solana_borsh,
@@ -17,7 +14,6 @@ use solana_program::{
     msg,
     program::invoke_signed,
     program_error::ProgramError,
-    program_pack::Pack,
     pubkey::Pubkey,
     sysvar::{clock::Clock, Sysvar},
 };
@@ -167,7 +163,6 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
     if metadata.ix.can_topup {
         metadata.sync_balance(escrow_tokens.amount);
     }
-
 
     // Check what has been unlocked so far
     let recipient_available = calculate_available(
@@ -322,31 +317,13 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
         // **acc.metadata.try_borrow_mut_lamports()? -= rent;
         // **acc.streamflow_treasury.try_borrow_mut_lamports()? += rent;
 
-        if escrow_tokens.amount > 0 {
-            //todo: transfer what's left (escrow_tokens.amount) to streamflow_treasury_tokens
-            // address
-            msg!(
-                "Transferred remaining {} {} tokens to the Streamflow treasury",
-                amount_to_ui_amount(escrow_tokens.amount, mint_info.decimals),
-                metadata.mint
-            );
-        }
-
-        msg!("Closing escrow SPL token account");
-        invoke_signed(
-            &spl_token::instruction::close_account(
-                acc.token_program.key,
-                acc.escrow_tokens.key,
-                acc.streamflow_treasury.key,
-                acc.escrow_tokens.key,
-                &[],
-            )?,
-            &[
-                acc.escrow_tokens.clone(),
-                acc.streamflow_treasury.clone(),
-                acc.escrow_tokens.clone(),
-            ],
-            &[&seeds],
+        process::close_escrow(
+            &metadata,
+            &seeds,
+            &acc.token_program,
+            &acc.escrow_tokens,
+            &acc.streamflow_treasury,
+            &acc.streamflow_treasury_tokens,
         )?;
     }
 

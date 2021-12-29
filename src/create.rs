@@ -74,7 +74,7 @@ fn account_sanity_check(pid: &Pubkey, a: CreateAccounts) -> ProgramResult {
 
     // We want these to not be initialized
     if !a.escrow_tokens.data_is_empty() || !a.metadata.data_is_empty() {
-        return Err(ProgramError::AccountAlreadyInitialized);
+        return Err(ProgramError::AccountAlreadyInitialized)
     }
 
     // We want these accounts to be writable
@@ -88,7 +88,7 @@ fn account_sanity_check(pid: &Pubkey, a: CreateAccounts) -> ProgramResult {
     //might be created
     // || !a.liquidator.is_writable //creditor (tx fees)
     {
-        return Err(SfError::AccountsNotWritable.into());
+        return Err(SfError::AccountsNotWritable.into())
     }
 
     // Check if the associated token accounts are legit
@@ -98,33 +98,33 @@ fn account_sanity_check(pid: &Pubkey, a: CreateAccounts) -> ProgramResult {
     let recipient_tokens = get_associated_token_address(a.recipient.key, a.mint.key);
     let partner_tokens = get_associated_token_address(a.partner.key, a.mint.key);
 
-    if a.streamflow_treasury.key != &strm_treasury_pubkey
-        || a.streamflow_treasury_tokens.key != &strm_treasury_tokens
+    if a.streamflow_treasury.key != &strm_treasury_pubkey ||
+        a.streamflow_treasury_tokens.key != &strm_treasury_tokens
     {
-        return Err(SfError::InvalidTreasury.into());
+        return Err(SfError::InvalidTreasury.into())
     }
 
-    if a.sender_tokens.key != &sender_tokens
-        || a.recipient_tokens.key != &recipient_tokens
-        || a.partner_tokens.key != &partner_tokens
+    if a.sender_tokens.key != &sender_tokens ||
+        a.recipient_tokens.key != &recipient_tokens ||
+        a.partner_tokens.key != &partner_tokens
     {
-        return Err(SfError::NotAssociated.into());
+        return Err(SfError::NotAssociated.into())
     }
 
     // Check escrow token account is legit
     // TODO: Needs a deterministic seed and metadata should become a PDA
     let escrow_tokens_pubkey = Pubkey::find_program_address(&[a.metadata.key.as_ref()], pid).0;
     if &escrow_tokens_pubkey != a.escrow_tokens.key {
-        return Err(ProgramError::InvalidAccountData);
+        return Err(ProgramError::InvalidAccountData)
     }
 
     // On-chain program ID checks
-    if a.rent.key != &sysvar::rent::id()
-        || a.token_program.key != &spl_token::id()
-        || a.associated_token_program.key != &spl_associated_token_account::id()
-        || a.system_program.key != &system_program::id()
+    if a.rent.key != &sysvar::rent::id() ||
+        a.token_program.key != &spl_token::id() ||
+        a.associated_token_program.key != &spl_associated_token_account::id() ||
+        a.system_program.key != &system_program::id()
     {
-        return Err(ProgramError::InvalidAccountData);
+        return Err(ProgramError::InvalidAccountData)
     }
 
     // Passed without touching the lasers
@@ -134,7 +134,7 @@ fn account_sanity_check(pid: &Pubkey, a: CreateAccounts) -> ProgramResult {
 fn instruction_sanity_check(ix: CreateParams, now: u64) -> ProgramResult {
     // We'll limit the stream name length
     if ix.stream_name.len() > MAX_STRING_SIZE {
-        return Err(SfError::StreamNameTooLong.into());
+        return Err(SfError::StreamNameTooLong.into())
     }
 
     // Check if timestamps are all in order and valid
@@ -143,7 +143,7 @@ fn instruction_sanity_check(ix: CreateParams, now: u64) -> ProgramResult {
 
     // Can't deposit less than what's needed for one period
     if ix.net_amount_deposited < ix.amount_per_period {
-        return Err(SfError::InvalidDeposit.into());
+        return Err(SfError::InvalidDeposit.into())
     }
 
     // TODO: Anything else?
@@ -158,10 +158,9 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
     // The stream initializer, and the keypair for creating the metadata account must sign this.
     // TODO: Metadata should be a PDA
     if !acc.sender.is_signer || !acc.metadata.is_signer {
-        return Err(ProgramError::MissingRequiredSignature);
+        return Err(ProgramError::MissingRequiredSignature)
     }
 
-    let cluster_rent = Rent::get()?;
     let mint_info = unpack_mint_account(&acc.mint)?;
     let now = Clock::get()?.unix_timestamp as u64;
 
@@ -188,7 +187,7 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
 
     let sender_tokens = unpack_token_account(&acc.sender_tokens)?;
     if sender_tokens.amount < gross_amount {
-        return Err(ProgramError::InsufficientFunds);
+        return Err(ProgramError::InsufficientFunds)
     }
 
     let mut metadata = Contract::new(
@@ -218,7 +217,7 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
 
     if acc.sender.lamports() < metadata_rent + tokens_rent {
         msg!("Error: Insufficient funds in {}", acc.sender.key);
-        return Err(ProgramError::InsufficientFunds);
+        return Err(ProgramError::InsufficientFunds)
     }
 
     msg!("Creating stream metadata account");
@@ -234,7 +233,7 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
     )?;
 
     msg!("Writing metadata into the account");
-    let mut data = acc.metadata.try_borrow_mut_data()?;
+    let data = acc.metadata.try_borrow_mut_data()?;
     save_account_info(&metadata, data)?;
 
     msg!("Creating stream escrow account");
