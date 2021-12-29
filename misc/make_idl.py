@@ -11,7 +11,7 @@
 #     cliff_amount: new BN(8241719),
 #     cancelable_by_sender: true,
 #     cancelable_by_recipent: false,
-#     withdrawal_public: false,
+#     automatic_withdrawal: false,
 #     transferable: false,
 #     stream_name: "foobar",
 # });

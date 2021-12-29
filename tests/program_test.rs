@@ -74,7 +74,7 @@ async fn timelock_program_test() -> Result<()> {
             cliff_amount: 0,
             cancelable_by_sender: false,
             cancelable_by_recipient: false,
-            withdrawal_public: false,
+            automatic_withdrawal: false,
             transferable_by_sender: false,
             transferable_by_recipient: false,
             release_rate: 0,
@@ -203,7 +203,7 @@ async fn timelock_program_test2() -> Result<()> {
             cliff_amount: 0,
             cancelable_by_sender: false,
             cancelable_by_recipient: false,
-            withdrawal_public: false,
+            automatic_withdrawal: false,
             transferable_by_sender: false,
             transferable_by_recipient: false,
             release_rate: 0, // Old contracts don't have it
@@ -422,7 +422,7 @@ async fn timelock_program_test_transfer() -> Result<()> {
             cliff_amount: 0,
             cancelable_by_sender: false,
             cancelable_by_recipient: false,
-            withdrawal_public: false,
+            automatic_withdrawal: false,
             transferable_by_sender: false,
             transferable_by_recipient: true, // Should be possible to transfer stream
             release_rate: 0,                 // Old contracts don't have it
@@ -535,7 +535,7 @@ async fn timelock_program_test_recurring() -> Result<()> {
             cliff_amount: 0,
             cancelable_by_sender: false,
             cancelable_by_recipient: false,
-            withdrawal_public: false,
+            automatic_withdrawal: false,
             transferable_by_sender: false,
             transferable_by_recipient: false,
             release_rate: spl_token::ui_amount_to_amount(1.0, 8),

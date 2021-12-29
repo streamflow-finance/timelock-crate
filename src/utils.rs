@@ -138,8 +138,8 @@ impl Invoker {
         }
     }
 
-    pub fn can_withdraw(&self, withdrawal_public: bool, requested_amount: u64) -> bool {
-        if withdrawal_public {
+    pub fn can_withdraw(&self, automatic_withdrawal: bool, requested_amount: u64) -> bool {
+        if automatic_withdrawal {
             return true
         }
 

@@ -161,7 +161,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
         &metadata.partner,
     );
 
-    if !withdraw_authority.can_withdraw(metadata.ix.withdrawal_public, amount) {
+    if !withdraw_authority.can_withdraw(metadata.ix.automatic_withdrawal, amount) {
         return Err(ProgramError::InvalidAccountData)
     }
 

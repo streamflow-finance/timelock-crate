@@ -35,7 +35,7 @@ pub struct CreateParams {
     /// Whether or not a stream can be canceled by a recipient
     pub cancelable_by_recipient: bool,
     /// Whether or not a 3rd party can initiate withdraw in the name of recipient
-    pub withdrawal_public: bool,
+    pub automatic_withdrawal: bool,
     /// Whether or not the sender can transfer the stream
     pub transferable_by_sender: bool,
     /// Whether or not the recipient can transfer the stream
