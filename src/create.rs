@@ -126,12 +126,12 @@ fn account_sanity_check(pid: &Pubkey, a: CreateAccounts) -> ProgramResult {
 
 fn instruction_sanity_check(ix: CreateParams, now: u64) -> ProgramResult {
     // We'll limit the stream name length
+    // TODO: fixed len
     if ix.stream_name.len() > MAX_STRING_SIZE {
         return Err(SfError::StreamNameTooLong.into())
     }
 
     // Check if timestamps are all in order and valid
-    //todo: end is now calculated, not an input parameter
     duration_sanity(now, ix.start_time, ix.cliff)?;
 
     // Can't deposit less than what's needed for one period
@@ -139,7 +139,9 @@ fn instruction_sanity_check(ix: CreateParams, now: u64) -> ProgramResult {
         return Err(SfError::InvalidDeposit.into())
     }
 
-    // TODO: Anything else?
+    if ix.cliff_amount > 0 && ix.net_amount_deposited < ix.cliff_amount {
+        return Err(SfError::InvalidDeposit.into())
+    }
 
     // Passed without touching the lasers.
     Ok(())
@@ -256,7 +258,7 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
             acc.token_program.key,
             acc.escrow_tokens.key,
             acc.mint.key,
-            acc.escrow_tokens.key, //todo: sam svoj gazda? why owner of itself?
+            acc.escrow_tokens.key,
         )?,
         &[
             acc.token_program.clone(),
@@ -347,7 +349,7 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
     msg!("Called by {}", acc.sender.key);
     msg!("Metadata written in {}", acc.metadata.key);
     msg!("Funds locked in {}", acc.escrow_tokens.key);
-    msg!("Stream duration is {}", pretty_time(ix.end_time - ix.start_time));
+    msg!("Stream duration is {}", pretty_time(metadata.end_time - ix.start_time));
 
     if ix.cliff > 0 && ix.cliff_amount > 0 {
         msg!("Cliff happens in {}", pretty_time(ix.cliff));

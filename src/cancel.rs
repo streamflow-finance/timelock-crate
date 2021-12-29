@@ -121,8 +121,6 @@ fn metadata_sanity_check(acc: CancelAccounts, metadata: Contract) -> ProgramResu
         return Err(SfError::MetadataAccountMismatch.into())
     }
 
-    // TODO: What else?
-
     // Passed without touching the lasers
     Ok(())
 }
@@ -174,6 +172,8 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         if !cancel_authority.can_cancel(&metadata.ix) {
             return Err(ProgramError::InvalidAccountData)
         }
+
+        metadata.canceled_at = now;
     }
 
     if metadata.ix.can_topup {
@@ -183,6 +183,7 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
 
     let recipient_available = calculate_available(
         now,
+        metadata.end_time,
         metadata.ix.clone(),
         metadata.ix.net_amount_deposited,
         metadata.amount_withdrawn,
@@ -190,6 +191,7 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
 
     let streamflow_available = calculate_available(
         now,
+        metadata.end_time,
         metadata.ix.clone(),
         metadata.streamflow_fee_total,
         metadata.streamflow_fee_withdrawn,
@@ -197,12 +199,11 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
 
     let partner_available = calculate_available(
         now,
+        metadata.end_time,
         metadata.ix.clone(),
         metadata.partner_fee_total,
         metadata.partner_fee_withdrawn,
     );
-
-    // TODO: Handle requested amounts.
 
     let recipient_remains = metadata.ix.net_amount_deposited - recipient_available;
     let streamflow_remains = metadata.streamflow_fee_total - streamflow_available;
@@ -275,7 +276,7 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
             &[&seeds],
         )?;
 
-        metadata.streamflow_fee_withdrawn += streamflow_available; // TODO: FIXME
+        metadata.streamflow_fee_withdrawn += streamflow_available;
         msg!(
             "Withdrawn: {} {} tokens",
             amount_to_ui_amount(streamflow_available, mint_info.decimals),
@@ -359,12 +360,6 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         acc.streamflow_treasury,
         acc.streamflow_treasury_tokens,
     )?;
-
-    // TODO: What's with the if clause here?
-    if now < metadata.end_time {
-        metadata.last_withdrawn_at = now;
-        metadata.canceled_at = now;
-    }
 
     save_account_info(&metadata, data)?;
 

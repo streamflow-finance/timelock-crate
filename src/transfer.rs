@@ -15,9 +15,9 @@ pub struct TransferAccounts<'a> {
     /// Account invoking cancel.
     pub authority: AccountInfo<'a>,
     /// Wallet address of a new recipient
-    pub recipient: AccountInfo<'a>,
+    pub new_recipient: AccountInfo<'a>,
     /// The associated token account address of a `new_recipient`
-    pub recipient_tokens: AccountInfo<'a>,
+    pub new_recipient_tokens: AccountInfo<'a>,
     /// The account holding the stream parameters
     pub metadata: AccountInfo<'a>,
     /// The SPL token mint account
@@ -42,14 +42,14 @@ fn account_sanity_check(pid: &Pubkey, a: TransferAccounts) -> ProgramResult {
     }
 
     // We want these accounts to be writable
-    if !a.authority.is_writable || !a.recipient_tokens.is_writable || !a.metadata.is_writable {
+    if !a.authority.is_writable || !a.new_recipient_tokens.is_writable || !a.metadata.is_writable {
         return Err(SfError::AccountsNotWritable.into())
     }
 
     // Check if the associated token accounts are legit
-    let recipient_tokens = get_associated_token_address(a.recipient.key, a.mint.key);
+    let new_recipient_tokens = get_associated_token_address(a.new_recipient.key, a.mint.key);
 
-    if a.recipient_tokens.key != &recipient_tokens {
+    if a.new_recipient_tokens.key != &new_recipient_tokens {
         return Err(SfError::MintMismatch.into())
     }
 
@@ -72,8 +72,6 @@ fn metadata_sanity_check(acc: TransferAccounts, metadata: Contract) -> ProgramRe
     if acc.mint.key != &metadata.mint {
         return Err(SfError::MintMismatch.into())
     }
-
-    // TODO: What else?
 
     // Passed without touching the lasers
     Ok(())
@@ -104,17 +102,21 @@ pub fn transfer_recipient(pid: &Pubkey, acc: TransferAccounts) -> ProgramResult 
         return Err(SfError::TransferNotAllowed.into())
     }
 
-    metadata.recipient = *acc.recipient.key;
-    metadata.recipient_tokens = *acc.recipient_tokens.key;
+    metadata.recipient = *acc.new_recipient.key;
+    metadata.recipient_tokens = *acc.new_recipient_tokens.key;
 
-    if acc.recipient_tokens.data_is_empty() {
+    if acc.new_recipient_tokens.data_is_empty() {
         msg!("Initializing new recipient's associated token account");
         invoke(
-            &create_associated_token_account(acc.authority.key, acc.recipient.key, acc.mint.key),
+            &create_associated_token_account(
+                acc.authority.key,
+                acc.new_recipient.key,
+                acc.mint.key,
+            ),
             &[
                 acc.authority.clone(),
-                acc.recipient_tokens.clone(),
-                acc.recipient.clone(),
+                acc.new_recipient_tokens.clone(),
+                acc.new_recipient.clone(),
                 acc.mint.clone(),
                 acc.system_program.clone(),
                 acc.token_program.clone(),

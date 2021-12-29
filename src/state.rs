@@ -20,8 +20,6 @@ pub const ESCROW_SEED_PREFIX: &[u8] = b"strfi_escrow";
 pub struct CreateParams {
     /// Timestamp when the tokens start vesting
     pub start_time: u64,
-    /// Timestamp when all tokens are fully vested
-    pub end_time: u64,
     /// Deposited amount of tokens
     pub net_amount_deposited: u64,
     /// Time step (period) in seconds per which the vesting/release occurs
@@ -45,7 +43,7 @@ pub struct CreateParams {
     /// Whether topup is enabled
     pub can_topup: bool,
     /// The name of this stream
-    pub stream_name: String,
+    pub stream_name: String, // TODO: Fixed len
 }
 
 impl CreateParams {

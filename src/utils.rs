@@ -46,12 +46,18 @@ pub fn pretty_time(t: u64) -> String {
 }
 
 // TODO: Test units, be robust against possible overflows.
-pub fn calculate_available(now: u64, ix: CreateParams, total: u64, withdrawn: u64) -> u64 {
+pub fn calculate_available(
+    now: u64,
+    end: u64,
+    ix: CreateParams,
+    total: u64,
+    withdrawn: u64,
+) -> u64 {
     if ix.start_time > now || ix.cliff > now || total == 0 || total == withdrawn {
         return 0
     }
 
-    if now > ix.end_time {
+    if now > end {
         return total - withdrawn
     }
 

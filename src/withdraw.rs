@@ -115,8 +115,6 @@ fn metadata_sanity_check(acc: WithdrawAccounts, metadata: Contract) -> ProgramRe
         return Err(SfError::MetadataAccountMismatch.into())
     }
 
-    // TODO: What else?
-
     // Passed without touching the lasers
     Ok(())
 }
@@ -175,6 +173,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
     // Check what has been unlocked so far
     let recipient_available = calculate_available(
         now,
+        metadata.end_time,
         metadata.ix.clone(),
         metadata.ix.net_amount_deposited,
         metadata.amount_withdrawn,
@@ -182,6 +181,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
 
     let streamflow_available = calculate_available(
         now,
+        metadata.end_time,
         metadata.ix.clone(),
         metadata.streamflow_fee_total,
         metadata.streamflow_fee_withdrawn,
@@ -189,6 +189,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
 
     let partner_available = calculate_available(
         now,
+        metadata.end_time,
         metadata.ix.clone(),
         metadata.partner_fee_total,
         metadata.partner_fee_withdrawn,
@@ -313,7 +314,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
     save_account_info(&metadata, data)?;
 
     // When everything is withdrawn, close the accounts.
-    if now >= metadata.ix.end_time {
+    if now >= metadata.end_time {
         // TODO: Close metadata account once there is an alternative storage solution
         // for historical data.
         // msg!("Closing metadata account");
