@@ -16,8 +16,11 @@ use spl_token::amount_to_ui_amount;
 use crate::{
     error::SfError,
     process,
-    state::{save_account_info, Contract, STRM_TREASURY},
-    utils::{calculate_available, unpack_mint_account, unpack_token_account, Invoker},
+    state::{find_escrow_account, save_account_info, Contract, STRM_TREASURY},
+    utils::{
+        calculate_available, calculate_external_deposit, unpack_mint_account, unpack_token_account,
+        Invoker,
+    },
 };
 
 #[derive(Clone, Debug)]
@@ -95,13 +98,6 @@ fn account_sanity_check(pid: &Pubkey, a: CancelAccounts) -> ProgramResult {
         return Err(SfError::MintMismatch.into())
     }
 
-    // Check escrow token account is legit
-    // TODO: Needs a deterministic seed and metadata should become a PDA
-    let escrow_tokens_pubkey = Pubkey::find_program_address(&[a.metadata.key.as_ref()], pid).0;
-    if &escrow_tokens_pubkey != a.escrow_tokens.key {
-        return Err(ProgramError::InvalidAccountData)
-    }
-
     // On-chain program ID checks
     if a.token_program.key != &spl_token::id() {
         return Err(ProgramError::InvalidAccountData)
@@ -150,6 +146,14 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         Ok(v) => v,
         Err(_) => return Err(SfError::InvalidMetadata.into()),
     };
+
+    // Taking the protocol version from the metadata, we check that the token
+    // escrow account is correct:
+    if &find_escrow_account(metadata.version, acc.metadata.key.as_ref(), pid).0 !=
+        acc.escrow_tokens.key
+    {
+        return Err(ProgramError::InvalidAccountData)
+    }
 
     metadata_sanity_check(acc.clone(), metadata.clone())?;
 

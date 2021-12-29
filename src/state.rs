@@ -12,6 +12,7 @@ pub const PROGRAM_VERSION: u8 = 2;
 pub const STRM_TREASURY: &str = "Ht5G1RhkcKnpLVLMhqJc5aqZ4wYUEbxbtZwGCVbgU7DL"; //todo: update
 pub const MAX_STRING_SIZE: usize = 200;
 pub const STRM_FEE_DEFAULT_PERCENT: f32 = 0.25;
+pub const METADATA_SEED_PREFIX: &[u8] = b"strfi_metadata";
 
 /// The struct containing instructions for initializing a stream
 #[derive(BorshDeserialize, BorshSerialize, Clone, Debug)]
@@ -194,4 +195,12 @@ pub fn save_account_info(
     let bytes = metadata.try_to_vec()?;
     data[0..bytes.len()].clone_from_slice(&bytes);
     Ok(())
+}
+
+pub fn find_escrow_account(version: u8, seed: &[u8], pid: &Pubkey) -> (Pubkey, u8) {
+    if version == 0 {
+        return Pubkey::find_program_address(&[seed], pid)
+    }
+
+    Pubkey::find_program_address(&[METADATA_SEED_PREFIX, seed], pid)
 }

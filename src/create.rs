@@ -19,8 +19,8 @@ use spl_token::amount_to_ui_amount;
 use crate::{
     error::SfError,
     state::{
-        save_account_info, Contract, CreateParams, MAX_STRING_SIZE, STRM_FEE_DEFAULT_PERCENT,
-        STRM_TREASURY,
+        find_escrow_account, save_account_info, Contract, CreateParams, MAX_STRING_SIZE,
+        PROGRAM_VERSION, STRM_FEE_DEFAULT_PERCENT, STRM_TREASURY,
     },
     utils::{
         calculate_fee_from_amount, duration_sanity, pretty_time, unpack_mint_account,
@@ -112,9 +112,8 @@ fn account_sanity_check(pid: &Pubkey, a: CreateAccounts) -> ProgramResult {
     }
 
     // Check escrow token account is legit
-    // TODO: Needs a deterministic seed and metadata should become a PDA
-    let escrow_tokens_pubkey = Pubkey::find_program_address(&[a.metadata.key.as_ref()], pid).0;
-    if &escrow_tokens_pubkey != a.escrow_tokens.key {
+    if &find_escrow_account(PROGRAM_VERSION, a.metadata.key.as_ref(), pid).0 != a.escrow_tokens.key
+    {
         return Err(ProgramError::InvalidAccountData)
     }
 

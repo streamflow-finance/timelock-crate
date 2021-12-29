@@ -1,11 +1,5 @@
 use std::str::FromStr;
 
-use crate::{
-    error::SfError,
-    process,
-    state::{Contract, STRM_TREASURY},
-    utils::{calculate_available, unpack_mint_account, unpack_token_account, Invoker},
-};
 use borsh::BorshSerialize;
 use solana_program::{
     account_info::AccountInfo,
@@ -19,6 +13,16 @@ use solana_program::{
 };
 use spl_associated_token_account::get_associated_token_address;
 use spl_token::amount_to_ui_amount;
+
+use crate::{
+    error::SfError,
+    process,
+    state::{find_escrow_account, Contract, STRM_FEE_DEFAULT_PERCENT, STRM_TREASURY},
+    utils::{
+        calculate_available, calculate_external_deposit, calculate_fee_from_amount,
+        unpack_mint_account, unpack_token_account, Invoker,
+    },
+};
 
 #[derive(Clone, Debug)]
 pub struct WithdrawAccounts<'a> {
@@ -85,13 +89,6 @@ fn account_sanity_check(pid: &Pubkey, a: WithdrawAccounts) -> ProgramResult {
         return Err(ProgramError::InvalidAccountData)
     }
 
-    // Check escrow token account is legit
-    // TODO: Needs a deterministic seed and metadata should become a PDA
-    let escrow_tokens_pubkey = Pubkey::find_program_address(&[a.metadata.key.as_ref()], pid).0;
-    if &escrow_tokens_pubkey != a.escrow_tokens.key {
-        return Err(ProgramError::InvalidAccountData)
-    }
-
     // On-chain program ID checks
     if a.token_program.key != &spl_token::id() {
         return Err(ProgramError::InvalidAccountData)
@@ -143,6 +140,14 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
         Ok(v) => v,
         Err(_) => return Err(SfError::InvalidMetadata.into()),
     };
+
+    // Taking the protocol version from the metadata, we check that the token
+    // escrow account is correct:
+    if &find_escrow_account(metadata.version, acc.metadata.key.as_ref(), pid).0 !=
+        acc.escrow_tokens.key
+    {
+        return Err(ProgramError::InvalidAccountData)
+    }
 
     metadata_sanity_check(acc.clone(), metadata.clone())?;
 

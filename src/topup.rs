@@ -4,6 +4,7 @@ use solana_program::{
     entrypoint::ProgramResult,
     msg,
     program::invoke,
+    program_error::ProgramError,
     pubkey::Pubkey,
     sysvar::{clock::Clock, Sysvar},
 };
@@ -11,8 +12,8 @@ use spl_token::amount_to_ui_amount;
 
 use crate::{
     error::SfError,
-    state::{save_account_info, Contract},
-    utils::{unpack_mint_account, unpack_token_account},
+    state::{find_escrow_account, save_account_info, Contract},
+    utils::{calculate_fee_from_amount, unpack_mint_account, unpack_token_account},
 };
 
 #[derive(Clone, Debug)]
@@ -29,7 +30,7 @@ pub struct TopupAccounts<'a> {
     pub token_program: AccountInfo<'a>,
 }
 
-pub fn topup(_program_id: &Pubkey, acc: TopupAccounts, amount: u64) -> ProgramResult {
+pub fn topup(pid: &Pubkey, acc: TopupAccounts, amount: u64) -> ProgramResult {
     msg!("Topping up escrow account");
 
     // Sanity checks
@@ -47,6 +48,14 @@ pub fn topup(_program_id: &Pubkey, acc: TopupAccounts, amount: u64) -> ProgramRe
 
     if !metadata.ix.can_topup {
         return Err(SfError::InvalidMetadata.into())
+    }
+
+    // Taking the protocol version from the metadata, we check that the token
+    // escrow account is correct:
+    if &find_escrow_account(metadata.version, acc.metadata.key.as_ref(), pid).0 !=
+        acc.escrow_tokens.key
+    {
+        return Err(ProgramError::InvalidAccountData)
     }
 
     let escrow_tokens = unpack_token_account(&acc.escrow_tokens)?;
