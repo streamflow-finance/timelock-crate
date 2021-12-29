@@ -13,7 +13,7 @@ use spl_token::amount_to_ui_amount;
 use crate::{
     error::SfError,
     state::{find_escrow_account, save_account_info, Contract},
-    utils::{calculate_fee_from_amount, unpack_mint_account, unpack_token_account},
+    utils::{unpack_mint_account, unpack_token_account},
 };
 
 #[derive(Clone, Debug)]
@@ -40,7 +40,7 @@ pub fn topup(pid: &Pubkey, acc: TopupAccounts, amount: u64) -> ProgramResult {
         return Err(SfError::AmountIsZero.into())
     }
 
-    let mut data = acc.metadata.try_borrow_mut_data()?;
+    let data = acc.metadata.try_borrow_mut_data()?;
     let mut metadata: Contract = match solana_borsh::try_from_slice_unchecked(&data) {
         Ok(v) => v,
         Err(_) => return Err(SfError::InvalidMetadata.into()),

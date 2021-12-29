@@ -7,7 +7,6 @@ use crate::{
     utils::{calculate_external_deposit, calculate_fee_from_amount},
 };
 
-// Hardcoded program version
 pub const PROGRAM_VERSION: u8 = 2;
 pub const STRM_TREASURY: &str = "Ht5G1RhkcKnpLVLMhqJc5aqZ4wYUEbxbtZwGCVbgU7DL"; //todo: update
 pub const MAX_NAME_SIZE_B: usize = 64;
@@ -192,6 +191,7 @@ pub fn save_account_info(metadata: &Contract, mut data: RefMut<&mut [u8]>) -> Pr
     Ok(())
 }
 
+#[allow(unused)]
 pub fn find_escrow_account(version: u8, seed: &[u8], pid: &Pubkey) -> (Pubkey, u8) {
     Pubkey::find_program_address(&[ESCROW_SEED_PREFIX, seed], pid)
 }

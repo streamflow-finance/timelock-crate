@@ -1,6 +1,5 @@
 use std::str::FromStr;
 
-use borsh::BorshSerialize;
 use solana_program::{
     account_info::AccountInfo,
     borsh as solana_borsh,
@@ -17,14 +16,8 @@ use spl_token::amount_to_ui_amount;
 use crate::{
     error::SfError,
     process,
-    state::{
-        find_escrow_account, save_account_info, Contract, ESCROW_SEED_PREFIX,
-        STRM_FEE_DEFAULT_PERCENT, STRM_TREASURY,
-    },
-    utils::{
-        calculate_available, calculate_external_deposit, calculate_fee_from_amount,
-        unpack_mint_account, unpack_token_account, Invoker,
-    },
+    state::{find_escrow_account, save_account_info, Contract, ESCROW_SEED_PREFIX, STRM_TREASURY},
+    utils::{calculate_available, unpack_mint_account, unpack_token_account, Invoker},
 };
 
 #[derive(Clone, Debug)]
@@ -136,7 +129,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
 
     account_sanity_check(pid, acc.clone())?;
 
-    let mut data = acc.metadata.try_borrow_mut_data()?;
+    let data = acc.metadata.try_borrow_mut_data()?;
     let mut metadata: Contract = match solana_borsh::try_from_slice_unchecked(&data) {
         Ok(v) => v,
         Err(_) => return Err(SfError::InvalidMetadata.into()),

@@ -164,7 +164,7 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
     }
 
     // Check partner accounts are legit
-    let (mut partner_fee_percent, mut strm_fee_percent) =
+    let (partner_fee_percent, strm_fee_percent) =
         match fetch_partner_fee_data(&acc.fee_oracle, acc.partner.key) {
             // this way we ensure that no matter what fee can't be larger than 0.5%
             Ok(v) => (if v.0 > 0.5 { 0.5 } else { v.0 }, if v.1 > 0.5 { 0.5 } else { v.1 }),
@@ -186,7 +186,7 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
         return Err(ProgramError::InsufficientFunds)
     }
 
-    let mut metadata = Contract::new(
+    let metadata = Contract::new(
         now,
         acc.clone(),
         ix.clone(),

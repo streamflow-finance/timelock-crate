@@ -83,7 +83,7 @@ pub fn transfer_recipient(pid: &Pubkey, acc: TransferAccounts) -> ProgramResult 
     // Sanity checks
     account_sanity_check(pid, acc.clone())?;
 
-    let mut data = acc.metadata.try_borrow_mut_data()?;
+    let data = acc.metadata.try_borrow_mut_data()?;
     let mut metadata: Contract = match solana_borsh::try_from_slice_unchecked(&data) {
         Ok(v) => v,
         Err(_) => return Err(SfError::InvalidMetadata.into()),
