@@ -43,7 +43,7 @@ pub struct CreateParams {
     /// Whether topup is enabled
     pub can_topup: bool,
     /// The name of this stream
-    pub stream_name: String, // TODO: Fixed len
+    pub stream_name: [u8; 64],
 }
 
 impl CreateParams {

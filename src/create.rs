@@ -125,12 +125,6 @@ fn account_sanity_check(pid: &Pubkey, a: CreateAccounts) -> ProgramResult {
 }
 
 fn instruction_sanity_check(ix: CreateParams, now: u64) -> ProgramResult {
-    // We'll limit the stream name length
-    // TODO: fixed len
-    if ix.stream_name.len() > MAX_STRING_SIZE {
-        return Err(SfError::StreamNameTooLong.into())
-    }
-
     // Check if timestamps are all in order and valid
     duration_sanity(now, ix.start_time, ix.cliff)?;
 
