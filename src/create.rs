@@ -1,4 +1,4 @@
-use std::{cmp::max, str::FromStr};
+use std::str::FromStr;
 
 use borsh::BorshSerialize;
 use partner_oracle::fees::fetch_partner_fee_data;
@@ -69,7 +69,7 @@ pub struct CreateAccounts<'a> {
     pub system_program: AccountInfo<'a>, // []
 }
 
-fn account_sanity_check(pid: &Pubkey, a: CreateAccounts) -> ProgramResult {
+fn account_sanity_check(_pid: &Pubkey, a: CreateAccounts) -> ProgramResult {
     msg!("Checking if all given accounts are correct");
 
     // We want these to not be initialized
