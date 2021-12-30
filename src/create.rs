@@ -334,21 +334,23 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
         )?;
     }
 
-    msg!(
-        "Success initializing {} {} token_stream for {}",
-        amount_to_ui_amount(ix.net_amount_deposited, mint_info.decimals),
-        acc.mint.key,
-        acc.recipient.key
-    );
+    // computationally expensive operations. :)
 
-    msg!("Called by {}", acc.sender.key);
-    msg!("Metadata written in {}", acc.metadata.key);
-    msg!("Funds locked in {}", acc.escrow_tokens.key);
-    msg!("Stream duration is {}", pretty_time(metadata.end_time - ix.start_time));
-
-    if ix.cliff > 0 && ix.cliff_amount > 0 {
-        msg!("Cliff happens in {}", pretty_time(ix.cliff));
-    }
+    // msg!(
+    //     "Success initializing {} {} token_stream for {}",
+    //     amount_to_ui_amount(ix.net_amount_deposited, mint_info.decimals),
+    //     acc.mint.key,
+    //     acc.recipient.key
+    // );
+    //
+    // msg!("Called by {}", acc.sender.key);
+    // msg!("Metadata written in {}", acc.metadata.key);
+    // msg!("Funds locked in {}", acc.escrow_tokens.key);
+    // msg!("Stream duration is {}", pretty_time(metadata.end_time - ix.start_time));
+    //
+    // if ix.cliff > 0 && ix.cliff_amount > 0 {
+    //     msg!("Cliff happens in {}", pretty_time(ix.cliff));
+    // }
 
     Ok(())
 }
