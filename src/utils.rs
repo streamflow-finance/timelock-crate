@@ -62,9 +62,8 @@ pub fn calculate_available(
 
     let start = if ix.cliff > 0 { ix.cliff } else { ix.start_time };
 
-    // TODO: Use uint arithmetics
     let periods_passed = (now - start) / ix.period;
-    let available = (periods_passed as f64 * ix.amount_per_period as f64) as u64;
+    let available = periods_passed.checked_mul(ix.amount_per_period)?;
     available - withdrawn + ix.cliff_amount
 }
 
