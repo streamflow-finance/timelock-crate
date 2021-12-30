@@ -11,7 +11,7 @@ pub const PROGRAM_VERSION: u8 = 2;
 pub const STRM_TREASURY: &str = "Ht5G1RhkcKnpLVLMhqJc5aqZ4wYUEbxbtZwGCVbgU7DL"; //todo: update
 pub const MAX_NAME_SIZE_B: usize = 64;
 pub const STRM_FEE_DEFAULT_PERCENT: f32 = 0.25;
-pub const ESCROW_SEED_PREFIX: &[u8] = b"strfi_escrow";
+pub const ESCROW_SEED_PREFIX: &[u8] = b"strm";
 
 /// The struct containing instructions for initializing a stream
 #[derive(BorshDeserialize, BorshSerialize, Clone, Debug)]
@@ -42,7 +42,7 @@ pub struct CreateParams {
     /// Whether topup is enabled
     pub can_topup: bool,
     /// The name of this stream
-    pub stream_name: [u8; 64],
+    pub stream_name: String,
     //can't use const MAX_NAME_SIZE_B bcs of javascript generator.
 }
 
