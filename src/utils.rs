@@ -63,7 +63,7 @@ pub fn calculate_available(
     let start = if ix.cliff > 0 { ix.cliff } else { ix.start_time };
 
     let periods_passed = (now - start) / ix.period;
-    let available = periods_passed.checked_mul(ix.amount_per_period)?;
+    let available = periods_passed.checked_mul(ix.amount_per_period).unwrap();
     available - withdrawn + ix.cliff_amount
 }
 
