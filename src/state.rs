@@ -66,7 +66,7 @@ impl CreateParams {
     }
 }
 
-/// TokenStreamData is the struct containing metadata for an SPL token stream.
+/// Contract is the struct containing metadata for an SPL token stream.
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug)]
 #[repr(C)]
 pub struct Contract {
@@ -123,7 +123,7 @@ pub struct Contract {
 }
 
 impl Contract {
-    /// Initialize a new `TokenStreamData` struct.
+    /// Initialize a new `Contract` struct.
     pub fn new(
         now: u64,
         acc: CreateAccounts,
