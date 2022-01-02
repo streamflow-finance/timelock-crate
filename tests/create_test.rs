@@ -27,7 +27,8 @@ use fascilities::*;
 
 #[tokio::test]
 async fn test_create_stream_success() -> Result<()> {
-    let strm_key = Pubkey::from_str(STRM_TREASURY).unwrap();
+    // let strm_key = Pubkey::from_str(STRM_TREASURY).unwrap();
+    let strm_key = Keypair::new().pubkey();
     let alice = Account { lamports: sol_to_lamports(1.0), ..Account::default() };
     let bob = Account { lamports: sol_to_lamports(1.0), ..Account::default() };
 
@@ -85,9 +86,10 @@ async fn test_create_stream_success() -> Result<()> {
             automatic_withdrawal: false,
             transferable_by_sender: false,
             transferable_by_recipient: false,
-            stream_name: "TheTestoooooooooor".as_bytes(),
+            can_topup: false,
+            stream_name: "TheTestoooooooooor".to_string(),
         },
-    };a
+    };
 
     let create_stream_ix_bytes = Instruction::new_with_bytes(
         tt.program_id,
@@ -115,8 +117,9 @@ async fn test_create_stream_success() -> Result<()> {
         .bench
         .process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp]))
         .await;
-
-    assert!(!transaction.is_err());
+    let is_err = transaction.is_err();
+    println!("{:?}", transaction);
+    assert!(!is_err);
     Ok(())
     // let metadata_acc = tt.bench.get_account(&metadata_kp.pubkey()).await.unwrap();
     // let metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
