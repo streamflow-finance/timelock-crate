@@ -5,7 +5,7 @@
 #[cfg(not(feature = "no-entrypoint"))]
 pub mod entrypoint;
 /// Errors
-pub(crate) mod error;
+pub mod error;
 /// Structs and data
 pub mod state;
 /// Utility functions

@@ -2,7 +2,7 @@ use solana_program::{msg, program_error::ProgramError};
 use thiserror::Error;
 
 #[derive(Error, Debug, Copy, Clone)]
-pub(crate) enum SfError {
+pub enum SfError {
     #[error("Accounts not writable!")]
     AccountsNotWritable,
 
