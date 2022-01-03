@@ -14,9 +14,10 @@ use solana_sdk::{
     sysvar::rent,
 };
 use spl_associated_token_account::get_associated_token_address;
+use std::str::FromStr;
 use test_sdk::tools::clone_keypair;
 
-use streamflow_timelock::state::{Contract, CreateParams, PROGRAM_VERSION};
+use streamflow_timelock::state::{Contract, CreateParams, PROGRAM_VERSION, STRM_TREASURY};
 
 mod fascilities;
 
@@ -24,10 +25,11 @@ use fascilities::*;
 
 #[tokio::test]
 async fn timelock_program_test() -> Result<()> {
+    let strm_key = Pubkey::from_str(STRM_TREASURY).unwrap();
     let alice = Account { lamports: sol_to_lamports(1.0), ..Account::default() };
     let bob = Account { lamports: sol_to_lamports(1.0), ..Account::default() };
 
-    let mut tt = TimelockProgramTest::start_new(&[alice, bob]).await;
+    let mut tt = TimelockProgramTest::start_new(&[alice, bob], &strm_key).await;
 
     let alice = clone_keypair(&tt.accounts[0]);
     let bob = clone_keypair(&tt.accounts[1]);
@@ -67,9 +69,9 @@ async fn timelock_program_test() -> Result<()> {
         ix: 0,
         metadata: CreateParams {
             start_time: now + 5,
-            end_time: now + 605,
             net_amount_deposited: spl_token::ui_amount_to_amount(20.0, 8),
             period: 1,
+            amount_per_period: 0,
             cliff: 0,
             cliff_amount: 0,
             cancelable_by_sender: false,
@@ -77,8 +79,8 @@ async fn timelock_program_test() -> Result<()> {
             automatic_withdrawal: false,
             transferable_by_sender: false,
             transferable_by_recipient: false,
-            release_rate: 0,
             stream_name: "TheTestoooooooooor".to_string(),
+            can_topup: false,
         },
     };
 
