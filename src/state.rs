@@ -54,7 +54,7 @@ impl CreateParams {
         let cliff_amount = self.cliff_amount;
 
         if self.net_amount_deposited < cliff_amount {
-            return cliff_time
+            return cliff_time;
         }
         // Nr of periods after the cliff
         let periods_left = (self.net_amount_deposited - cliff_amount) / self.amount_per_period;
@@ -171,15 +171,24 @@ impl Contract {
             calculate_external_deposit(balance, gross_amount, self.amount_withdrawn);
 
         if external_deposit > 0 {
-            self.deposit(external_deposit);
+            self.deposit_gross(external_deposit);
         }
     }
 
-    pub fn deposit(&mut self, gross_amount: u64) {
+    pub fn deposit_gross(&mut self, gross_amount: u64) {
         let partner_fee_addition =
             calculate_fee_from_amount(gross_amount, self.partner_fee_percent);
         let strm_fee_addition = calculate_fee_from_amount(gross_amount, self.partner_fee_percent);
         self.ix.net_amount_deposited += gross_amount - partner_fee_addition - strm_fee_addition;
+        self.partner_fee_total += partner_fee_addition;
+        self.streamflow_fee_total += strm_fee_addition;
+        self.end_time = self.ix.calculate_end_time();
+    }
+
+    pub fn deposit_net(&mut self, net_amount: u64) {
+        let partner_fee_addition = calculate_fee_from_amount(net_amount, self.partner_fee_percent);
+        let strm_fee_addition = calculate_fee_from_amount(net_amount, self.partner_fee_percent);
+        self.ix.net_amount_deposited += net_amount;
         self.partner_fee_total += partner_fee_addition;
         self.streamflow_fee_total += strm_fee_addition;
         self.end_time = self.ix.calculate_end_time();
