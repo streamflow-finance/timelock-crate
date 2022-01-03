@@ -1,5 +1,5 @@
 use solana_program::{
-    account_info::AccountInfo, entrypoint::ProgramResult, program_error::ProgramError,
+    account_info::AccountInfo, entrypoint::ProgramResult, msg, program_error::ProgramError,
     program_pack::Pack, pubkey::Pubkey,
 };
 
@@ -51,6 +51,7 @@ pub fn calculate_available(
     ix: CreateParams,
     total: u64,
     withdrawn: u64,
+    fee_percentage: f32,
 ) -> u64 {
     if ix.start_time > now || ix.cliff > now || total == 0 || total == withdrawn {
         return 0
@@ -64,10 +65,23 @@ pub fn calculate_available(
 
     let periods_passed = (now - start) / ix.period;
     let available = periods_passed.checked_mul(ix.amount_per_period).unwrap();
+    let precision_factor: f32 = 1000000.0;
+    let factor = (fee_percentage / 100.0 * precision_factor) as u64;
+    let available = available * factor / precision_factor as u64;
     available - withdrawn + ix.cliff_amount
 }
 
-fn calculate_available2(now: u64, end: u64, ix: CreateParams, total: u64, withdrawn: u64) -> u64 {
+pub fn calculate_available2(
+    now: u64,
+    end: u64,
+    ix: CreateParams,
+    total: u64,
+    withdrawn: u64,
+    fee_percentage: f32,
+) -> u64 {
+    if fee_percentage == 0.0 {
+        return 0
+    }
     if ix.start_time > now || ix.cliff > now || total == 0 || total == withdrawn {
         return 0
     }
@@ -80,7 +94,9 @@ fn calculate_available2(now: u64, end: u64, ix: CreateParams, total: u64, withdr
 
     let periods_passed = u128::from(now - start) * 10_u128.pow(8) / u128::from(ix.period);
     let periods_passed = periods_passed / 10_u128.pow(8);
-    let available = periods_passed * u128::from(ix.amount_per_period);
+    let available =
+        periods_passed * u128::from(ix.amount_per_period) * 10_u128.pow(8) / fee_percentage as u128;
+    let available = available / 10_u128.pow(8);
 
     let ret = available - u128::from(withdrawn) + u128::from(ix.cliff_amount);
 
@@ -90,7 +106,7 @@ fn calculate_available2(now: u64, end: u64, ix: CreateParams, total: u64, withdr
 
 // TODO: impl calculations from ix
 pub fn calculate_external_deposit(balance: u64, deposited: u64, withdrawn: u64) -> u64 {
-    if deposited - withdrawn == balance {
+    if deposited - withdrawn >= balance {
         return 0
     }
 

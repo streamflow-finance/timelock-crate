@@ -187,6 +187,7 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         metadata.ix.clone(),
         metadata.ix.net_amount_deposited,
         metadata.amount_withdrawn,
+        100.0,
     );
 
     let streamflow_available = calculate_available(
@@ -195,6 +196,7 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         metadata.ix.clone(),
         metadata.streamflow_fee_total,
         metadata.streamflow_fee_withdrawn,
+        metadata.streamflow_fee_percent,
     );
 
     let partner_available = calculate_available(
@@ -203,6 +205,7 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         metadata.ix.clone(),
         metadata.partner_fee_total,
         metadata.partner_fee_withdrawn,
+        metadata.partner_fee_percent,
     );
 
     let recipient_remains = metadata.ix.net_amount_deposited - recipient_available;
@@ -248,15 +251,15 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         );
     }
 
-    let escrow_tokens = unpack_token_account(&acc.escrow_tokens)?;
+    // let escrow_tokens = unpack_token_account(&acc.escrow_tokens)?;
     // if stream can_setup - external deposits will be settled, so this ext deposit will be 0
-    let external_deposit = calculate_external_deposit(
-        escrow_tokens.amount,
-        metadata.ix.net_amount_deposited,
-        metadata.amount_withdrawn,
-    );
-    let transferable_to_strm = streamflow_available + external_deposit;
-    if transferable_to_strm > 0 {
+    // let external_deposit = calculate_external_deposit(
+    //     escrow_tokens.amount,
+    //     metadata.ix.net_amount_deposited,
+    //     metadata.amount_withdrawn,
+    // );
+    // TODO: if account is not topapable, transfer external deposits back to strm
+    if streamflow_available > 0 {
         msg!("Transferring unlocked tokens to Streamflow treasury");
         invoke_signed(
             &spl_token::instruction::transfer(
@@ -282,6 +285,8 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
             amount_to_ui_amount(streamflow_available, mint_info.decimals),
             metadata.mint
         );
+        msg!("Total fee {}", metadata.streamflow_fee_total);
+        msg!("Withdrawn fee {}", metadata.streamflow_fee_withdrawn);
         msg!(
             "Remaining: {} {} tokens",
             amount_to_ui_amount(

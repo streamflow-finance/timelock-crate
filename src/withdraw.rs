@@ -170,6 +170,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
         metadata.ix.clone(),
         metadata.ix.net_amount_deposited,
         metadata.amount_withdrawn,
+        100.0,
     );
 
     let streamflow_available = calculate_available(
@@ -178,6 +179,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
         metadata.ix.clone(),
         metadata.streamflow_fee_total,
         metadata.streamflow_fee_withdrawn,
+        metadata.streamflow_fee_percent,
     );
 
     let partner_available = calculate_available(
@@ -186,6 +188,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
         metadata.ix.clone(),
         metadata.partner_fee_total,
         metadata.partner_fee_withdrawn,
+        metadata.partner_fee_percent,
     );
 
     if amount > recipient_available {

@@ -9,7 +9,7 @@ pub mod error;
 /// Structs and data
 pub mod state;
 /// Utility functions
-pub(crate) mod utils;
+pub mod utils;
 
 pub mod cancel;
 pub mod create;
