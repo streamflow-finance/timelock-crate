@@ -17,10 +17,7 @@ use crate::{
     error::SfError,
     process,
     state::{find_escrow_account, save_account_info, Contract, ESCROW_SEED_PREFIX, STRM_TREASURY},
-    utils::{
-        calculate_available, calculate_external_deposit, unpack_mint_account, unpack_token_account,
-        Invoker,
-    },
+    utils::{calculate_available, unpack_mint_account, unpack_token_account, Invoker},
 };
 
 #[derive(Clone, Debug)]
@@ -251,14 +248,6 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         );
     }
 
-    // let escrow_tokens = unpack_token_account(&acc.escrow_tokens)?;
-    // if stream can_setup - external deposits will be settled, so this ext deposit will be 0
-    // let external_deposit = calculate_external_deposit(
-    //     escrow_tokens.amount,
-    //     metadata.ix.net_amount_deposited,
-    //     metadata.amount_withdrawn,
-    // );
-    // TODO: if account is not topapable, transfer external deposits back to strm
     if streamflow_available > 0 {
         msg!("Transferring unlocked tokens to Streamflow treasury");
         invoke_signed(

@@ -166,9 +166,8 @@ impl Contract {
     }
 
     pub fn sync_balance(&mut self, balance: u64) {
-        let gross_amount = self.gross_amount();
         let external_deposit =
-            calculate_external_deposit(balance, gross_amount, self.amount_withdrawn);
+            calculate_external_deposit(balance, self.gross_amount(), self.amount_withdrawn);
 
         if external_deposit > 0 {
             self.deposit_gross(external_deposit);
