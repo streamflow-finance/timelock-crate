@@ -208,7 +208,7 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
     let metadata_rent = cluster_rent.minimum_balance(metadata_struct_size);
     let mut tokens_rent = cluster_rent.minimum_balance(tokens_struct_size);
     if acc.recipient_tokens.data_is_empty() {
-        tokens_rent *= cluster_rent.minimum_balance(tokens_struct_size);
+        tokens_rent += cluster_rent.minimum_balance(tokens_struct_size);
     }
 
     if acc.sender.lamports() < metadata_rent + tokens_rent {
