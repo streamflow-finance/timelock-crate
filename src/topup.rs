@@ -61,12 +61,12 @@ pub fn topup(pid: &Pubkey, acc: TopupAccounts, amount: u64) -> ProgramResult {
     let escrow_tokens = unpack_token_account(&acc.escrow_tokens)?;
     metadata.sync_balance(escrow_tokens.amount);
 
-    //metadata_sanity_check(acc.clone())?;
-
     let now = Clock::get()?.unix_timestamp as u64;
     if metadata.end_time < now {
         return Err(SfError::StreamClosed.into())
     }
+
+    metadata.deposit_net(amount);
 
     msg!("Transferring funds into escrow account");
     invoke(
@@ -76,7 +76,7 @@ pub fn topup(pid: &Pubkey, acc: TopupAccounts, amount: u64) -> ProgramResult {
             acc.escrow_tokens.key,
             acc.sender.key,
             &[],
-            amount,
+            metadata.gross_amount(),
         )?,
         &[
             acc.sender_tokens.clone(),
@@ -86,14 +86,13 @@ pub fn topup(pid: &Pubkey, acc: TopupAccounts, amount: u64) -> ProgramResult {
         ],
     )?;
 
-    metadata.deposit(amount);
     save_account_info(&metadata, data)?;
 
     let mint_info = unpack_mint_account(&acc.mint)?;
 
     msg!(
         "Successfully topped up {} to token stream {} on behalf of {}",
-        amount_to_ui_amount(amount, mint_info.decimals),
+        amount_to_ui_amount(metadata.gross_amount(), mint_info.decimals),
         acc.escrow_tokens.key,
         acc.sender.key,
     );
