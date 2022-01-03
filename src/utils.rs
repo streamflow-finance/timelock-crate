@@ -7,7 +7,7 @@ use crate::{error::SfError, state::CreateParams};
 
 /// Do a sanity check with given Unix timestamps.
 pub fn duration_sanity(now: u64, start: u64, cliff: u64) -> ProgramResult {
-    let cliff_cond = if cliff == 0 { true } else { start < cliff };
+    let cliff_cond = if cliff == 0 { true } else { start <= cliff };
 
     if now < start && cliff_cond {
         return Ok(())
