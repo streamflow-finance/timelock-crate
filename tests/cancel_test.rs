@@ -73,10 +73,11 @@ async fn test_cancel_success() -> Result<()> {
     let clock = tt.bench.get_clock().await;
     let now = clock.unix_timestamp as u64;
     let transfer_amount = 20;
-    let amount_per_period = 1000000;
+    let amount_per_period = spl_token::ui_amount_to_amount(0.01, 8);
     let period = 1;
 
     let cancelable_by_sender = true;
+    let cliff = now + 40;
     let create_stream_ix = CreateStreamIx {
         ix: 0,
         metadata: CreateParams {
@@ -84,8 +85,8 @@ async fn test_cancel_success() -> Result<()> {
             net_amount_deposited: spl_token::ui_amount_to_amount(transfer_amount as f64, 8),
             period,
             amount_per_period,
-            cliff: 0,
-            cliff_amount: 0,
+            cliff,
+            cliff_amount: spl_token::ui_amount_to_amount(transfer_amount as f64 / 2.0, 8),
             cancelable_by_sender,
             cancelable_by_recipient: false,
             automatic_withdrawal: false,
@@ -126,7 +127,8 @@ async fn test_cancel_success() -> Result<()> {
     assert!(!is_err);
 
     let periods_passed = 200;
-    tt.advance_clock_past_timestamp(now as i64 + periods_passed).await;
+    let periods_after_cliff = now + periods_passed - cliff;
+    tt.advance_clock_past_timestamp((now + periods_passed) as i64).await;
 
     let cancel_ix = CancelIx { ix: 2 };
 
@@ -156,8 +158,8 @@ async fn test_cancel_success() -> Result<()> {
 
     let strm_expected_fee_total =
         (0.0025 * spl_token::ui_amount_to_amount(transfer_amount as f64, 8) as f64) as u64;
-    let strm_expected_fee_withdrawn = 545000;
-    let recipient_expected_withdrawn = amount_per_period * (periods_passed as u64 + 18);
+    let strm_expected_fee_withdrawn = 2957500;
+    let recipient_expected_withdrawn = 1183000000;
 
     let metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
     assert_eq!(metadata_data.ix.cancelable_by_sender, cancelable_by_sender);
@@ -167,6 +169,7 @@ async fn test_cancel_success() -> Result<()> {
     assert_eq!(metadata_data.streamflow_fee_withdrawn, strm_expected_fee_withdrawn);
     assert_eq!(metadata_data.partner_fee_withdrawn, strm_expected_fee_withdrawn);
     assert_eq!(metadata_data.amount_withdrawn, recipient_expected_withdrawn);
+    // assert_eq!(metadata_data.end_time, );
 
     Ok(())
 }

@@ -161,15 +161,20 @@ impl Contract {
         }
     }
 
+    pub fn total_amount_withdrawn(&self) -> u64 {
+        self.amount_withdrawn + self.partner_fee_withdrawn + self.streamflow_fee_withdrawn
+    }
+
     pub fn gross_amount(&self) -> u64 {
         self.ix.net_amount_deposited + self.streamflow_fee_total + self.partner_fee_total
     }
 
-    pub fn sync_balance(&mut self, balance: u64) {
-        // todo: check if this is correct because of fees (fees are in gross but amount_withdrawn
-        // does not includes fees
+    pub fn try_sync_balance(&mut self, balance: u64) {
+        if !self.ix.can_topup {
+            return;
+        }
         let external_deposit =
-            calculate_external_deposit(balance, self.gross_amount(), self.amount_withdrawn);
+            calculate_external_deposit(balance, self.gross_amount(), self.total_amount_withdrawn());
 
         if external_deposit > 0 {
             self.deposit_gross(external_deposit);

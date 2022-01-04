@@ -117,7 +117,7 @@ fn metadata_sanity_check(acc: WithdrawAccounts, metadata: Contract) -> ProgramRe
 /// The function will read the instructions from the metadata account and see
 /// if there are any unlocked funds. If so, they will be transferred from the
 /// escrow account to the stream recipient.
-pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResult {
+pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, mut amount: u64) -> ProgramResult {
     msg!("Withdrawing from SPL token stream");
 
     let now = Clock::get()?.unix_timestamp as u64;
@@ -159,9 +159,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
     }
 
     let escrow_tokens = unpack_token_account(&acc.escrow_tokens)?;
-    if metadata.ix.can_topup {
-        metadata.sync_balance(escrow_tokens.amount)
-    }
+    metadata.try_sync_balance(escrow_tokens.amount);
 
     // Check what has been unlocked so far
     let recipient_available = calculate_available(
@@ -190,7 +188,9 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
         metadata.partner_fee_withdrawn,
         metadata.partner_fee_percent,
     );
-
+    if amount == u64::MAX {
+        amount = recipient_available
+    }
     if amount > recipient_available {
         msg!("Available for recipient: {}", recipient_available);
         return Err(SfError::AmountMoreThanAvailable.into())
