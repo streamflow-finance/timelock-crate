@@ -389,12 +389,12 @@ async fn test_withdraw_stream_cliff() -> Result<()> {
     let amount_per_period = spl_token::ui_amount_to_amount(0.1, 8);
     let period = 1;
     let cliff_amount = spl_token::ui_amount_to_amount(transfer_amount as f64 / 2.0, 8);
-    let stream_amount = spl_token::ui_amount_to_amount(transfer_amount as f64, 8);
+    let amount = spl_token::ui_amount_to_amount(transfer_amount as f64, 8);
     let create_stream_ix = CreateStreamIx {
         ix: 0,
         metadata: CreateParams {
             start_time: now + 5,
-            net_amount_deposited: stream_amount,
+            net_amount_deposited: amount,
             period,
             amount_per_period,
             cliff: now + 50,
@@ -468,7 +468,7 @@ async fn test_withdraw_stream_cliff() -> Result<()> {
     let is_err = transaction.is_err();
     assert!(!is_err);
 
-    let strm_expected_fee_total = (0.0025 * (cliff_amount + stream_amount) as f64) as u64;
+    let strm_expected_fee_total = (0.0025 * amount as f64) as u64;
     let strm_expected_fee_withdrawn = 2950000;
 
     let metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
@@ -479,7 +479,7 @@ async fn test_withdraw_stream_cliff() -> Result<()> {
     assert_eq!(metadata_data.partner_fee_withdrawn, strm_expected_fee_withdrawn);
 
     // check if external deposits were identified
-    assert_eq!(metadata_data.ix.net_amount_deposited, stream_amount);
+    assert_eq!(metadata_data.ix.net_amount_deposited, amount);
 
     Ok(())
 }

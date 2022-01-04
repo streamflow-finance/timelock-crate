@@ -168,7 +168,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
         now,
         metadata.end_time,
         metadata.ix.clone(),
-        metadata.ix.total_deposit(),
+        metadata.ix.net_amount_deposited,
         metadata.amount_withdrawn,
         100.0,
     );
@@ -228,7 +228,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
         msg!(
             "Remaining: {} {} tokens",
             amount_to_ui_amount(
-                metadata.ix.total_deposit() - metadata.amount_withdrawn,
+                metadata.ix.net_amount_deposited - metadata.amount_withdrawn,
                 mint_info.decimals
             ),
             metadata.mint
