@@ -251,9 +251,9 @@ async fn test_create_stream_fees_properly_set() -> Result<()> {
     let expected_total_fees = net_deposit / 1000 * 5;
 
     assert_eq!(metadata_data.ix.net_amount_deposited, net_deposit);
-    assert_eq!(metadata_data.partner_fee_total, expected_total_fees / 2 - 1);
+    assert_eq!(metadata_data.partner_fee_total, expected_total_fees / 2);
     assert_eq!(metadata_data.partner_fee_percent, 0.25);
-    assert_eq!(metadata_data.streamflow_fee_total, expected_total_fees / 2 - 1);
+    assert_eq!(metadata_data.streamflow_fee_total, expected_total_fees / 2);
     assert_eq!(metadata_data.streamflow_fee_percent, 0.25);
     Ok(())
 }

@@ -160,7 +160,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
 
     let escrow_tokens = unpack_token_account(&acc.escrow_tokens)?;
     if metadata.ix.can_topup {
-        metadata.sync_balance(escrow_tokens.amount);
+        metadata.sync_balance(escrow_tokens.amount)
     }
 
     // Check what has been unlocked so far
@@ -168,7 +168,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
         now,
         metadata.end_time,
         metadata.ix.clone(),
-        metadata.ix.net_amount_deposited,
+        metadata.ix.total_deposit(),
         metadata.amount_withdrawn,
         100.0,
     );
@@ -228,7 +228,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
         msg!(
             "Remaining: {} {} tokens",
             amount_to_ui_amount(
-                metadata.ix.net_amount_deposited - metadata.amount_withdrawn,
+                metadata.ix.total_deposit() - metadata.amount_withdrawn,
                 mint_info.decimals
             ),
             metadata.mint
@@ -261,6 +261,8 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, amount: u64) -> ProgramResu
             amount_to_ui_amount(streamflow_available, mint_info.decimals),
             metadata.mint
         );
+        msg!("Strm fee total: {}", metadata.streamflow_fee_total);
+        msg!("Strm fee withdrawn: {}", metadata.streamflow_fee_withdrawn);
         msg!(
             "Remaining: {} {} tokens",
             amount_to_ui_amount(

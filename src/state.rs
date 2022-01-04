@@ -49,20 +49,24 @@ pub struct CreateParams {
 impl CreateParams {
     // Calculate timestamp when stream is closable
     pub fn calculate_end_time(&self) -> u64 {
-        let cliff_time = if self.cliff > 0 { self.cliff } else { self.start_time };
+        let start = if self.cliff > 0 { self.cliff } else { self.start_time };
 
-        let cliff_amount = self.cliff_amount;
-
-        if self.net_amount_deposited < cliff_amount {
-            return cliff_time;
-        }
-        // Nr of periods after the cliff
-        let periods_left = (self.net_amount_deposited - cliff_amount) / self.amount_per_period;
+        let periods_left = self.net_amount_deposited / self.amount_per_period;
 
         // Seconds till account runs out of available funds, +1 as ceil (integer)
         let seconds_left = periods_left * self.period + 1;
 
-        cliff_time + seconds_left
+        start + seconds_left
+    }
+
+    pub fn total_deposit(&self) -> u64 {
+        self.net_amount_deposited + self.cliff_amount
+    }
+
+    pub fn stream_available(&self, now: u64) -> u64 {
+        let start = if self.cliff > 0 { self.cliff } else { self.start_time };
+        let periods_passed = (now - start) / self.period;
+        periods_passed.checked_mul(self.amount_per_period).unwrap()
     }
 }
 
@@ -162,13 +166,12 @@ impl Contract {
     }
 
     pub fn gross_amount(&self) -> u64 {
-        self.ix.net_amount_deposited + self.streamflow_fee_total + self.partner_fee_total
+        self.ix.total_deposit() + self.streamflow_fee_total + self.partner_fee_total
     }
 
     pub fn sync_balance(&mut self, balance: u64) {
-        let gross_amount = self.gross_amount();
         let external_deposit =
-            calculate_external_deposit(balance, gross_amount, self.amount_withdrawn);
+            calculate_external_deposit(balance, self.gross_amount(), self.amount_withdrawn);
 
         if external_deposit > 0 {
             self.deposit_gross(external_deposit);

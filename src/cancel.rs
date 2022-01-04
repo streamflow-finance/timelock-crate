@@ -17,10 +17,7 @@ use crate::{
     error::SfError,
     process,
     state::{find_escrow_account, save_account_info, Contract, ESCROW_SEED_PREFIX, STRM_TREASURY},
-    utils::{
-        calculate_available, calculate_external_deposit, unpack_mint_account, unpack_token_account,
-        Invoker,
-    },
+    utils::{calculate_available, unpack_mint_account, unpack_token_account, Invoker},
 };
 
 #[derive(Clone, Debug)]
@@ -185,7 +182,7 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         now,
         metadata.end_time,
         metadata.ix.clone(),
-        metadata.ix.net_amount_deposited,
+        metadata.ix.total_deposit(),
         metadata.amount_withdrawn,
         100.0,
     );
@@ -208,7 +205,7 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         metadata.partner_fee_percent,
     );
 
-    let recipient_remains = metadata.ix.net_amount_deposited - recipient_available;
+    let recipient_remains = metadata.ix.total_deposit() - recipient_available;
     let streamflow_remains = metadata.streamflow_fee_total - streamflow_available;
     let partner_remains = metadata.partner_fee_total - partner_available;
 
@@ -244,21 +241,13 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         msg!(
             "Remaining: {} {} tokens",
             amount_to_ui_amount(
-                metadata.ix.net_amount_deposited - metadata.amount_withdrawn,
+                metadata.ix.total_deposit() - metadata.amount_withdrawn,
                 mint_info.decimals
             ),
             metadata.mint
         );
     }
 
-    // let escrow_tokens = unpack_token_account(&acc.escrow_tokens)?;
-    // if stream can_setup - external deposits will be settled, so this ext deposit will be 0
-    // let external_deposit = calculate_external_deposit(
-    //     escrow_tokens.amount,
-    //     metadata.ix.net_amount_deposited,
-    //     metadata.amount_withdrawn,
-    // );
-    // TODO: if account is not topapable, transfer external deposits back to strm
     if streamflow_available > 0 {
         msg!("Transferring unlocked tokens to Streamflow treasury");
         invoke_signed(
