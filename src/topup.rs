@@ -59,7 +59,7 @@ pub fn topup(pid: &Pubkey, acc: TopupAccounts, amount: u64) -> ProgramResult {
     }
 
     let escrow_tokens = unpack_token_account(&acc.escrow_tokens)?;
-    metadata.sync_balance(escrow_tokens.amount);
+    metadata.try_sync_balance(escrow_tokens.amount);
 
     let now = Clock::get()?.unix_timestamp as u64;
     if metadata.end_time < now {

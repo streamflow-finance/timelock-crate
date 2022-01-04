@@ -173,10 +173,8 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         metadata.canceled_at = now;
     }
 
-    if metadata.ix.can_topup {
-        let escrow_tokens = unpack_token_account(&acc.escrow_tokens)?;
-        metadata.sync_balance(escrow_tokens.amount);
-    }
+    let escrow_tokens = unpack_token_account(&acc.escrow_tokens)?;
+    metadata.try_sync_balance(escrow_tokens.amount);
 
     let recipient_available = calculate_available(
         now,
