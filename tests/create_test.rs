@@ -197,15 +197,17 @@ async fn test_create_stream_fees_properly_set() -> Result<()> {
     let transfer_amount = 20;
     let amount_per_period = 100000;
     let period = 1;
+    let amount = spl_token::ui_amount_to_amount(transfer_amount as f64, 8);
+    let cliff_amount = spl_token::ui_amount_to_amount(transfer_amount as f64 / 2.0, 8);
     let create_stream_ix = CreateStreamIx {
         ix: 0,
         metadata: CreateParams {
             start_time: now + 5,
-            net_amount_deposited: spl_token::ui_amount_to_amount(transfer_amount as f64, 8),
+            net_amount_deposited: amount,
             period,
             amount_per_period,
             cliff: 0,
-            cliff_amount: 0,
+            cliff_amount,
             cancelable_by_sender: false,
             cancelable_by_recipient: false,
             automatic_withdrawal: false,
@@ -246,11 +248,9 @@ async fn test_create_stream_fees_properly_set() -> Result<()> {
     assert!(!is_err);
     let metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
 
-    let net_deposit = spl_token::ui_amount_to_amount(transfer_amount as f64, 8);
+    let expected_total_fees = amount / 1000 * 5;
 
-    let expected_total_fees = net_deposit / 1000 * 5;
-
-    assert_eq!(metadata_data.ix.net_amount_deposited, net_deposit);
+    assert_eq!(metadata_data.ix.net_amount_deposited, amount);
     assert_eq!(metadata_data.partner_fee_total, expected_total_fees / 2);
     assert_eq!(metadata_data.partner_fee_percent, 0.25);
     assert_eq!(metadata_data.streamflow_fee_total, expected_total_fees / 2);

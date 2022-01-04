@@ -50,17 +50,13 @@ impl CreateParams {
     // Calculate timestamp when stream is closable
     pub fn calculate_end_time(&self) -> u64 {
         let start = if self.cliff > 0 { self.cliff } else { self.start_time };
-
+        //todo: recalculate
         let periods_left = self.net_amount_deposited / self.amount_per_period;
 
         // Seconds till account runs out of available funds, +1 as ceil (integer)
         let seconds_left = periods_left * self.period + 1;
 
         start + seconds_left
-    }
-
-    pub fn total_deposit(&self) -> u64 {
-        self.net_amount_deposited + self.cliff_amount
     }
 
     pub fn stream_available(&self, now: u64) -> u64 {
@@ -166,10 +162,12 @@ impl Contract {
     }
 
     pub fn gross_amount(&self) -> u64 {
-        self.ix.total_deposit() + self.streamflow_fee_total + self.partner_fee_total
+        self.ix.net_amount_deposited + self.streamflow_fee_total + self.partner_fee_total
     }
 
     pub fn sync_balance(&mut self, balance: u64) {
+        // todo: check if this is correct because of fees (fees are in gross but amount_withdrawn
+        // does not includes fees
         let external_deposit =
             calculate_external_deposit(balance, self.gross_amount(), self.amount_withdrawn);
 

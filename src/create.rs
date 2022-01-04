@@ -133,6 +133,9 @@ fn instruction_sanity_check(ix: CreateParams, now: u64) -> ProgramResult {
         return Err(SfError::InvalidDeposit.into())
     }
 
+    if ix.cliff_amount > 0 && ix.net_amount_deposited < ix.cliff_amount {
+        return Err(SfError::InvalidDeposit.into())
+    }
     // Passed without touching the lasers.
     Ok(())
 }
@@ -169,12 +172,13 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
         };
 
     // Calculate fees
-    let partner_fee_amount = calculate_fee_from_amount(ix.total_deposit(), partner_fee_percent);
-    let strm_fee_amount = calculate_fee_from_amount(ix.total_deposit(), strm_fee_percent);
+    let partner_fee_amount =
+        calculate_fee_from_amount(ix.net_amount_deposited, partner_fee_percent);
+    let strm_fee_amount = calculate_fee_from_amount(ix.net_amount_deposited, strm_fee_percent);
     msg!("Partner fee: {}", amount_to_ui_amount(partner_fee_amount, mint_info.decimals));
     msg!("Streamflow fee: {}", amount_to_ui_amount(strm_fee_amount, mint_info.decimals));
 
-    let gross_amount = ix.total_deposit() + partner_fee_amount + strm_fee_amount;
+    let gross_amount = ix.net_amount_deposited + partner_fee_amount + strm_fee_amount;
 
     let sender_tokens = unpack_token_account(&acc.sender_tokens)?;
     if sender_tokens.amount < gross_amount {
