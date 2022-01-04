@@ -61,14 +61,9 @@ pub fn calculate_available(
         return total - withdrawn
     }
 
-    let start = if ix.cliff > 0 { ix.cliff } else { ix.start_time };
-
-    let periods_passed = (now - start) / ix.period;
-    let available = periods_passed.checked_mul(ix.amount_per_period).unwrap();
-    let precision_factor: f32 = 1000000.0;
-    let factor = (fee_percentage / 100.0 * precision_factor) as u64;
-    let available = available * factor / precision_factor as u64;
-    available - withdrawn + ix.cliff_amount
+    let stream_available = calculate_fee_from_amount(ix.stream_available(now), fee_percentage);
+    let cliff_available = calculate_fee_from_amount(ix.cliff_amount, fee_percentage);
+    stream_available + cliff_available - withdrawn
 }
 
 pub fn calculate_available2(
@@ -118,10 +113,9 @@ pub fn calculate_fee_from_amount(amount: u64, percentage: f32) -> u64 {
     if percentage <= 0.0 {
         return 0
     }
-
-    // TODO: Test units
-    //todo: is something lost in this calculation? floats are imprecise.
-    (amount as f64 * (percentage / 100.0) as f64) as u64
+    let precision_factor: f32 = 1000000.0;
+    let factor = (percentage / 100.0 * precision_factor) as u64;
+    amount * factor / precision_factor as u64
 }
 
 pub enum Invoker {

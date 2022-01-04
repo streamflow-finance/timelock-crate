@@ -155,7 +155,7 @@ async fn test_cancel_success() -> Result<()> {
     assert_eq!(transaction.is_err(), !cancelable_by_sender);
 
     let strm_expected_fee_total =
-        (0.0025 * spl_token::ui_amount_to_amount(transfer_amount as f64, 8) as f64) as u64 - 1;
+        (0.0025 * spl_token::ui_amount_to_amount(transfer_amount as f64, 8) as f64) as u64;
     let strm_expected_fee_withdrawn = 545000;
     let recipient_expected_withdrawn = amount_per_period * (periods_passed as u64 + 18);
 
@@ -186,10 +186,10 @@ async fn test_cancel_success() -> Result<()> {
 //     let payer = clone_keypair(&tt.bench.payer);
 //
 //     let strm_token_mint = Keypair::new();
-//     let alice_ass_token = get_associated_token_address(&alice.pubkey(), &strm_token_mint.pubkey());
-//     let bob_ass_token = get_associated_token_address(&bob.pubkey(), &strm_token_mint.pubkey());
-//     let strm_ass_token = get_associated_token_address(&strm_key, &strm_token_mint.pubkey());
-//     let partner_ass_token =
+//     let alice_ass_token = get_associated_token_address(&alice.pubkey(),
+// &strm_token_mint.pubkey());     let bob_ass_token = get_associated_token_address(&bob.pubkey(),
+// &strm_token_mint.pubkey());     let strm_ass_token = get_associated_token_address(&strm_key,
+// &strm_token_mint.pubkey());     let partner_ass_token =
 //         get_associated_token_address(&partner.pubkey(), &strm_token_mint.pubkey());
 //
 //     tt.bench.create_mint(&strm_token_mint, &tt.bench.payer.pubkey()).await;
@@ -206,10 +206,11 @@ async fn test_cancel_success() -> Result<()> {
 //         .await;
 //
 //     let alice_ass_account = tt.bench.get_account(&alice_ass_token).await.unwrap();
-//     let alice_token_data = spl_token::state::Account::unpack_from_slice(&alice_ass_account.data)?;
-//     assert_eq!(alice_token_data.amount, spl_token::ui_amount_to_amount(100000.0, 8));
-//     assert_eq!(alice_token_data.mint, strm_token_mint.pubkey());
-//     assert_eq!(alice_token_data.owner, alice.pubkey());
+//     let alice_token_data =
+// spl_token::state::Account::unpack_from_slice(&alice_ass_account.data)?;     assert_eq!
+// (alice_token_data.amount, spl_token::ui_amount_to_amount(100000.0, 8));     assert_eq!
+// (alice_token_data.mint, strm_token_mint.pubkey());     assert_eq!(alice_token_data.owner,
+// alice.pubkey());
 //
 //     let escrow_tokens_pubkey =
 //         find_escrow_account(PROGRAM_VERSION, metadata_kp.pubkey().as_ref(), &tt.program_id).0;
@@ -317,10 +318,10 @@ async fn test_cancel_success() -> Result<()> {
 //     let payer = clone_keypair(&tt.bench.payer);
 //
 //     let strm_token_mint = Keypair::new();
-//     let alice_ass_token = get_associated_token_address(&alice.pubkey(), &strm_token_mint.pubkey());
-//     let bob_ass_token = get_associated_token_address(&bob.pubkey(), &strm_token_mint.pubkey());
-//     let strm_ass_token = get_associated_token_address(&strm_key, &strm_token_mint.pubkey());
-//     let partner_ass_token =
+//     let alice_ass_token = get_associated_token_address(&alice.pubkey(),
+// &strm_token_mint.pubkey());     let bob_ass_token = get_associated_token_address(&bob.pubkey(),
+// &strm_token_mint.pubkey());     let strm_ass_token = get_associated_token_address(&strm_key,
+// &strm_token_mint.pubkey());     let partner_ass_token =
 //         get_associated_token_address(&partner.pubkey(), &strm_token_mint.pubkey());
 //
 //     tt.bench.create_mint(&strm_token_mint, &tt.bench.payer.pubkey()).await;
@@ -337,10 +338,11 @@ async fn test_cancel_success() -> Result<()> {
 //         .await;
 //
 //     let alice_ass_account = tt.bench.get_account(&alice_ass_token).await.unwrap();
-//     let alice_token_data = spl_token::state::Account::unpack_from_slice(&alice_ass_account.data)?;
-//     assert_eq!(alice_token_data.amount, spl_token::ui_amount_to_amount(100000.0, 8));
-//     assert_eq!(alice_token_data.mint, strm_token_mint.pubkey());
-//     assert_eq!(alice_token_data.owner, alice.pubkey());
+//     let alice_token_data =
+// spl_token::state::Account::unpack_from_slice(&alice_ass_account.data)?;     assert_eq!
+// (alice_token_data.amount, spl_token::ui_amount_to_amount(100000.0, 8));     assert_eq!
+// (alice_token_data.mint, strm_token_mint.pubkey());     assert_eq!(alice_token_data.owner,
+// alice.pubkey());
 //
 //     let escrow_tokens_pubkey =
 //         find_escrow_account(PROGRAM_VERSION, metadata_kp.pubkey().as_ref(), &tt.program_id).0;
@@ -448,10 +450,10 @@ async fn test_cancel_success() -> Result<()> {
 //     let payer = clone_keypair(&tt.bench.payer);
 //
 //     let strm_token_mint = Keypair::new();
-//     let alice_ass_token = get_associated_token_address(&alice.pubkey(), &strm_token_mint.pubkey());
-//     let bob_ass_token = get_associated_token_address(&bob.pubkey(), &strm_token_mint.pubkey());
-//     let strm_ass_token = get_associated_token_address(&strm_key, &strm_token_mint.pubkey());
-//     let partner_ass_token =
+//     let alice_ass_token = get_associated_token_address(&alice.pubkey(),
+// &strm_token_mint.pubkey());     let bob_ass_token = get_associated_token_address(&bob.pubkey(),
+// &strm_token_mint.pubkey());     let strm_ass_token = get_associated_token_address(&strm_key,
+// &strm_token_mint.pubkey());     let partner_ass_token =
 //         get_associated_token_address(&partner.pubkey(), &strm_token_mint.pubkey());
 //
 //     tt.bench.create_mint(&strm_token_mint, &tt.bench.payer.pubkey()).await;
@@ -468,10 +470,11 @@ async fn test_cancel_success() -> Result<()> {
 //         .await;
 //
 //     let alice_ass_account = tt.bench.get_account(&alice_ass_token).await.unwrap();
-//     let alice_token_data = spl_token::state::Account::unpack_from_slice(&alice_ass_account.data)?;
-//     assert_eq!(alice_token_data.amount, spl_token::ui_amount_to_amount(100000.0, 8));
-//     assert_eq!(alice_token_data.mint, strm_token_mint.pubkey());
-//     assert_eq!(alice_token_data.owner, alice.pubkey());
+//     let alice_token_data =
+// spl_token::state::Account::unpack_from_slice(&alice_ass_account.data)?;     assert_eq!
+// (alice_token_data.amount, spl_token::ui_amount_to_amount(100000.0, 8));     assert_eq!
+// (alice_token_data.mint, strm_token_mint.pubkey());     assert_eq!(alice_token_data.owner,
+// alice.pubkey());
 //
 //     let escrow_tokens_pubkey =
 //         find_escrow_account(PROGRAM_VERSION, metadata_kp.pubkey().as_ref(), &tt.program_id).0;
@@ -575,10 +578,10 @@ async fn test_cancel_success() -> Result<()> {
 //     let payer = clone_keypair(&tt.bench.payer);
 //
 //     let strm_token_mint = Keypair::new();
-//     let alice_ass_token = get_associated_token_address(&alice.pubkey(), &strm_token_mint.pubkey());
-//     let bob_ass_token = get_associated_token_address(&bob.pubkey(), &strm_token_mint.pubkey());
-//     let strm_ass_token = get_associated_token_address(&strm_key, &strm_token_mint.pubkey());
-//     let partner_ass_token =
+//     let alice_ass_token = get_associated_token_address(&alice.pubkey(),
+// &strm_token_mint.pubkey());     let bob_ass_token = get_associated_token_address(&bob.pubkey(),
+// &strm_token_mint.pubkey());     let strm_ass_token = get_associated_token_address(&strm_key,
+// &strm_token_mint.pubkey());     let partner_ass_token =
 //         get_associated_token_address(&partner.pubkey(), &strm_token_mint.pubkey());
 //
 //     tt.bench.create_mint(&strm_token_mint, &tt.bench.payer.pubkey()).await;
@@ -595,10 +598,11 @@ async fn test_cancel_success() -> Result<()> {
 //         .await;
 //
 //     let alice_ass_account = tt.bench.get_account(&alice_ass_token).await.unwrap();
-//     let alice_token_data = spl_token::state::Account::unpack_from_slice(&alice_ass_account.data)?;
-//     assert_eq!(alice_token_data.amount, spl_token::ui_amount_to_amount(100000.0, 8));
-//     assert_eq!(alice_token_data.mint, strm_token_mint.pubkey());
-//     assert_eq!(alice_token_data.owner, alice.pubkey());
+//     let alice_token_data =
+// spl_token::state::Account::unpack_from_slice(&alice_ass_account.data)?;     assert_eq!
+// (alice_token_data.amount, spl_token::ui_amount_to_amount(100000.0, 8));     assert_eq!
+// (alice_token_data.mint, strm_token_mint.pubkey());     assert_eq!(alice_token_data.owner,
+// alice.pubkey());
 //
 //     let escrow_tokens_pubkey =
 //         find_escrow_account(PROGRAM_VERSION, metadata_kp.pubkey().as_ref(), &tt.program_id).0;
