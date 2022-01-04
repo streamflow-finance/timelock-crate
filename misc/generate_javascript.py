@@ -17,6 +17,7 @@ structs = {}
 
 header = """// Program interaction library
 const borsh = require("borsh");
+const spl = require("@solana/spl-token");
 
 class Assignable {
     constructor(properties) {
@@ -25,8 +26,6 @@ class Assignable {
         });
     }
 }
-
-class Struct extends Assignable {}
 """
 
 
@@ -49,6 +48,8 @@ def lookup_layout(t, n):
     if t == "String":
         return f"['{n}', 'string'],"
     if t == "[u8; 64]":
+        return f"['{n}', [64]],"
+    if t == "[u8; MAX_NAME_SIZE_B]":
         return f"['{n}', [64]],"
 
     return None
@@ -169,7 +170,8 @@ def main():
     parse_structs(lines)
 
     for i in structs:
-        print(f"const {i} = new Map([[Struct, {{")
+        print(f"class {i}Struct extends Assignable {{}}")
+        print(f"const {i} = new Map([[{i}Struct, {{")
         print("    kind: 'struct',")
         print("    fields: [")
         generate_schema(i)
