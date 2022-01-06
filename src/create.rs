@@ -133,6 +133,10 @@ fn instruction_sanity_check(ix: CreateParams, now: u64) -> ProgramResult {
         return Err(SfError::InvalidDeposit.into())
     }
 
+    if !(ix.amount_per_period > 0) {
+        return Err(SfError::InvalidMetadata.into())
+    }
+
     if ix.cliff_amount > 0 && ix.net_amount_deposited < ix.cliff_amount {
         return Err(SfError::InvalidDeposit.into())
     }
