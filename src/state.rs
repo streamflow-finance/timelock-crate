@@ -65,16 +65,6 @@ impl CreateParams {
         let periods_passed = (now - start) / self.period;
         periods_passed.checked_mul(self.amount_per_period).unwrap()
     }
-
-    pub fn valid_cliff(&self) -> bool {
-        if (self.cliff > 0) != (self.cliff_amount > 0) {
-            return false
-        }
-        if self.cliff < 0 && self.cliff_amount < 0 {
-            return false
-        }
-        return true
-    }
 }
 
 /// TokenStreamData is the struct containing metadata for an SPL token stream.

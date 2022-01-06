@@ -145,10 +145,6 @@ fn instruction_sanity_check(ix: CreateParams, now: u64) -> ProgramResult {
         return Err(SfError::InvalidMetadata.into())
     }
 
-    if !ix.valid_cliff() {
-        return Err(SfError::InvalidMetadata.into())
-    }
-
     // Passed without touching the lasers.
     Ok(())
 }
