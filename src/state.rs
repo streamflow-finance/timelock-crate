@@ -4,6 +4,7 @@ use std::cell::RefMut;
 
 use crate::{
     create::CreateAccounts,
+    error::SfError,
     utils::{calculate_external_deposit, calculate_fee_from_amount},
 };
 
@@ -63,6 +64,16 @@ impl CreateParams {
         let start = if self.cliff > 0 { self.cliff } else { self.start_time };
         let periods_passed = (now - start) / self.period;
         periods_passed.checked_mul(self.amount_per_period).unwrap()
+    }
+
+    pub fn valid_cliff(&self) -> bool {
+        if (self.cliff > 0) != (self.cliff_amount > 0) {
+            return false
+        }
+        if self.cliff < 0 && self.cliff_amount < 0 {
+            return false
+        }
+        return true
     }
 }
 
@@ -171,7 +182,7 @@ impl Contract {
 
     pub fn try_sync_balance(&mut self, balance: u64) {
         if !self.ix.can_topup {
-            return;
+            return
         }
         let external_deposit =
             calculate_external_deposit(balance, self.gross_amount(), self.total_amount_withdrawn());
