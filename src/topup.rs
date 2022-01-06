@@ -8,12 +8,13 @@ use solana_program::{
     pubkey::Pubkey,
     sysvar::{clock::Clock, Sysvar},
 };
+
 use spl_token::amount_to_ui_amount;
 
 use crate::{
     error::SfError,
     state::{find_escrow_account, save_account_info, Contract},
-    utils::{unpack_mint_account, unpack_token_account},
+    utils::{unpack_mint_account, unpack_token_account, calculate_fee_from_amount},
 };
 
 #[derive(Clone, Debug)]
@@ -66,7 +67,8 @@ pub fn topup(pid: &Pubkey, acc: TopupAccounts, amount: u64) -> ProgramResult {
         return Err(SfError::StreamClosed.into())
     }
 
-    metadata.deposit_net(amount);
+    let strm_fee = calculate_fee_from_amount(amount, metadata.streamflow_fee_percent);
+    let partner_fee = calculate_fee_from_amount(amount, metadata.partner_fee_percent);
 
     msg!("Transferring funds into escrow account");
     invoke(
@@ -76,7 +78,7 @@ pub fn topup(pid: &Pubkey, acc: TopupAccounts, amount: u64) -> ProgramResult {
             acc.escrow_tokens.key,
             acc.sender.key,
             &[],
-            metadata.gross_amount(),
+            amount + partner_fee + strm_fee,
         )?,
         &[
             acc.sender_tokens.clone(),
@@ -86,6 +88,7 @@ pub fn topup(pid: &Pubkey, acc: TopupAccounts, amount: u64) -> ProgramResult {
         ],
     )?;
 
+    metadata.deposit_net(amount);
     save_account_info(&metadata, data)?;
 
     let mint_info = unpack_mint_account(&acc.mint)?;

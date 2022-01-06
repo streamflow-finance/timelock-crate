@@ -194,7 +194,7 @@ impl Contract {
 
     pub fn deposit_net(&mut self, net_amount: u64) {
         let partner_fee_addition = calculate_fee_from_amount(net_amount, self.partner_fee_percent);
-        let strm_fee_addition = calculate_fee_from_amount(net_amount, self.partner_fee_percent);
+        let strm_fee_addition = calculate_fee_from_amount(net_amount, self.streamflow_fee_percent);
         self.ix.net_amount_deposited += net_amount;
         self.partner_fee_total += partner_fee_addition;
         self.streamflow_fee_total += strm_fee_addition;

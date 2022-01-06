@@ -12,7 +12,7 @@ pub enum SfError {
     #[error("Invalid metadata account")]
     InvalidMetadataAccount,
 
-    #[error("Metadata mismatched with given accounts")]
+    #[error("Provided accounts don't match the ones in contract.")]
     MetadataAccountMismatch,
 
     #[error("Invalid escrow account")]
