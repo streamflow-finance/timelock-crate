@@ -192,7 +192,7 @@ mod tests {
         assert!(duration_sanity(100, 110, 120).is_ok());
         assert!(duration_sanity(100, 110, 0).is_ok());
         assert!(duration_sanity(100, 140, 130).is_err());
-        assert!(duration_sanity(100, 130, 130).is_err());
+        assert!(duration_sanity(100, 130, 130).is_ok());
         assert!(duration_sanity(130, 130, 130).is_err());
         assert!(duration_sanity(100, 110, 140).is_ok());
     }
