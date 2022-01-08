@@ -169,7 +169,8 @@ async fn test_cancel_success() -> Result<()> {
     assert_eq!(metadata_data.streamflow_fee_withdrawn, strm_expected_fee_withdrawn);
     assert_eq!(metadata_data.partner_fee_withdrawn, strm_expected_fee_withdrawn);
     assert_eq!(metadata_data.amount_withdrawn, recipient_expected_withdrawn);
-    // assert_eq!(metadata_data.end_time, );
+    let bob_tokens = get_token_balance(&mut tt.bench.context.banks_client, bob_ass_token).await;
+    assert_eq!(bob_tokens, recipient_expected_withdrawn);
 
     Ok(())
 }
@@ -309,6 +310,8 @@ async fn test_cancel_expired() -> Result<()> {
     assert_eq!(metadata_data.partner_fee_total, metadata_data.partner_fee_withdrawn);
     assert_eq!(metadata_data.streamflow_fee_total, metadata_data.streamflow_fee_withdrawn);
     assert_eq!(metadata_data.ix.net_amount_deposited, metadata_data.amount_withdrawn);
+    let bob_tokens = get_token_balance(&mut tt.bench.context.banks_client, bob_ass_token).await;
+    assert_eq!(bob_tokens, metadata_data.amount_withdrawn);
 
     Ok(())
 }

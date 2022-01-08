@@ -1,11 +1,12 @@
 use borsh::{BorshDeserialize, BorshSerialize};
-use solana_program_test::processor;
+use solana_program_test::{processor, BanksClient};
 use solana_sdk::{
     account::Account, clock::UnixTimestamp, native_token::sol_to_lamports, pubkey::Pubkey,
     signature::Signer, signer::keypair::Keypair,
 };
 
 use partner_oracle::fees::{Partner, Partners};
+use solana_program::{msg, program_pack::Pack};
 use solana_program_test::ProgramTest;
 
 use streamflow_timelock::{entrypoint::process_instruction, state::CreateParams};
@@ -130,4 +131,9 @@ impl TimelockProgramTest {
             clock = self.bench.get_clock().await;
         }
     }
+}
+
+pub async fn get_token_balance(banks_client: &mut BanksClient, pubkey: Pubkey) -> u64 {
+    let token: Account = banks_client.get_account(pubkey).await.unwrap().unwrap();
+    spl_token::state::Account::unpack(&token.data[..]).unwrap().amount
 }

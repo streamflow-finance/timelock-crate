@@ -170,6 +170,8 @@ async fn test_withdraw_stream_success() -> Result<()> {
         metadata_data.ix.net_amount_deposited,
         spl_token::ui_amount_to_amount(transfer_amount as f64, 8)
     );
+    let bob_tokens = get_token_balance(&mut tt.bench.context.banks_client, bob_ass_token).await;
+    assert_eq!(bob_tokens, metadata_data.amount_withdrawn);
 
     Ok(())
 }
@@ -332,10 +334,12 @@ async fn test_withdraw_external_deposit() -> Result<()> {
     // check if external deposits were identified
     assert_eq!(
         metadata_data.ix.net_amount_deposited,
-        spl_token::ui_amount_to_amount(transfer_amount as f64, 8)
-            + spl_token::ui_amount_to_amount(external_deposit_amount as f64, 8)
-            - 2 * strm_external_deposit_fee
+        spl_token::ui_amount_to_amount(transfer_amount as f64, 8) +
+            spl_token::ui_amount_to_amount(external_deposit_amount as f64, 8) -
+            2 * strm_external_deposit_fee
     );
+    let bob_tokens = get_token_balance(&mut tt.bench.context.banks_client, bob_ass_token).await;
+    assert_eq!(bob_tokens, metadata_data.amount_withdrawn);
 
     Ok(())
 }
@@ -480,6 +484,8 @@ async fn test_withdraw_stream_cliff() -> Result<()> {
 
     // check if external deposits were identified
     assert_eq!(metadata_data.ix.net_amount_deposited, amount);
+    let bob_tokens = get_token_balance(&mut tt.bench.context.banks_client, bob_ass_token).await;
+    assert_eq!(bob_tokens, metadata_data.amount_withdrawn);
 
     Ok(())
 }
