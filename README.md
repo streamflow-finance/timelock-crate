@@ -1,6 +1,6 @@
 streamflow-timelock
 ===================
-**Disclaimer: Security audit under way.**
+**Security audit passed. [Report here.](https://github.com/StreamFlow-Finance/timelock-crate/blob/community/TIMELOCK_COMMUNITY_REPORT_FINAL.pdf) ✅**
 
 This is a free and open-source community version of [Streamflow Timelock](../../tree/master) protocol, that comes with certain limitations compared to the commercial version.
 
