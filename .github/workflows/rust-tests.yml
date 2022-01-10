@@ -6,6 +6,9 @@ jobs:
     compile-and-test:
         runs-on: ubuntu-20.04
         steps:
+            - uses: webfactory/ssh-agent@v0.5.4
+              with:
+                ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
             - uses: actions/checkout@v2
             - name: Install Rust
               uses: actions-rs/toolchain@v1
