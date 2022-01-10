@@ -203,10 +203,6 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         metadata.partner_fee_percent,
     );
 
-    let recipient_remains = metadata.ix.net_amount_deposited - recipient_available;
-    let streamflow_remains = metadata.streamflow_fee_total - streamflow_available;
-    let partner_remains = metadata.partner_fee_total - partner_available;
-
     let seeds = [ESCROW_SEED_PREFIX, acc.metadata.key.as_ref(), &[escrow_tokens_bump]];
 
     if recipient_available > 0 {
@@ -319,6 +315,9 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
             metadata.mint
         );
     }
+    let recipient_remains = metadata.ix.net_amount_deposited - metadata.amount_withdrawn;
+    let streamflow_remains = metadata.streamflow_fee_total - metadata.streamflow_fee_withdrawn;
+    let partner_remains = metadata.partner_fee_total - metadata.partner_fee_withdrawn;
 
     if recipient_remains > 0 || streamflow_remains > 0 || partner_remains > 0 {
         msg!("Transferring remains back to sender");
