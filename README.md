@@ -1,6 +1,6 @@
 streamflow-timelock
 ===================
-**Security audit passed. [Report here.](https://github.com/StreamFlow-Finance/timelock-crate/blob/community/TIMELOCK_IMPLEMENTATION_COMMUNITY_REPORT_FINAL.pdf) ✅**
+**Security audit passed. [Report here.](https://github.com/StreamFlow-Finance/timelock-crate/blob/master/TIMELOCK_COMMUNITY_REPORT_FINAL.pdf) ✅**
 
 This Rust crate provides SPL timelock functionalities that can be used "out of the box" and integrated in other Solana programs.
 
