@@ -275,7 +275,6 @@ async fn test_create_stream_amount_period_invalid() -> Result<()> {
     let bob = Account { lamports: sol_to_lamports(10.0), ..Account::default() };
 
     let mut tt = TimelockProgramTest::start_new(&[alice, bob], &strm_key).await;
-
     let alice = clone_keypair(&tt.accounts[0]);
     let bob = clone_keypair(&tt.accounts[1]);
     let partner = clone_keypair(&tt.accounts[2]);
