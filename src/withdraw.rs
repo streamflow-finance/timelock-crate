@@ -312,7 +312,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, mut amount: u64) -> Program
     save_account_info(&metadata, data)?;
 
     // When everything is withdrawn, close the accounts.
-    if now >= metadata.end_time {
+    if metadata.all_funds_withdrawn() {
         // TODO: Close metadata account once there is an alternative storage solution
         // for historical data.
         // msg!("Closing metadata account");
