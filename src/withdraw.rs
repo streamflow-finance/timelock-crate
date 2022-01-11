@@ -188,7 +188,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, mut amount: u64) -> Program
         metadata.partner_fee_withdrawn,
         metadata.partner_fee_percent,
     );
-    if amount == u64::MAX {
+    if amount == u64::MAX || now > metadata.end_time {
         amount = recipient_available
     }
     if amount > recipient_available {
