@@ -162,6 +162,10 @@ impl Contract {
         }
     }
 
+    pub fn all_funds_withdrawn(&self) -> bool {
+        self.amount_withdrawn == self.ix.net_amount_deposited
+    }
+
     pub fn total_amount_withdrawn(&self) -> u64 {
         self.amount_withdrawn + self.partner_fee_withdrawn + self.streamflow_fee_withdrawn
     }
