@@ -14,7 +14,7 @@ use spl_token::amount_to_ui_amount;
 use crate::{
     error::SfError,
     state::{find_escrow_account, save_account_info, Contract},
-    utils::{unpack_mint_account, unpack_token_account, calculate_fee_from_amount},
+    utils::{calculate_fee_from_amount, unpack_mint_account, unpack_token_account},
 };
 
 #[derive(Clone, Debug)]
@@ -36,7 +36,9 @@ pub fn topup(pid: &Pubkey, acc: TopupAccounts, amount: u64) -> ProgramResult {
 
     // Sanity checks
     //account_sanity_check
-
+    if !acc.sender.is_signer {
+        return Err(ProgramError::MissingRequiredSignature)
+    }
     if amount == 0 {
         return Err(SfError::AmountIsZero.into())
     }

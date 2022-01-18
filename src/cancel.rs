@@ -64,6 +64,10 @@ fn account_sanity_check(pid: &Pubkey, a: CancelAccounts) -> ProgramResult {
         return Err(SfError::InvalidMetadataAccount.into())
     }
 
+    if !a.authority.is_signer {
+        return Err(ProgramError::MissingRequiredSignature)
+    }
+
     // We want these accounts to be writable
     if !a.authority.is_writable ||
         !a.recipient_tokens.is_writable ||
@@ -156,9 +160,6 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
     // If stream is expired, anyone can close it
     if now < metadata.end_time {
         msg!("Stream not yet expired, checking authorization");
-        if !acc.authority.is_signer {
-            return Err(ProgramError::MissingRequiredSignature)
-        }
         let cancel_authority = Invoker::new(
             acc.authority.key,
             &metadata.sender,

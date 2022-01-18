@@ -41,6 +41,10 @@ fn account_sanity_check(pid: &Pubkey, a: TransferAccounts) -> ProgramResult {
         return Err(SfError::InvalidMetadataAccount.into())
     }
 
+    if !a.authority.is_signer {
+        return Err(ProgramError::MissingRequiredSignature)
+    }
+
     // We want these accounts to be writable
     if !a.authority.is_writable || !a.new_recipient_tokens.is_writable || !a.metadata.is_writable {
         return Err(SfError::AccountsNotWritable.into())

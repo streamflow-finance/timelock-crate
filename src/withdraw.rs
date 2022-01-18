@@ -58,6 +58,10 @@ fn account_sanity_check(pid: &Pubkey, a: WithdrawAccounts) -> ProgramResult {
         return Err(SfError::InvalidMetadataAccount.into())
     }
 
+    if !a.authority.is_signer {
+        return Err(ProgramError::MissingRequiredSignature)
+    }
+
     // We want these accounts to be writable
     if !a.authority.is_writable ||
         !a.recipient_tokens.is_writable ||
@@ -122,10 +126,6 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, mut amount: u64) -> Program
 
     let now = Clock::get()?.unix_timestamp as u64;
     let mint_info = unpack_mint_account(&acc.mint)?;
-
-    if !acc.authority.is_signer {
-        return Err(ProgramError::MissingRequiredSignature)
-    }
 
     account_sanity_check(pid, acc.clone())?;
 
