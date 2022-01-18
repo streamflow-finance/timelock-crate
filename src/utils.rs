@@ -114,8 +114,9 @@ pub fn calculate_fee_from_amount(amount: u64, percentage: f32) -> u64 {
         return 0
     }
     let precision_factor: f32 = 1000000.0;
-    let factor = (percentage / 100.0 * precision_factor) as u64;
-    amount * factor / precision_factor as u64
+    let factor = (percentage / 100.0 * precision_factor) as u128; //largest it can get is 10^4
+    (amount as u128 * factor / precision_factor as u128) as u64 // this does not fit if amount
+                                                                // itself cannot fit into u64
 }
 
 pub enum Invoker {
