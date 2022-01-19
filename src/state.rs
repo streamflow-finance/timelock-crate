@@ -1,5 +1,5 @@
 use borsh::{BorshDeserialize, BorshSerialize};
-use solana_program::{entrypoint::ProgramResult, pubkey::Pubkey};
+use solana_program::{entrypoint::ProgramResult, program_error::ProgramError, pubkey::Pubkey};
 use std::cell::RefMut;
 
 use crate::{
@@ -49,21 +49,26 @@ pub struct CreateParams {
 
 impl CreateParams {
     // Calculate timestamp when stream is closable
-    pub fn calculate_end_time(&self) -> u64 {
+    pub fn calculate_end_time(&self) -> Result<u64, ProgramError> {
         let start = if self.cliff > 0 { self.cliff } else { self.start_time };
-        //todo: recalculate
-        let periods_left = self.net_amount_deposited / self.amount_per_period;
 
-        // Seconds till account runs out of available funds, +1 as ceil (integer)
-        let seconds_left = periods_left * self.period + 1;
+        let periods_left = self
+            .net_amount_deposited
+            .checked_div(self.amount_per_period)
+            .ok_or(ProgramError::InvalidArgument)?;
 
-        start + seconds_left
+        // Seconds till account runs out of available funds
+        let seconds_left =
+            periods_left.checked_mul(self.period).ok_or(ProgramError::InvalidArgument)?;
+
+        Ok(start + seconds_left)
     }
 
-    pub fn stream_available(&self, now: u64) -> u64 {
+    pub fn stream_available(&self, now: u64) -> Result<u64, ProgramError> {
         let start = if self.cliff > 0 { self.cliff } else { self.start_time };
-        let periods_passed = (now - start) / self.period;
-        periods_passed.checked_mul(self.amount_per_period).unwrap()
+        let periods_passed =
+            (now - start).checked_div(self.period).ok_or(ProgramError::InvalidArgument)?;
+        periods_passed.checked_mul(self.amount_per_period).ok_or(ProgramError::InvalidArgument)
     }
 }
 
@@ -133,14 +138,14 @@ impl Contract {
         partner_fee_percent: f32,
         streamflow_fee_total: u64,
         streamflow_fee_percent: f32,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, ProgramError> {
+        Ok(Self {
             magic: 0,
             version: PROGRAM_VERSION,
             created_at: now,
             amount_withdrawn: 0,
             canceled_at: 0,
-            end_time: ix.calculate_end_time(),
+            end_time: ix.calculate_end_time()?,
             last_withdrawn_at: 0,
             sender: *acc.sender.key,
             sender_tokens: *acc.sender_tokens.key,
@@ -159,51 +164,91 @@ impl Contract {
             partner_fee_withdrawn: 0,
             partner_fee_percent,
             ix,
-        }
+        })
     }
 
     pub fn all_funds_withdrawn(&self) -> bool {
         self.amount_withdrawn == self.ix.net_amount_deposited
     }
 
-    pub fn total_amount_withdrawn(&self) -> u64 {
-        self.amount_withdrawn + self.partner_fee_withdrawn + self.streamflow_fee_withdrawn
+    pub fn total_amount_withdrawn(&self) -> Result<u64, ProgramError> {
+        let mut result = self
+            .amount_withdrawn
+            .checked_add(self.partner_fee_withdrawn)
+            .ok_or(ProgramError::InvalidArgument)?;
+        result = result
+            .checked_add(self.streamflow_fee_withdrawn)
+            .ok_or(ProgramError::InvalidArgument)?;
+        Ok(result)
     }
 
-    pub fn gross_amount(&self) -> u64 {
-        self.ix.net_amount_deposited + self.streamflow_fee_total + self.partner_fee_total
+    pub fn gross_amount(&self) -> Result<u64, ProgramError> {
+        let mut result = self
+            .ix
+            .net_amount_deposited
+            .checked_add(self.streamflow_fee_total)
+            .ok_or(ProgramError::InvalidArgument)?;
+        result = result.checked_add(self.partner_fee_total).ok_or(ProgramError::InvalidArgument)?;
+        Ok(result)
     }
 
-    pub fn try_sync_balance(&mut self, balance: u64) {
+    pub fn try_sync_balance(&mut self, balance: u64) -> Result<(), ProgramError> {
         if !self.ix.can_topup {
-            return
+            return Ok(())
         }
-        let external_deposit =
-            calculate_external_deposit(balance, self.gross_amount(), self.total_amount_withdrawn());
+        let external_deposit = calculate_external_deposit(
+            balance,
+            self.gross_amount()?,
+            self.total_amount_withdrawn()?,
+        );
 
         if external_deposit > 0 {
-            self.deposit_gross(external_deposit);
+            self.deposit_gross(external_deposit)?;
         }
+        Ok(())
     }
 
-    pub fn deposit_gross(&mut self, gross_amount: u64) {
+    pub fn deposit_gross(&mut self, gross_amount: u64) -> Result<(), ProgramError> {
         let partner_fee_addition =
             calculate_fee_from_amount(gross_amount, self.partner_fee_percent);
         let strm_fee_addition =
             calculate_fee_from_amount(gross_amount, self.streamflow_fee_percent);
-        self.ix.net_amount_deposited += gross_amount - partner_fee_addition - strm_fee_addition;
-        self.partner_fee_total += partner_fee_addition;
-        self.streamflow_fee_total += strm_fee_addition;
-        self.end_time = self.ix.calculate_end_time();
+        let net_amount = gross_amount - partner_fee_addition - strm_fee_addition;
+        self.ix.net_amount_deposited = self
+            .ix
+            .net_amount_deposited
+            .checked_add(net_amount)
+            .ok_or(ProgramError::InvalidArgument)?;
+        self.partner_fee_total = self
+            .partner_fee_total
+            .checked_add(partner_fee_addition)
+            .ok_or(ProgramError::InvalidArgument)?;
+        self.streamflow_fee_total = self
+            .streamflow_fee_total
+            .checked_add(strm_fee_addition)
+            .ok_or(ProgramError::InvalidArgument)?;
+        self.end_time = self.ix.calculate_end_time()?;
+        Ok(())
     }
 
-    pub fn deposit_net(&mut self, net_amount: u64) {
+    pub fn deposit_net(&mut self, net_amount: u64) -> Result<(), ProgramError> {
         let partner_fee_addition = calculate_fee_from_amount(net_amount, self.partner_fee_percent);
         let strm_fee_addition = calculate_fee_from_amount(net_amount, self.streamflow_fee_percent);
-        self.ix.net_amount_deposited += net_amount;
-        self.partner_fee_total += partner_fee_addition;
-        self.streamflow_fee_total += strm_fee_addition;
-        self.end_time = self.ix.calculate_end_time();
+        self.ix.net_amount_deposited = self
+            .ix
+            .net_amount_deposited
+            .checked_add(net_amount)
+            .ok_or(ProgramError::InvalidArgument)?;
+        self.partner_fee_total = self
+            .partner_fee_total
+            .checked_add(partner_fee_addition)
+            .ok_or(ProgramError::InvalidArgument)?;
+        self.streamflow_fee_total = self
+            .streamflow_fee_total
+            .checked_add(strm_fee_addition)
+            .ok_or(ProgramError::InvalidArgument)?;
+        self.end_time = self.ix.calculate_end_time()?;
+        Ok(())
     }
 }
 

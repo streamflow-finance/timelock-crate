@@ -135,7 +135,7 @@ async fn test_create_stream_success() -> Result<()> {
     let net_deposit = spl_token::ui_amount_to_amount(transfer_amount as f64, 8);
 
     let expected_periods = net_deposit / amount_per_period;
-    let expected_end = now + 6 + expected_periods * period;
+    let expected_end = now + 5 + expected_periods * period;
 
     assert_eq!(metadata_acc.owner, tt.program_id);
     assert_eq!(metadata_data.amount_withdrawn, 0);

@@ -62,7 +62,7 @@ pub fn topup(pid: &Pubkey, acc: TopupAccounts, amount: u64) -> ProgramResult {
     }
 
     let escrow_tokens = unpack_token_account(&acc.escrow_tokens)?;
-    metadata.try_sync_balance(escrow_tokens.amount);
+    metadata.try_sync_balance(escrow_tokens.amount)?;
 
     let now = Clock::get()?.unix_timestamp as u64;
     if metadata.end_time < now {
@@ -90,14 +90,14 @@ pub fn topup(pid: &Pubkey, acc: TopupAccounts, amount: u64) -> ProgramResult {
         ],
     )?;
 
-    metadata.deposit_net(amount);
+    metadata.deposit_net(amount)?;
     save_account_info(&metadata, data)?;
 
     let mint_info = unpack_mint_account(&acc.mint)?;
 
     msg!(
         "Successfully topped up {} to token stream {} on behalf of {}",
-        amount_to_ui_amount(metadata.gross_amount(), mint_info.decimals),
+        amount_to_ui_amount(metadata.gross_amount()?, mint_info.decimals),
         acc.escrow_tokens.key,
         acc.sender.key,
     );

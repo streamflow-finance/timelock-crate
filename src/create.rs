@@ -187,7 +187,12 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
     msg!("Partner fee: {}", amount_to_ui_amount(partner_fee_amount, mint_info.decimals));
     msg!("Streamflow fee: {}", amount_to_ui_amount(strm_fee_amount, mint_info.decimals));
 
-    let gross_amount = ix.net_amount_deposited + partner_fee_amount + strm_fee_amount;
+    let gross_amount = ix
+        .net_amount_deposited
+        .checked_add(partner_fee_amount)
+        .ok_or(ProgramError::InvalidArgument)?
+        .checked_add(strm_fee_amount)
+        .ok_or(ProgramError::InvalidArgument)?;
 
     let sender_tokens = unpack_token_account(&acc.sender_tokens)?;
     if sender_tokens.amount < gross_amount {
@@ -202,7 +207,7 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
         partner_fee_percent,
         strm_fee_amount,
         strm_fee_percent,
-    );
+    )?;
 
     let metadata_bytes = metadata.try_to_vec()?;
     // We pad % 8 for size , since that's what has to be allocated.

@@ -17,14 +17,14 @@ pub fn close_escrow<'a>(
     let escrow_tokens_spl_account = unpack_token_account(&escrow_tokens)?;
     let external_deposit = calculate_external_deposit(
         escrow_tokens_spl_account.amount,
-        metadata.gross_amount(),
+        metadata.gross_amount()?,
         metadata.amount_withdrawn,
     );
 
     if external_deposit > 0 {
         msg!(
             "Transferring leftover external deposit: {} tokens to Streamflow treasury",
-            metadata.gross_amount()
+            metadata.gross_amount()?
         );
         invoke_signed(
             &spl_token::instruction::transfer(

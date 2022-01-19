@@ -175,7 +175,7 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
     }
 
     let escrow_tokens = unpack_token_account(&acc.escrow_tokens)?;
-    metadata.try_sync_balance(escrow_tokens.amount);
+    metadata.try_sync_balance(escrow_tokens.amount)?;
 
     let recipient_available = calculate_available(
         now,
@@ -184,7 +184,7 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         metadata.ix.net_amount_deposited,
         metadata.amount_withdrawn,
         100.0,
-    );
+    )?;
 
     let streamflow_available = calculate_available(
         now,
@@ -193,7 +193,7 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         metadata.streamflow_fee_total,
         metadata.streamflow_fee_withdrawn,
         metadata.streamflow_fee_percent,
-    );
+    )?;
 
     let partner_available = calculate_available(
         now,
@@ -202,7 +202,7 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         metadata.partner_fee_total,
         metadata.partner_fee_withdrawn,
         metadata.partner_fee_percent,
-    );
+    )?;
 
     let seeds = [ESCROW_SEED_PREFIX, acc.metadata.key.as_ref(), &[escrow_tokens_bump]];
 

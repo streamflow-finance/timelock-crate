@@ -52,18 +52,18 @@ pub fn calculate_available(
     total: u64,
     withdrawn: u64,
     fee_percentage: f32,
-) -> u64 {
+) -> Result<u64, ProgramError> {
     if ix.start_time > now || ix.cliff > now || total == 0 || total == withdrawn {
-        return 0
+        return Ok(0)
     }
 
     if now > end {
-        return total - withdrawn
+        return Ok(total - withdrawn)
     }
 
-    let stream_available = calculate_fee_from_amount(ix.stream_available(now), fee_percentage);
+    let stream_available = calculate_fee_from_amount(ix.stream_available(now)?, fee_percentage);
     let cliff_available = calculate_fee_from_amount(ix.cliff_amount, fee_percentage);
-    stream_available + cliff_available - withdrawn
+    Ok(stream_available + cliff_available - withdrawn)
 }
 
 pub fn calculate_available2(
