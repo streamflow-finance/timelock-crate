@@ -39,6 +39,11 @@ pub fn topup(pid: &Pubkey, acc: TopupAccounts, amount: u64) -> ProgramResult {
     if !acc.sender.is_signer {
         return Err(ProgramError::MissingRequiredSignature)
     }
+
+    if acc.token_program.key != &spl_token::id() {
+        return Err(ProgramError::InvalidAccountData)
+    }
+
     if amount == 0 {
         return Err(SfError::AmountIsZero.into())
     }
