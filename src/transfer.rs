@@ -106,6 +106,11 @@ pub fn transfer_recipient(pid: &Pubkey, acc: TransferAccounts) -> ProgramResult 
         return Err(SfError::TransferNotAllowed.into())
     }
 
+    // prevent transferring to myself
+    if acc.authority.key == acc.new_recipient.key {
+        return Err(ProgramError::InvalidArgument)
+    }
+
     metadata.recipient = *acc.new_recipient.key;
     metadata.recipient_tokens = *acc.new_recipient_tokens.key;
 
