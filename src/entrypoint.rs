@@ -12,6 +12,7 @@ use solana_program::{
 use crate::{
     cancel::{cancel, CancelAccounts},
     create::{create, CreateAccounts},
+    instruction::StreamInstruction,
     state::CreateParams,
     topup::{topup, TopupAccounts},
     transfer::{transfer_recipient, TransferAccounts},
@@ -21,9 +22,10 @@ use crate::{
 entrypoint!(process_instruction);
 pub fn process_instruction(pid: &Pubkey, acc: &[AccountInfo], ix: &[u8]) -> ProgramResult {
     let ai = &mut acc.iter();
+    let instruction = StreamInstruction::unpack(ix)?;
 
-    match ix[0] {
-        0 => {
+    match instruction {
+        StreamInstruction::Create { create_params } => {
             let ia = CreateAccounts {
                 sender: next_account_info(ai)?.clone(),
                 sender_tokens: next_account_info(ai)?.clone(),
@@ -42,10 +44,9 @@ pub fn process_instruction(pid: &Pubkey, acc: &[AccountInfo], ix: &[u8]) -> Prog
                 associated_token_program: next_account_info(ai)?.clone(),
                 system_program: next_account_info(ai)?.clone(),
             };
-            let si = CreateParams::try_from_slice(&ix[1..])?;
-            return create(pid, ia, si)
+            return create(pid, ia, create_params)
         }
-        1 => {
+        StreamInstruction::Withdraw { amount } => {
             let ia = WithdrawAccounts {
                 authority: next_account_info(ai)?.clone(),
                 recipient: next_account_info(ai)?.clone(),
@@ -59,10 +60,9 @@ pub fn process_instruction(pid: &Pubkey, acc: &[AccountInfo], ix: &[u8]) -> Prog
                 mint: next_account_info(ai)?.clone(),
                 token_program: next_account_info(ai)?.clone(),
             };
-            let amount = u64::from_le_bytes(ix[1..].try_into().unwrap());
             return withdraw(pid, ia, amount)
         }
-        2 => {
+        StreamInstruction::Cancel {} => {
             let ia = CancelAccounts {
                 authority: next_account_info(ai)?.clone(),
                 sender: next_account_info(ai)?.clone(),
@@ -80,7 +80,7 @@ pub fn process_instruction(pid: &Pubkey, acc: &[AccountInfo], ix: &[u8]) -> Prog
             };
             return cancel(pid, ia)
         }
-        3 => {
+        StreamInstruction::Transfer {} => {
             let ia = TransferAccounts {
                 authority: next_account_info(ai)?.clone(),
                 new_recipient: next_account_info(ai)?.clone(),
@@ -94,7 +94,7 @@ pub fn process_instruction(pid: &Pubkey, acc: &[AccountInfo], ix: &[u8]) -> Prog
             };
             return transfer_recipient(pid, ia)
         }
-        4 => {
+        StreamInstruction::TopUp { amount } => {
             let ia = TopupAccounts {
                 sender: next_account_info(ai)?.clone(),
                 sender_tokens: next_account_info(ai)?.clone(),
@@ -107,11 +107,7 @@ pub fn process_instruction(pid: &Pubkey, acc: &[AccountInfo], ix: &[u8]) -> Prog
                 mint: next_account_info(ai)?.clone(),
                 token_program: next_account_info(ai)?.clone(),
             };
-            let amount = u64::from_le_bytes(ix[1..].try_into().unwrap());
             return topup(pid, ia, amount)
         }
-        _ => {}
     }
-
-    Err(ProgramError::InvalidInstructionData)
 }
