@@ -44,7 +44,7 @@ pub fn process_instruction(pid: &Pubkey, acc: &[AccountInfo], ix: &[u8]) -> Prog
                 associated_token_program: next_account_info(ai)?.clone(),
                 system_program: next_account_info(ai)?.clone(),
             };
-            return create(pid, ia, create_params)
+            create(pid, ia, create_params)
         }
         StreamInstruction::Withdraw { amount } => {
             let ia = WithdrawAccounts {
@@ -60,7 +60,7 @@ pub fn process_instruction(pid: &Pubkey, acc: &[AccountInfo], ix: &[u8]) -> Prog
                 mint: next_account_info(ai)?.clone(),
                 token_program: next_account_info(ai)?.clone(),
             };
-            return withdraw(pid, ia, amount)
+            withdraw(pid, ia, amount)
         }
         StreamInstruction::Cancel {} => {
             let ia = CancelAccounts {
@@ -78,7 +78,7 @@ pub fn process_instruction(pid: &Pubkey, acc: &[AccountInfo], ix: &[u8]) -> Prog
                 mint: next_account_info(ai)?.clone(),
                 token_program: next_account_info(ai)?.clone(),
             };
-            return cancel(pid, ia)
+            cancel(pid, ia)
         }
         StreamInstruction::Transfer {} => {
             let ia = TransferAccounts {
@@ -92,7 +92,7 @@ pub fn process_instruction(pid: &Pubkey, acc: &[AccountInfo], ix: &[u8]) -> Prog
                 associated_token_program: next_account_info(ai)?.clone(),
                 system_program: next_account_info(ai)?.clone(),
             };
-            return transfer_recipient(pid, ia)
+            transfer_recipient(pid, ia)
         }
         StreamInstruction::TopUp { amount } => {
             let ia = TopupAccounts {
@@ -107,7 +107,7 @@ pub fn process_instruction(pid: &Pubkey, acc: &[AccountInfo], ix: &[u8]) -> Prog
                 mint: next_account_info(ai)?.clone(),
                 token_program: next_account_info(ai)?.clone(),
             };
-            return topup(pid, ia, amount)
+            topup(pid, ia, amount)
         }
     }
 }
