@@ -13,6 +13,7 @@ pub mod utils;
 
 pub mod cancel;
 pub mod create;
+pub mod instruction;
 pub mod process;
 pub mod topup;
 pub mod transfer;
