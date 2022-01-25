@@ -43,7 +43,7 @@ pub struct CreateParams {
     /// Whether topup is enabled
     pub can_topup: bool,
     /// The name of this stream
-    pub stream_name: String,
+    pub stream_name: [u8; 64],
     //can't use const MAX_NAME_SIZE_B bcs of javascript generator.
 }
 
