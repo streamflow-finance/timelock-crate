@@ -89,7 +89,7 @@ async fn test_topup_success() -> Result<()> {
             transferable_by_sender: true,
             transferable_by_recipient: true,
             can_topup: true,
-            stream_name: "TheTestoooooooooor".to_string(),
+            stream_name: TEST_STREAM_NAME,
         },
     };
 
@@ -213,7 +213,7 @@ async fn test_topup_not_signer() -> Result<()> {
             transferable_by_sender: true,
             transferable_by_recipient: true,
             can_topup: true,
-            stream_name: "TheTestoooooooooor".to_string(),
+            stream_name: TEST_STREAM_NAME,
         },
     };
 

@@ -96,7 +96,7 @@ async fn test_create_stream_success() -> Result<()> {
             transferable_by_sender,
             transferable_by_recipient,
             can_topup: false,
-            stream_name: "TheTestoooooooooor".to_string(),
+            stream_name: TEST_STREAM_NAME,
         },
     };
 
@@ -150,7 +150,7 @@ async fn test_create_stream_success() -> Result<()> {
     assert_eq!(metadata_data.mint, strm_token_mint.pubkey());
     assert_eq!(metadata_data.escrow_tokens, escrow_tokens_pubkey);
     assert_eq!(metadata_data.ix.start_time, now + 5);
-    assert_eq!(metadata_data.ix.stream_name, "TheTestoooooooooor".to_string());
+    assert_eq!(metadata_data.ix.stream_name, TEST_STREAM_NAME);
     assert_eq!(metadata_data.ix.cancelable_by_sender, cancelable_by_sender);
     assert_eq!(metadata_data.ix.cancelable_by_recipient, cancelable_by_recipient);
     assert_eq!(metadata_data.ix.transferable_by_recipient, transferable_by_recipient);
@@ -223,7 +223,7 @@ async fn test_create_stream_fees_properly_set() -> Result<()> {
             transferable_by_sender: false,
             transferable_by_recipient: false,
             can_topup: false,
-            stream_name: "TheTestoooooooooor".to_string(),
+            stream_name: TEST_STREAM_NAME,
         },
     };
 
@@ -329,7 +329,7 @@ async fn test_create_stream_amount_period_invalid() -> Result<()> {
             transferable_by_sender: false,
             transferable_by_recipient: false,
             can_topup: false,
-            stream_name: "TheTestoooooooooor".to_string(),
+            stream_name: TEST_STREAM_NAME,
         },
     };
 
@@ -427,7 +427,7 @@ async fn test_create_stream_cliff_amount_higher_than_net() -> Result<()> {
             transferable_by_sender: false,
             transferable_by_recipient: false,
             can_topup: false,
-            stream_name: "TheTestoooooooooor".to_string(),
+            stream_name: TEST_STREAM_NAME,
         },
     };
 
@@ -525,7 +525,7 @@ async fn test_create_stream_amount_deposited_less_then_app() -> Result<()> {
             transferable_by_sender: false,
             transferable_by_recipient: false,
             can_topup: false,
-            stream_name: "TheTestoooooooooor".to_string(),
+            stream_name: TEST_STREAM_NAME,
         },
     };
 
@@ -629,7 +629,7 @@ async fn test_create_stream_not_signer() -> Result<()> {
             transferable_by_sender,
             transferable_by_recipient,
             can_topup: false,
-            stream_name: "TheTestoooooooooor".to_string(),
+            stream_name: TEST_STREAM_NAME,
         },
     };
 
@@ -732,7 +732,7 @@ async fn test_create_stream_metadata_not_signed() -> Result<()> {
             transferable_by_sender,
             transferable_by_recipient,
             can_topup: false,
-            stream_name: "TheTestoooooooooor".to_string(),
+            stream_name: TEST_STREAM_NAME,
         },
     };
 

@@ -36,8 +36,9 @@
 //     let payer = clone_keypair(&tt.bench.payer);
 //
 //     let strm_token_mint = Keypair::new();
-//     let alice_ass_token = get_associated_token_address(&alice.pubkey(), &strm_token_mint.pubkey());
-//     let bob_ass_token = get_associated_token_address(&bob.pubkey(), &strm_token_mint.pubkey());
+//     let alice_ass_token = get_associated_token_address(&alice.pubkey(),
+// &strm_token_mint.pubkey());     let bob_ass_token = get_associated_token_address(&bob.pubkey(),
+// &strm_token_mint.pubkey());
 //
 //     tt.bench.create_mint(&strm_token_mint, &tt.bench.payer.pubkey()).await;
 //
@@ -53,10 +54,11 @@
 //         .await;
 //
 //     let alice_ass_account = tt.bench.get_account(&alice_ass_token).await.unwrap();
-//     let alice_token_data = spl_token::state::Account::unpack_from_slice(&alice_ass_account.data)?;
-//     assert_eq!(alice_token_data.amount, spl_token::ui_amount_to_amount(100.0, 8));
-//     assert_eq!(alice_token_data.mint, strm_token_mint.pubkey());
-//     assert_eq!(alice_token_data.owner, alice.pubkey());
+//     let alice_token_data =
+// spl_token::state::Account::unpack_from_slice(&alice_ass_account.data)?;     assert_eq!
+// (alice_token_data.amount, spl_token::ui_amount_to_amount(100.0, 8));     assert_eq!
+// (alice_token_data.mint, strm_token_mint.pubkey());     assert_eq!(alice_token_data.owner,
+// alice.pubkey());
 //
 //     let metadata_kp = Keypair::new();
 //     let (escrow_tokens_pubkey, _) =
@@ -79,7 +81,7 @@
 //             automatic_withdrawal: false,
 //             transferable_by_sender: false,
 //             transferable_by_recipient: false,
-//             stream_name: "TheTestoooooooooor".to_string(),
+//             stream_name: TEST_STREAM_NAME,
 //             can_topup: false,
 //         },
 //     };
@@ -102,7 +104,8 @@
 //         ],
 //     );
 //
-//     tt.bench.process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp])).await?;
+//     tt.bench.process_transaction(&[create_stream_ix_bytes], Some(&[&alice,
+// &metadata_kp])).await?;
 //
 //     let metadata_acc = tt.bench.get_account(&metadata_kp.pubkey()).await.unwrap();
 //     let metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
@@ -122,7 +125,7 @@
 //     assert_eq!(metadata_data.ix.start_time, now + 5);
 //     assert_eq!(metadata_data.ix.end_time, now + 605);
 //     assert_eq!(metadata_data.ix.net_amount_deposited, spl_token::ui_amount_to_amount(20.0, 8));
-//     assert_eq!(metadata_data.ix.stream_name, "TheTestoooooooooor".to_string());
+//     assert_eq!(metadata_data.ix.stream_name, TEST_STREAM_NAME);
 //
 //     // Let's warp ahead and try withdrawing some of the stream.
 //     tt.advance_clock_past_timestamp(now as i64 + 300).await;
@@ -165,8 +168,9 @@
 //     let payer = clone_keypair(&tt.bench.payer);
 //
 //     let strm_token_mint = Keypair::new();
-//     let alice_ass_token = get_associated_token_address(&alice.pubkey(), &strm_token_mint.pubkey());
-//     let bob_ass_token = get_associated_token_address(&bob.pubkey(), &strm_token_mint.pubkey());
+//     let alice_ass_token = get_associated_token_address(&alice.pubkey(),
+// &strm_token_mint.pubkey());     let bob_ass_token = get_associated_token_address(&bob.pubkey(),
+// &strm_token_mint.pubkey());
 //
 //     tt.bench.create_mint(&strm_token_mint, &tt.bench.payer.pubkey()).await;
 //
@@ -182,10 +186,11 @@
 //         .await;
 //
 //     let alice_ass_account = tt.bench.get_account(&alice_ass_token).await.unwrap();
-//     let alice_token_data = spl_token::state::Account::unpack_from_slice(&alice_ass_account.data)?;
-//     assert_eq!(alice_token_data.amount, spl_token::ui_amount_to_amount(100.0, 8));
-//     assert_eq!(alice_token_data.mint, strm_token_mint.pubkey());
-//     assert_eq!(alice_token_data.owner, alice.pubkey());
+//     let alice_token_data =
+// spl_token::state::Account::unpack_from_slice(&alice_ass_account.data)?;     assert_eq!
+// (alice_token_data.amount, spl_token::ui_amount_to_amount(100.0, 8));     assert_eq!
+// (alice_token_data.mint, strm_token_mint.pubkey());     assert_eq!(alice_token_data.owner,
+// alice.pubkey());
 //
 //     let metadata_kp = Keypair::new();
 //     let (escrow_tokens_pubkey, _) =
@@ -231,7 +236,8 @@
 //         ],
 //     );
 //
-//     tt.bench.process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp])).await?;
+//     tt.bench.process_transaction(&[create_stream_ix_bytes], Some(&[&alice,
+// &metadata_kp])).await?;
 //
 //     let metadata_acc = tt.bench.get_account(&metadata_kp.pubkey()).await.unwrap();
 //     let metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
@@ -263,13 +269,14 @@
 //         ],
 //     );
 //
-//     let transaction_error = tt.bench.process_transaction(&[transfer_ix_bytes], Some(&[&bob])).await;
+//     let transaction_error = tt.bench.process_transaction(&[transfer_ix_bytes],
+// Some(&[&bob])).await;
 //
 //     assert!(transaction_error.is_err());
 //
 //     // Top up account with 12 and see new amount in escrow account
-//     let topup_ix = TopUpIx { ix: 4, amount: spl_token::ui_amount_to_amount(10.0, 8) }; // 4 => topup_stream
-//     let topupix_bytes = Instruction::new_with_bytes(
+//     let topup_ix = TopUpIx { ix: 4, amount: spl_token::ui_amount_to_amount(10.0, 8) }; // 4 =>
+// topup_stream     let topupix_bytes = Instruction::new_with_bytes(
 //         tt.program_id,
 //         &topup_ix.try_to_vec()?,
 //         vec![
@@ -384,8 +391,9 @@
 //     let payer = clone_keypair(&tt.bench.payer);
 //
 //     let strm_token_mint = Keypair::new();
-//     let alice_ass_token = get_associated_token_address(&alice.pubkey(), &strm_token_mint.pubkey());
-//     let bob_ass_token = get_associated_token_address(&bob.pubkey(), &strm_token_mint.pubkey());
+//     let alice_ass_token = get_associated_token_address(&alice.pubkey(),
+// &strm_token_mint.pubkey());     let bob_ass_token = get_associated_token_address(&bob.pubkey(),
+// &strm_token_mint.pubkey());
 //
 //     tt.bench.create_mint(&strm_token_mint, &tt.bench.payer.pubkey()).await;
 //
@@ -401,10 +409,11 @@
 //         .await;
 //
 //     let alice_ass_account = tt.bench.get_account(&alice_ass_token).await.unwrap();
-//     let alice_token_data = spl_token::state::Account::unpack_from_slice(&alice_ass_account.data)?;
-//     assert_eq!(alice_token_data.amount, spl_token::ui_amount_to_amount(100.0, 8));
-//     assert_eq!(alice_token_data.mint, strm_token_mint.pubkey());
-//     assert_eq!(alice_token_data.owner, alice.pubkey());
+//     let alice_token_data =
+// spl_token::state::Account::unpack_from_slice(&alice_ass_account.data)?;     assert_eq!
+// (alice_token_data.amount, spl_token::ui_amount_to_amount(100.0, 8));     assert_eq!
+// (alice_token_data.mint, strm_token_mint.pubkey());     assert_eq!(alice_token_data.owner,
+// alice.pubkey());
 //
 //     let metadata_kp = Keypair::new();
 //     let (escrow_tokens_pubkey, _) =
@@ -450,7 +459,8 @@
 //         ],
 //     );
 //
-//     tt.bench.process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp])).await?;
+//     tt.bench.process_transaction(&[create_stream_ix_bytes], Some(&[&alice,
+// &metadata_kp])).await?;
 //
 //     let metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
 //
@@ -497,8 +507,9 @@
 //     let payer = clone_keypair(&tt.bench.payer);
 //
 //     let strm_token_mint = Keypair::new();
-//     let alice_ass_token = get_associated_token_address(&alice.pubkey(), &strm_token_mint.pubkey());
-//     let bob_ass_token = get_associated_token_address(&bob.pubkey(), &strm_token_mint.pubkey());
+//     let alice_ass_token = get_associated_token_address(&alice.pubkey(),
+// &strm_token_mint.pubkey());     let bob_ass_token = get_associated_token_address(&bob.pubkey(),
+// &strm_token_mint.pubkey());
 //
 //     tt.bench.create_mint(&strm_token_mint, &tt.bench.payer.pubkey()).await;
 //
@@ -514,10 +525,11 @@
 //         .await;
 //
 //     let alice_ass_account = tt.bench.get_account(&alice_ass_token).await.unwrap();
-//     let alice_token_data = spl_token::state::Account::unpack_from_slice(&alice_ass_account.data)?;
-//     assert_eq!(alice_token_data.amount, spl_token::ui_amount_to_amount(100.0, 8));
-//     assert_eq!(alice_token_data.mint, strm_token_mint.pubkey());
-//     assert_eq!(alice_token_data.owner, alice.pubkey());
+//     let alice_token_data =
+// spl_token::state::Account::unpack_from_slice(&alice_ass_account.data)?;     assert_eq!
+// (alice_token_data.amount, spl_token::ui_amount_to_amount(100.0, 8));     assert_eq!
+// (alice_token_data.mint, strm_token_mint.pubkey());     assert_eq!(alice_token_data.owner,
+// alice.pubkey());
 //
 //     let metadata_kp = Keypair::new();
 //     let (escrow_tokens_pubkey, _) =
@@ -563,7 +575,8 @@
 //         ],
 //     );
 //
-//     tt.bench.process_transaction(&[create_stream_ix_bytes], Some(&[&alice, &metadata_kp])).await?;
+//     tt.bench.process_transaction(&[create_stream_ix_bytes], Some(&[&alice,
+// &metadata_kp])).await?;
 //
 //     let metadata_acc = tt.bench.get_account(&metadata_kp.pubkey()).await.unwrap();
 //     let metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
@@ -577,8 +590,8 @@
 //     assert_eq!(metadata_data.ix.release_rate, 100000000);
 //
 //     // Top up account with 12 and see new amount in escrow account
-//     let topup_ix = TopUpIx { ix: 4, amount: spl_token::ui_amount_to_amount(20.0, 8) }; // 4 => topup_stream
-//     let topupix_bytes = Instruction::new_with_bytes(
+//     let topup_ix = TopUpIx { ix: 4, amount: spl_token::ui_amount_to_amount(20.0, 8) }; // 4 =>
+// topup_stream     let topupix_bytes = Instruction::new_with_bytes(
 //         tt.program_id,
 //         &topup_ix.try_to_vec()?,
 //         vec![
@@ -686,8 +699,8 @@
 //     assert_eq!(metadata_data.last_withdrawn_at, new_now);
 //
 //     // Try to topup, stream expired, shouldn't succeed
-//     let topup_ix = TopUpIx { ix: 4, amount: spl_token::ui_amount_to_amount(10.0, 8) }; // 4 => topup_stream
-//     let topupix_bytes = Instruction::new_with_bytes(
+//     let topup_ix = TopUpIx { ix: 4, amount: spl_token::ui_amount_to_amount(10.0, 8) }; // 4 =>
+// topup_stream     let topupix_bytes = Instruction::new_with_bytes(
 //         tt.program_id,
 //         &topup_ix.try_to_vec()?,
 //         vec![
@@ -700,8 +713,8 @@
 //         ],
 //     );
 //
-//     let transaction_error = tt.bench.process_transaction(&[topupix_bytes], Some(&[&alice])).await;
-//     // Stream closed, no topup
+//     let transaction_error = tt.bench.process_transaction(&[topupix_bytes],
+// Some(&[&alice])).await;     // Stream closed, no topup
 //     assert!(transaction_error.is_err());
 //
 //     let cancel_ix_bytes = Instruction::new_with_bytes(

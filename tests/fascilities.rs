@@ -55,6 +55,8 @@ pub TestAccounts {
 }
 */
 
+pub const TEST_STREAM_NAME: [u8; 64] = ["t".as_bytes()[0]; 64];
+
 impl TimelockProgramTest {
     pub async fn start_new(accounts: &[Account], strm_acc: &Pubkey) -> Self {
         let mut program_test = ProgramTest::default();
