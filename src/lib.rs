@@ -8,6 +8,8 @@ pub mod entrypoint;
 pub mod error;
 /// Structs and data
 pub mod state;
+/// Safe math
+pub mod try_math;
 /// Utility functions
 pub mod utils;
 

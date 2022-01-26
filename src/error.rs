@@ -44,6 +44,9 @@ pub enum SfError {
 
     #[error("Amount requested is larger than available")]
     AmountMoreThanAvailable = 0x73,
+
+    #[error("Arithmetic error")]
+    ArithmeticError = 0x80,
 }
 
 impl From<SfError> for ProgramError {
