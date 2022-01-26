@@ -14,6 +14,7 @@ use spl_token::amount_to_ui_amount;
 use crate::{
     error::SfError,
     state::{find_escrow_account, save_account_info, Contract},
+    try_math::TryAdd,
     utils::{calculate_fee_from_amount, unpack_mint_account, unpack_token_account},
 };
 
@@ -85,7 +86,7 @@ pub fn topup(pid: &Pubkey, acc: TopupAccounts, amount: u64) -> ProgramResult {
             acc.escrow_tokens.key,
             acc.sender.key,
             &[],
-            amount + partner_fee + strm_fee,
+            amount.try_add(partner_fee)?.try_add(strm_fee)?,
         )?,
         &[
             acc.sender_tokens.clone(),

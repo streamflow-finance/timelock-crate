@@ -5,6 +5,7 @@ use std::cell::RefMut;
 use crate::{
     create::CreateAccounts,
     error::SfError,
+    try_math::*,
     utils::{calculate_external_deposit, calculate_fee_from_amount},
 };
 
@@ -52,23 +53,18 @@ impl CreateParams {
     pub fn calculate_end_time(&self) -> Result<u64, ProgramError> {
         let start = if self.cliff > 0 { self.cliff } else { self.start_time };
 
-        let periods_left = self
-            .net_amount_deposited
-            .checked_div(self.amount_per_period)
-            .ok_or(ProgramError::InvalidArgument)?;
+        let periods_left = self.net_amount_deposited.try_div(self.amount_per_period)?;
 
         // Seconds till account runs out of available funds
-        let seconds_left =
-            periods_left.checked_mul(self.period).ok_or(ProgramError::InvalidArgument)?;
+        let seconds_left = periods_left.try_mul(self.period)?;
 
-        Ok(start + seconds_left)
+        Ok(start.try_add(seconds_left)?)
     }
 
     pub fn stream_available(&self, now: u64) -> Result<u64, ProgramError> {
         let start = if self.cliff > 0 { self.cliff } else { self.start_time };
-        let periods_passed =
-            (now - start).checked_div(self.period).ok_or(ProgramError::InvalidArgument)?;
-        periods_passed.checked_mul(self.amount_per_period).ok_or(ProgramError::InvalidArgument)
+        let periods_passed = (now.try_sub(start)?).try_div(self.period)?;
+        periods_passed.try_mul(self.amount_per_period)
     }
 }
 
@@ -172,24 +168,16 @@ impl Contract {
     }
 
     pub fn total_amount_withdrawn(&self) -> Result<u64, ProgramError> {
-        let mut result = self
-            .amount_withdrawn
-            .checked_add(self.partner_fee_withdrawn)
-            .ok_or(ProgramError::InvalidArgument)?;
-        result = result
-            .checked_add(self.streamflow_fee_withdrawn)
-            .ok_or(ProgramError::InvalidArgument)?;
-        Ok(result)
+        self.amount_withdrawn
+            .try_add(self.partner_fee_withdrawn)?
+            .try_add(self.streamflow_fee_withdrawn)
     }
 
     pub fn gross_amount(&self) -> Result<u64, ProgramError> {
-        let mut result = self
-            .ix
+        self.ix
             .net_amount_deposited
-            .checked_add(self.streamflow_fee_total)
-            .ok_or(ProgramError::InvalidArgument)?;
-        result = result.checked_add(self.partner_fee_total).ok_or(ProgramError::InvalidArgument)?;
-        Ok(result)
+            .try_add(self.streamflow_fee_total)?
+            .try_add(self.partner_fee_total)
     }
 
     pub fn try_sync_balance(&mut self, balance: u64) -> Result<(), ProgramError> {
@@ -200,7 +188,7 @@ impl Contract {
             balance,
             self.gross_amount()?,
             self.total_amount_withdrawn()?,
-        );
+        )?;
 
         if external_deposit > 0 {
             self.deposit_gross(external_deposit)?;
@@ -213,20 +201,10 @@ impl Contract {
             calculate_fee_from_amount(gross_amount, self.partner_fee_percent);
         let strm_fee_addition =
             calculate_fee_from_amount(gross_amount, self.streamflow_fee_percent);
-        let net_amount = gross_amount - partner_fee_addition - strm_fee_addition;
-        self.ix.net_amount_deposited = self
-            .ix
-            .net_amount_deposited
-            .checked_add(net_amount)
-            .ok_or(ProgramError::InvalidArgument)?;
-        self.partner_fee_total = self
-            .partner_fee_total
-            .checked_add(partner_fee_addition)
-            .ok_or(ProgramError::InvalidArgument)?;
-        self.streamflow_fee_total = self
-            .streamflow_fee_total
-            .checked_add(strm_fee_addition)
-            .ok_or(ProgramError::InvalidArgument)?;
+        let net_amount = gross_amount.try_sub(partner_fee_addition)?.try_sub(strm_fee_addition)?;
+        self.ix.net_amount_deposited.try_add_assign(net_amount)?;
+        self.partner_fee_total.try_add_assign(partner_fee_addition)?;
+        self.streamflow_fee_total.try_add_assign(strm_fee_addition)?;
         self.end_time = self.ix.calculate_end_time()?;
         Ok(())
     }
@@ -234,19 +212,9 @@ impl Contract {
     pub fn deposit_net(&mut self, net_amount: u64) -> Result<(), ProgramError> {
         let partner_fee_addition = calculate_fee_from_amount(net_amount, self.partner_fee_percent);
         let strm_fee_addition = calculate_fee_from_amount(net_amount, self.streamflow_fee_percent);
-        self.ix.net_amount_deposited = self
-            .ix
-            .net_amount_deposited
-            .checked_add(net_amount)
-            .ok_or(ProgramError::InvalidArgument)?;
-        self.partner_fee_total = self
-            .partner_fee_total
-            .checked_add(partner_fee_addition)
-            .ok_or(ProgramError::InvalidArgument)?;
-        self.streamflow_fee_total = self
-            .streamflow_fee_total
-            .checked_add(strm_fee_addition)
-            .ok_or(ProgramError::InvalidArgument)?;
+        self.ix.net_amount_deposited.try_add_assign(net_amount)?;
+        self.partner_fee_total.try_add_assign(partner_fee_addition)?;
+        self.streamflow_fee_total.try_add_assign(strm_fee_addition)?;
         self.end_time = self.ix.calculate_end_time()?;
         Ok(())
     }

@@ -3,6 +3,8 @@ use solana_program::{
     program_pack::Pack, pubkey::Pubkey,
 };
 
+use crate::try_math::*;
+
 use crate::{error::SfError, state::CreateParams};
 
 /// Do a sanity check with given Unix timestamps.
@@ -58,54 +60,25 @@ pub fn calculate_available(
     }
 
     if now > end {
-        return Ok(total - withdrawn)
+        return Ok(total.try_sub(withdrawn)?)
     }
 
     let stream_available = calculate_fee_from_amount(ix.stream_available(now)?, fee_percentage);
     let cliff_available = calculate_fee_from_amount(ix.cliff_amount, fee_percentage);
-    Ok(stream_available + cliff_available - withdrawn)
-}
-
-pub fn calculate_available2(
-    now: u64,
-    end: u64,
-    ix: CreateParams,
-    total: u64,
-    withdrawn: u64,
-    fee_percentage: f32,
-) -> u64 {
-    if fee_percentage == 0.0 {
-        return 0
-    }
-    if ix.start_time > now || ix.cliff > now || total == 0 || total == withdrawn {
-        return 0
-    }
-
-    if now > end {
-        return total - withdrawn
-    }
-
-    let start = if ix.cliff > 0 { ix.cliff } else { ix.start_time };
-
-    let periods_passed = u128::from(now - start) * 10_u128.pow(8) / u128::from(ix.period);
-    let periods_passed = periods_passed / 10_u128.pow(8);
-    let available =
-        periods_passed * u128::from(ix.amount_per_period) * 10_u128.pow(8) / fee_percentage as u128;
-    let available = available / 10_u128.pow(8);
-
-    let ret = available - u128::from(withdrawn) + u128::from(ix.cliff_amount);
-
-    // Truncate to 64 bits
-    ret as u64
+    Ok(stream_available.try_add(cliff_available)?.try_sub(withdrawn)?)
 }
 
 // TODO: impl calculations from ix
-pub fn calculate_external_deposit(balance: u64, deposited: u64, withdrawn: u64) -> u64 {
-    if deposited - withdrawn >= balance {
-        return 0
+pub fn calculate_external_deposit(
+    balance: u64,
+    deposited: u64,
+    withdrawn: u64,
+) -> Result<u64, ProgramError> {
+    if deposited.try_sub(withdrawn)? >= balance {
+        return Ok(0)
     }
 
-    balance - (deposited - withdrawn)
+    Ok(balance.try_sub(deposited.try_sub(withdrawn)?)?)
 }
 
 /// Given amount and percentage, return the u64 of that percentage.
@@ -206,8 +179,8 @@ mod tests {
 
     #[test]
     fn test_external_deposit() {
-        assert_eq!(calculate_external_deposit(9, 10, 4), 3);
-        assert_eq!(calculate_external_deposit(100, 100, 0), 0);
-        assert_eq!(calculate_external_deposit(100, 100, 100), 100);
+        assert_eq!(calculate_external_deposit(9, 10, 4).unwrap(), 3);
+        assert_eq!(calculate_external_deposit(100, 100, 0).unwrap(), 0);
+        assert_eq!(calculate_external_deposit(100, 100, 100).unwrap(), 100);
     }
 }

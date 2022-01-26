@@ -19,7 +19,7 @@ pub fn close_escrow<'a>(
         escrow_tokens_spl_account.amount,
         metadata.gross_amount()?,
         metadata.amount_withdrawn,
-    );
+    )?;
 
     if external_deposit > 0 {
         msg!(

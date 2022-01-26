@@ -17,6 +17,7 @@ use crate::{
     error::SfError,
     process,
     state::{find_escrow_account, save_account_info, Contract, ESCROW_SEED_PREFIX, STRM_TREASURY},
+    try_math::{TryAdd, TrySub},
     utils::{calculate_available, unpack_mint_account, unpack_token_account, Invoker},
 };
 
@@ -226,7 +227,7 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
             &[&seeds],
         )?;
 
-        metadata.amount_withdrawn += recipient_available;
+        metadata.amount_withdrawn.try_add_assign(recipient_available)?;
         metadata.last_withdrawn_at = now;
         msg!(
             "Withdrawn: {} {} tokens",
@@ -236,7 +237,7 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         msg!(
             "Remaining: {} {} tokens",
             amount_to_ui_amount(
-                metadata.ix.net_amount_deposited - metadata.amount_withdrawn,
+                metadata.ix.net_amount_deposited.try_sub(metadata.amount_withdrawn)?,
                 mint_info.decimals
             ),
             metadata.mint
@@ -263,7 +264,7 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
             &[&seeds],
         )?;
 
-        metadata.streamflow_fee_withdrawn += streamflow_available;
+        metadata.streamflow_fee_withdrawn.try_add_assign(streamflow_available)?;
         msg!(
             "Withdrawn: {} {} tokens",
             amount_to_ui_amount(streamflow_available, mint_info.decimals),
@@ -274,7 +275,7 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         msg!(
             "Remaining: {} {} tokens",
             amount_to_ui_amount(
-                metadata.streamflow_fee_total - metadata.streamflow_fee_withdrawn,
+                metadata.streamflow_fee_total.try_sub(metadata.streamflow_fee_withdrawn)?,
                 mint_info.decimals
             ),
             metadata.mint
@@ -301,7 +302,7 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
             &[&seeds],
         )?;
 
-        metadata.partner_fee_withdrawn += partner_available;
+        metadata.partner_fee_withdrawn.try_add_assign(partner_available)?;
         msg!(
             "Withdrawn: {} {} tokens",
             amount_to_ui_amount(partner_available, mint_info.decimals),
@@ -310,15 +311,16 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
         msg!(
             "Remaining: {} {} tokens",
             amount_to_ui_amount(
-                metadata.partner_fee_total - metadata.partner_fee_withdrawn,
+                metadata.partner_fee_total.try_sub(metadata.partner_fee_withdrawn)?,
                 mint_info.decimals
             ),
             metadata.mint
         );
     }
-    let recipient_remains = metadata.ix.net_amount_deposited - metadata.amount_withdrawn;
-    let streamflow_remains = metadata.streamflow_fee_total - metadata.streamflow_fee_withdrawn;
-    let partner_remains = metadata.partner_fee_total - metadata.partner_fee_withdrawn;
+    let recipient_remains = metadata.ix.net_amount_deposited.try_sub(metadata.amount_withdrawn)?;
+    let streamflow_remains =
+        metadata.streamflow_fee_total.try_sub(metadata.streamflow_fee_withdrawn)?;
+    let partner_remains = metadata.partner_fee_total.try_sub(metadata.partner_fee_withdrawn)?;
 
     if recipient_remains > 0 || streamflow_remains > 0 || partner_remains > 0 {
         msg!("Transferring remains back to sender");
@@ -329,7 +331,7 @@ pub fn cancel(pid: &Pubkey, acc: CancelAccounts) -> ProgramResult {
                 acc.sender_tokens.key,
                 acc.escrow_tokens.key,
                 &[],
-                recipient_remains + streamflow_remains + partner_remains,
+                recipient_remains.try_add(streamflow_remains)?.try_add(partner_remains)?,
             )?,
             &[
                 acc.escrow_tokens.clone(), // src

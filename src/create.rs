@@ -22,6 +22,7 @@ use crate::{
         find_escrow_account, save_account_info, Contract, CreateParams, ESCROW_SEED_PREFIX,
         PROGRAM_VERSION, STRM_FEE_DEFAULT_PERCENT, STRM_TREASURY,
     },
+    try_math::TryAdd,
     utils::{
         calculate_fee_from_amount, duration_sanity, pretty_time, unpack_mint_account,
         unpack_token_account,
@@ -187,12 +188,8 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
     msg!("Partner fee: {}", amount_to_ui_amount(partner_fee_amount, mint_info.decimals));
     msg!("Streamflow fee: {}", amount_to_ui_amount(strm_fee_amount, mint_info.decimals));
 
-    let gross_amount = ix
-        .net_amount_deposited
-        .checked_add(partner_fee_amount)
-        .ok_or(ProgramError::InvalidArgument)?
-        .checked_add(strm_fee_amount)
-        .ok_or(ProgramError::InvalidArgument)?;
+    let gross_amount =
+        ix.net_amount_deposited.try_add(partner_fee_amount)?.try_add(strm_fee_amount)?;
 
     let sender_tokens = unpack_token_account(&acc.sender_tokens)?;
     if sender_tokens.amount < gross_amount {
@@ -221,10 +218,10 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
     let metadata_rent = cluster_rent.minimum_balance(metadata_struct_size);
     let mut tokens_rent = cluster_rent.minimum_balance(tokens_struct_size);
     if acc.recipient_tokens.data_is_empty() {
-        tokens_rent += cluster_rent.minimum_balance(tokens_struct_size);
+        tokens_rent.try_add_assign(cluster_rent.minimum_balance(tokens_struct_size))?;
     }
 
-    if acc.sender.lamports() < metadata_rent + tokens_rent {
+    if acc.sender.lamports() < metadata_rent.try_add(tokens_rent)? {
         msg!("Error: Insufficient funds in {}", acc.sender.key);
         return Err(ProgramError::InsufficientFunds)
     }
@@ -359,7 +356,7 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
     // msg!("Called by {}", acc.sender.key);
     // msg!("Metadata written in {}", acc.metadata.key);
     // msg!("Funds locked in {}", acc.escrow_tokens.key);
-    // msg!("Stream duration is {}", pretty_time(metadata.end_time - ix.start_time));
+    // msg!("Stream duration is {}", pretty_time(metadata.end_time.try_sub(ix.start_time)?));
     //
     // if ix.cliff > 0 && ix.cliff_amount > 0 {
     //     msg!("Cliff happens in {}", pretty_time(ix.cliff));

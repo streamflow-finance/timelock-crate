@@ -17,6 +17,7 @@ use crate::{
     error::SfError,
     process,
     state::{find_escrow_account, save_account_info, Contract, ESCROW_SEED_PREFIX, STRM_TREASURY},
+    try_math::{TryAdd, TrySub},
     utils::{calculate_available, unpack_mint_account, unpack_token_account, Invoker},
 };
 
@@ -218,7 +219,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, mut amount: u64) -> Program
             &[&seeds],
         )?;
 
-        metadata.amount_withdrawn += amount;
+        metadata.amount_withdrawn.try_add_assign(amount)?;
         metadata.last_withdrawn_at = now;
         msg!(
             "Withdrawn: {} {} tokens",
@@ -228,7 +229,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, mut amount: u64) -> Program
         msg!(
             "Remaining: {} {} tokens",
             amount_to_ui_amount(
-                metadata.ix.net_amount_deposited - metadata.amount_withdrawn,
+                metadata.ix.net_amount_deposited.try_sub(metadata.amount_withdrawn)?,
                 mint_info.decimals
             ),
             metadata.mint
@@ -255,7 +256,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, mut amount: u64) -> Program
             &[&seeds],
         )?;
 
-        metadata.streamflow_fee_withdrawn += streamflow_available;
+        metadata.streamflow_fee_withdrawn.try_add_assign(streamflow_available)?;
         msg!(
             "Withdrawn: {} {} tokens",
             amount_to_ui_amount(streamflow_available, mint_info.decimals),
@@ -266,7 +267,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, mut amount: u64) -> Program
         msg!(
             "Remaining: {} {} tokens",
             amount_to_ui_amount(
-                metadata.streamflow_fee_total - metadata.streamflow_fee_withdrawn,
+                metadata.streamflow_fee_total.try_sub(metadata.streamflow_fee_withdrawn)?,
                 mint_info.decimals
             ),
             metadata.mint
@@ -293,7 +294,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, mut amount: u64) -> Program
             &[&seeds],
         )?;
 
-        metadata.partner_fee_withdrawn += partner_available;
+        metadata.partner_fee_withdrawn.try_add_assign(partner_available)?;
         msg!(
             "Withdrawn: {} {} tokens",
             amount_to_ui_amount(partner_available, mint_info.decimals),
@@ -302,7 +303,7 @@ pub fn withdraw(pid: &Pubkey, acc: WithdrawAccounts, mut amount: u64) -> Program
         msg!(
             "Remaining: {} {} tokens",
             amount_to_ui_amount(
-                metadata.partner_fee_total - metadata.partner_fee_withdrawn,
+                metadata.partner_fee_total.try_sub(metadata.partner_fee_withdrawn)?,
                 mint_info.decimals
             ),
             metadata.mint
