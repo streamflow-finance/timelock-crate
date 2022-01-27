@@ -90,6 +90,7 @@ async fn test_withdraw_stream_success() -> Result<()> {
             transferable_by_recipient: false,
             can_topup: false,
             stream_name: TEST_STREAM_NAME,
+            ..Default::default()
         },
     };
 
@@ -238,6 +239,7 @@ async fn test_withdraw_small_amount() -> Result<()> {
             transferable_by_recipient: false,
             can_topup: false,
             stream_name: TEST_STREAM_NAME,
+            ..Default::default()
         },
     };
 
@@ -386,6 +388,7 @@ async fn test_withdraw_external_deposit() -> Result<()> {
             transferable_by_recipient: false,
             can_topup: true,
             stream_name: TEST_STREAM_NAME,
+            ..Default::default()
         },
     };
 
@@ -556,6 +559,7 @@ async fn test_withdraw_stream_cliff() -> Result<()> {
             transferable_by_recipient: false,
             can_topup: false,
             stream_name: TEST_STREAM_NAME,
+            ..Default::default()
         },
     };
 
@@ -700,6 +704,7 @@ async fn test_withdraw_expired_stream() -> Result<()> {
             transferable_by_recipient: false,
             can_topup: false,
             stream_name: TEST_STREAM_NAME,
+            ..Default::default()
         },
     };
 
@@ -848,6 +853,7 @@ async fn test_withdraw_not_signer() -> Result<()> {
             transferable_by_recipient: false,
             can_topup: false,
             stream_name: TEST_STREAM_NAME,
+            ..Default::default()
         },
     };
 
@@ -976,6 +982,7 @@ async fn test_withdraw_stream_self_stream() -> Result<()> {
             transferable_by_recipient: false,
             can_topup: false,
             stream_name: TEST_STREAM_NAME,
+            ..Default::default()
         },
     };
 

@@ -89,6 +89,7 @@ async fn test_topup_success() -> Result<()> {
             transferable_by_recipient: true,
             can_topup: true,
             stream_name: TEST_STREAM_NAME,
+            ..Default::default()
         },
     };
 
@@ -213,6 +214,7 @@ async fn test_topup_not_signer() -> Result<()> {
             transferable_by_recipient: true,
             can_topup: true,
             stream_name: TEST_STREAM_NAME,
+            ..Default::default()
         },
     };
 

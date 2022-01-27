@@ -92,6 +92,7 @@ async fn test_cancel_success() -> Result<()> {
             transferable_by_recipient: false,
             can_topup: false,
             stream_name: TEST_STREAM_NAME,
+            ..Default::default()
         },
     };
 
@@ -240,6 +241,7 @@ async fn test_cancel_expired() -> Result<()> {
             transferable_by_recipient: false,
             can_topup: false,
             stream_name: TEST_STREAM_NAME,
+            ..Default::default()
         },
     };
 
@@ -381,6 +383,7 @@ async fn test_not_cancelable_sender() -> Result<()> {
             transferable_by_recipient: false,
             can_topup: false,
             stream_name: TEST_STREAM_NAME,
+            ..Default::default()
         },
     };
 
@@ -512,6 +515,7 @@ async fn test_not_cancelable_recipient() -> Result<()> {
             transferable_by_recipient: false,
             can_topup: false,
             stream_name: TEST_STREAM_NAME,
+            ..Default::default()
         },
     };
 
@@ -643,6 +647,7 @@ async fn test_cancel_expired_no_check() -> Result<()> {
             transferable_by_recipient: false,
             can_topup: false,
             stream_name: TEST_STREAM_NAME,
+            ..Default::default()
         },
     };
 
@@ -776,6 +781,7 @@ async fn test_cancel_not_signer() -> Result<()> {
             transferable_by_recipient: false,
             can_topup: false,
             stream_name: TEST_STREAM_NAME,
+            ..Default::default()
         },
     };
 
@@ -908,6 +914,7 @@ async fn test_cancel_self_stream_success() -> Result<()> {
             transferable_by_recipient: false,
             can_topup: false,
             stream_name: TEST_STREAM_NAME,
+            ..Default::default()
         },
     };
 

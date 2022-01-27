@@ -95,6 +95,7 @@ async fn test_create_stream_success() -> Result<()> {
             transferable_by_recipient,
             can_topup: false,
             stream_name: TEST_STREAM_NAME,
+            ..Default::default()
         },
     };
 
@@ -222,6 +223,7 @@ async fn test_create_stream_fees_properly_set() -> Result<()> {
             transferable_by_recipient: false,
             can_topup: false,
             stream_name: TEST_STREAM_NAME,
+            ..Default::default()
         },
     };
 
@@ -328,6 +330,7 @@ async fn test_create_stream_amount_period_invalid() -> Result<()> {
             transferable_by_recipient: false,
             can_topup: false,
             stream_name: TEST_STREAM_NAME,
+            ..Default::default()
         },
     };
 
@@ -426,6 +429,7 @@ async fn test_create_stream_cliff_amount_higher_than_net() -> Result<()> {
             transferable_by_recipient: false,
             can_topup: false,
             stream_name: TEST_STREAM_NAME,
+            ..Default::default()
         },
     };
 
@@ -524,6 +528,7 @@ async fn test_create_stream_amount_deposited_less_then_app() -> Result<()> {
             transferable_by_recipient: false,
             can_topup: false,
             stream_name: TEST_STREAM_NAME,
+            ..Default::default()
         },
     };
 
@@ -628,6 +633,7 @@ async fn test_create_stream_not_signer() -> Result<()> {
             transferable_by_recipient,
             can_topup: false,
             stream_name: TEST_STREAM_NAME,
+            ..Default::default()
         },
     };
 
@@ -731,6 +737,7 @@ async fn test_create_stream_metadata_not_signed() -> Result<()> {
             transferable_by_recipient,
             can_topup: false,
             stream_name: TEST_STREAM_NAME,
+            ..Default::default()
         },
     };
 

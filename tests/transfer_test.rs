@@ -89,6 +89,7 @@ async fn test_transfer_success() -> Result<()> {
             transferable_by_recipient: true,
             can_topup: false,
             stream_name: TEST_STREAM_NAME,
+            ..Default::default()
         },
     };
 
@@ -220,6 +221,7 @@ async fn test_not_transferable_sender() -> Result<()> {
             transferable_by_recipient: true,
             can_topup: false,
             stream_name: TEST_STREAM_NAME,
+            ..Default::default()
         },
     };
 
@@ -346,6 +348,7 @@ async fn test_not_transferable_recipient() -> Result<()> {
             transferable_by_recipient,
             can_topup: false,
             stream_name: TEST_STREAM_NAME,
+            ..Default::default()
         },
     };
 
@@ -471,6 +474,7 @@ async fn test_transfer_not_signer() -> Result<()> {
             transferable_by_recipient: true,
             can_topup: false,
             stream_name: TEST_STREAM_NAME,
+            ..Default::default()
         },
     };
 
@@ -596,6 +600,7 @@ async fn test_transfer_myself_fails() -> Result<()> {
             transferable_by_recipient: true,
             can_topup: false,
             stream_name: TEST_STREAM_NAME,
+            ..Default::default()
         },
     };
 
@@ -721,6 +726,7 @@ async fn test_transfer_self_stream_to_other_success() -> Result<()> {
             transferable_by_recipient: true,
             can_topup: false,
             stream_name: TEST_STREAM_NAME,
+            ..Default::default()
         },
     };
 
