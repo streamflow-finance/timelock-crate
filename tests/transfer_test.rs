@@ -2,7 +2,6 @@ use std::str::FromStr;
 
 use anyhow::Result;
 use borsh::BorshSerialize;
-use solana_program::program_error::ProgramError;
 use solana_program_test::tokio;
 use solana_sdk::{
     account::Account,
@@ -125,7 +124,7 @@ async fn test_transfer_success() -> Result<()> {
     let periods_passed = 200;
     tt.advance_clock_past_timestamp(now as i64 + periods_passed).await;
 
-    let metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
+    let _metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
 
     // Test if recipient can be transfered
     let transfer_ix = TransferIx { ix: 3 }; // 3 => entrypoint transfer recipient
@@ -256,7 +255,7 @@ async fn test_not_transferable_sender() -> Result<()> {
     let periods_passed = 200;
     tt.advance_clock_past_timestamp(now as i64 + periods_passed).await;
 
-    let metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
+    let _metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
 
     // Test if recipient can be transfered
     let transfer_ix = TransferIx { ix: 3 }; // 3 => entrypoint transfer recipient
@@ -382,7 +381,7 @@ async fn test_not_transferable_recipient() -> Result<()> {
     let periods_passed = 200;
     tt.advance_clock_past_timestamp(now as i64 + periods_passed).await;
 
-    let metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
+    let _metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
 
     // Test if recipient can be transfered
     let transfer_ix = TransferIx { ix: 3 }; // 3 => entrypoint transfer recipient
@@ -507,7 +506,7 @@ async fn test_transfer_not_signer() -> Result<()> {
     let periods_passed = 200;
     tt.advance_clock_past_timestamp(now as i64 + periods_passed).await;
 
-    let metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
+    let _metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
 
     // Test if recipient can be transfered
     let transfer_ix = TransferIx { ix: 3 }; // 3 => entrypoint transfer recipient
@@ -632,7 +631,7 @@ async fn test_transfer_myself_fails() -> Result<()> {
     let periods_passed = 200;
     tt.advance_clock_past_timestamp(now as i64 + periods_passed).await;
 
-    let metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
+    let _metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
 
     // Test if recipient can be transfered
     let transfer_ix = TransferIx { ix: 3 }; // 3 => entrypoint transfer recipient
@@ -757,7 +756,7 @@ async fn test_transfer_self_stream_to_other_success() -> Result<()> {
     let periods_passed = 200;
     tt.advance_clock_past_timestamp(now as i64 + periods_passed).await;
 
-    let metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
+    let _metadata_data: Contract = tt.bench.get_borsh_account(&metadata_kp.pubkey()).await;
 
     // Test if recipient can be transfered
     let transfer_ix = TransferIx { ix: 3 }; // 3 => entrypoint transfer recipient

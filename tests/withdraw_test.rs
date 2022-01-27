@@ -2,7 +2,6 @@ use std::str::FromStr;
 
 use anyhow::Result;
 use borsh::BorshSerialize;
-use solana_program::program_error::ProgramError;
 use solana_program_test::tokio;
 use solana_sdk::{
     account::Account,
@@ -19,9 +18,8 @@ use spl_associated_token_account::get_associated_token_address;
 
 use test_sdk::tools::clone_keypair;
 
-use streamflow_timelock::{
-    error::SfError,
-    state::{find_escrow_account, Contract, CreateParams, PROGRAM_VERSION, STRM_TREASURY},
+use streamflow_timelock::state::{
+    find_escrow_account, Contract, CreateParams, PROGRAM_VERSION, STRM_TREASURY,
 };
 
 mod fascilities;
@@ -930,7 +928,7 @@ async fn test_withdraw_stream_self_stream() -> Result<()> {
 
     let strm_token_mint = Keypair::new();
     let alice_ass_token = get_associated_token_address(&alice.pubkey(), &strm_token_mint.pubkey());
-    let bob_ass_token = get_associated_token_address(&bob.pubkey(), &strm_token_mint.pubkey());
+    let _bob_ass_token = get_associated_token_address(&bob.pubkey(), &strm_token_mint.pubkey());
     let strm_ass_token = get_associated_token_address(&strm_key, &strm_token_mint.pubkey());
     let partner_ass_token =
         get_associated_token_address(&partner.pubkey(), &strm_token_mint.pubkey());

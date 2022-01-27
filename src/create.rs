@@ -24,8 +24,7 @@ use crate::{
     },
     try_math::TryAdd,
     utils::{
-        calculate_fee_from_amount, duration_sanity, pretty_time, unpack_mint_account,
-        unpack_token_account,
+        calculate_fee_from_amount, duration_sanity, unpack_mint_account, unpack_token_account,
     },
 };
 

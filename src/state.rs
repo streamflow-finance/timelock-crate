@@ -4,7 +4,6 @@ use std::cell::RefMut;
 
 use crate::{
     create::CreateAccounts,
-    error::SfError,
     try_math::*,
     utils::{calculate_external_deposit, calculate_fee_from_amount},
 };

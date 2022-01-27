@@ -1,11 +1,7 @@
-use std::convert::TryInto;
-
-use borsh::BorshDeserialize;
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint,
     entrypoint::ProgramResult,
-    program_error::ProgramError,
     pubkey::Pubkey,
 };
 
@@ -13,7 +9,6 @@ use crate::{
     cancel::{cancel, CancelAccounts},
     create::{create, CreateAccounts},
     instruction::StreamInstruction,
-    state::CreateParams,
     topup::{topup, TopupAccounts},
     transfer::{transfer_recipient, TransferAccounts},
     withdraw::{withdraw, WithdrawAccounts},

@@ -2,7 +2,6 @@ use std::str::FromStr;
 
 use anyhow::Result;
 use borsh::BorshSerialize;
-use solana_program::program_error::ProgramError;
 use solana_program_test::tokio;
 use solana_sdk::{
     account::Account,

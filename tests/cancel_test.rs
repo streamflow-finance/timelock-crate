@@ -2,7 +2,6 @@ use std::str::FromStr;
 
 use anyhow::Result;
 use borsh::BorshSerialize;
-use solana_program::{msg, program_error::ProgramError};
 use solana_program_test::tokio;
 use solana_sdk::{
     account::Account,
@@ -18,9 +17,8 @@ use solana_sdk::{
 use spl_associated_token_account::get_associated_token_address;
 use test_sdk::tools::clone_keypair;
 
-use streamflow_timelock::{
-    state::{find_escrow_account, Contract, CreateParams, PROGRAM_VERSION, STRM_TREASURY},
-    utils::unpack_token_account,
+use streamflow_timelock::state::{
+    find_escrow_account, Contract, CreateParams, PROGRAM_VERSION, STRM_TREASURY,
 };
 
 mod fascilities;
@@ -127,7 +125,7 @@ async fn test_cancel_success() -> Result<()> {
     assert!(!is_err);
 
     let periods_passed = 200;
-    let periods_after_cliff = now + periods_passed - cliff;
+    let _periods_after_cliff = now + periods_passed - cliff;
     tt.advance_clock_past_timestamp((now + periods_passed) as i64).await;
 
     let cancel_ix = CancelIx { ix: 2 };
@@ -416,7 +414,7 @@ async fn test_not_cancelable_sender() -> Result<()> {
     assert!(!is_err);
 
     let periods_passed = 200;
-    let periods_after_cliff = now + periods_passed - cliff;
+    let _periods_after_cliff = now + periods_passed - cliff;
     tt.advance_clock_past_timestamp((now + periods_passed) as i64).await;
 
     let cancel_ix = CancelIx { ix: 2 };
@@ -547,7 +545,7 @@ async fn test_not_cancelable_recipient() -> Result<()> {
     assert!(!is_err);
 
     let periods_passed = 200;
-    let periods_after_cliff = now + periods_passed - cliff;
+    let _periods_after_cliff = now + periods_passed - cliff;
     tt.advance_clock_past_timestamp((now + periods_passed) as i64).await;
 
     let cancel_ix = CancelIx { ix: 2 };
@@ -811,7 +809,7 @@ async fn test_cancel_not_signer() -> Result<()> {
     assert!(!is_err);
 
     let periods_passed = 200;
-    let periods_after_cliff = now + periods_passed - cliff;
+    let _periods_after_cliff = now + periods_passed - cliff;
     tt.advance_clock_past_timestamp((now + periods_passed) as i64).await;
 
     let cancel_ix = CancelIx { ix: 2 };
@@ -859,7 +857,7 @@ async fn test_cancel_self_stream_success() -> Result<()> {
 
     let strm_token_mint = Keypair::new();
     let alice_ass_token = get_associated_token_address(&alice.pubkey(), &strm_token_mint.pubkey());
-    let bob_ass_token = get_associated_token_address(&bob.pubkey(), &strm_token_mint.pubkey());
+    let _bob_ass_token = get_associated_token_address(&bob.pubkey(), &strm_token_mint.pubkey());
     let strm_ass_token = get_associated_token_address(&strm_key, &strm_token_mint.pubkey());
     let partner_ass_token =
         get_associated_token_address(&partner.pubkey(), &strm_token_mint.pubkey());
@@ -943,7 +941,7 @@ async fn test_cancel_self_stream_success() -> Result<()> {
     assert!(!is_err);
 
     let periods_passed = 200;
-    let periods_after_cliff = now + periods_passed - cliff;
+    let _periods_after_cliff = now + periods_passed - cliff;
     tt.advance_clock_past_timestamp((now + periods_passed) as i64).await;
 
     let cancel_ix = CancelIx { ix: 2 };

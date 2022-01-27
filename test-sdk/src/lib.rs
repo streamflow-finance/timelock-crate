@@ -58,7 +58,7 @@ impl ProgramTestBench {
             all_signers.extend_from_slice(signers);
         }
 
-        let recent_blockhash = self.context.banks_client.get_recent_blockhash().await.unwrap();
+        let recent_blockhash = self.context.banks_client.get_latest_blockhash().await.unwrap();
 
         transaction.sign(&all_signers, recent_blockhash);
 

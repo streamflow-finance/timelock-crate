@@ -6,7 +6,7 @@ use solana_sdk::{
 };
 
 use partner_oracle::fees::{Partner, Partners};
-use solana_program::{msg, program_pack::Pack};
+use solana_program::program_pack::Pack;
 use solana_program_test::ProgramTest;
 
 use streamflow_timelock::{entrypoint::process_instruction, state::CreateParams};
@@ -120,6 +120,7 @@ impl TimelockProgramTest {
         Self { bench, program_id, accounts: accounts_kp, fees_acc: fees_acc_pubkey }
     }
 
+    #[allow(dead_code)]
     pub async fn advance_clock_past_timestamp(&mut self, unix_timestamp: UnixTimestamp) {
         let mut clock = self.bench.get_clock().await;
         let mut n = 1;
@@ -135,6 +136,7 @@ impl TimelockProgramTest {
     }
 }
 
+#[allow(dead_code)]
 pub async fn get_token_balance(banks_client: &mut BanksClient, pubkey: Pubkey) -> u64 {
     let token: Account = banks_client.get_account(pubkey).await.unwrap().unwrap();
     spl_token::state::Account::unpack(&token.data[..]).unwrap().amount
