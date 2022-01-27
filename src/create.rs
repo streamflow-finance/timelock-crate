@@ -207,8 +207,9 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
     )?;
 
     let metadata_bytes = metadata.try_to_vec()?;
-    // We pad % 8 for size , since that's what has to be allocated.
-    let mut metadata_struct_size = metadata_bytes.len();
+    // We pad % 8 for size , since that's what has to be allocated, and add a bit for the future.
+    let pad = 680;
+    let mut metadata_struct_size = metadata_bytes.len() + pad;
     while metadata_struct_size % 8 > 0 {
         metadata_struct_size += 1;
     }
