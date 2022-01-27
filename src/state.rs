@@ -48,6 +48,27 @@ pub struct CreateParams {
     //can't use const MAX_NAME_SIZE_B bcs of javascript generator.
 }
 
+impl Default for CreateParams {
+    //these values are overridden.
+    fn default() -> Self {
+        CreateParams {
+            start_time: 0,
+            net_amount_deposited: 0,
+            period: 1,
+            amount_per_period: 0,
+            cliff: 0,
+            cliff_amount: 0,
+            cancelable_by_sender: true,
+            cancelable_by_recipient: false,
+            automatic_withdrawal: false,
+            transferable_by_sender: false,
+            transferable_by_recipient: true,
+            can_topup: false,
+            stream_name: ["t".as_bytes()[0]; 64],
+        }
+    }
+}
+
 impl CreateParams {
     // Calculate timestamp when stream is closable
     pub fn calculate_end_time(&self) -> Result<u64, ProgramError> {

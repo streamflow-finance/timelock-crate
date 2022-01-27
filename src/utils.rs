@@ -46,7 +46,6 @@ pub fn pretty_time(t: u64) -> String {
     format!("{} days, {} hours, {} minutes, {} seconds", days, hours, minutes, seconds)
 }
 
-// TODO: Test units, be robust against possible overflows.
 pub fn calculate_available(
     now: u64,
     end: u64,
@@ -182,5 +181,42 @@ mod tests {
         assert_eq!(calculate_external_deposit(9, 10, 4).unwrap(), 3);
         assert_eq!(calculate_external_deposit(100, 100, 0).unwrap(), 0);
         assert_eq!(calculate_external_deposit(100, 100, 100).unwrap(), 100);
+    }
+
+    #[test]
+    fn test_calculate_available() -> Result<(), ProgramError> {
+        let start = 1643273913;
+        let mut ix = CreateParams {
+            start_time: start,
+            net_amount_deposited: 100000,
+            period: 1,
+            amount_per_period: 1000,
+            cliff: 1643273913,
+            cliff_amount: 0,
+            ..Default::default()
+        };
+        let mut end = ix.calculate_end_time()?;
+        assert_eq!(calculate_available(start - 10, end, ix.clone(), 100000, 0, 100.0)?, 0);
+        assert_eq!(calculate_available(start + 10, end, ix.clone(), 100000, 0, 100.0)?, 10000);
+        assert_eq!(calculate_available(start + 10, end, ix.clone(), 100000, 0, 10.0)?, 1000);
+        assert_eq!(calculate_available(start + 10, end, ix.clone(), 100000, 500, 10.0)?, 500);
+        assert_eq!(calculate_available(end, end, ix.clone(), 100000, 0, 100.0)?, 100000);
+
+        ix = CreateParams {
+            start_time: start,
+            net_amount_deposited: 100000,
+            period: 1,
+            amount_per_period: 1000,
+            cliff: start + 20,
+            cliff_amount: 10000,
+            ..Default::default()
+        };
+        end = ix.calculate_end_time()?;
+        assert_eq!(calculate_available(start + 20, end, ix.clone(), 100000, 0, 100.0)?, 10000);
+        assert_eq!(calculate_available(start, end, ix.clone(), 100000, 0, 100.0)?, 0);
+        assert_eq!(calculate_available(start + 10, end, ix.clone(), 100000, 0, 100.0)?, 0);
+        assert_eq!(calculate_available(start + 30, end, ix.clone(), 100000, 5000, 100.0)?, 15000);
+        assert_eq!(calculate_available(start + 30, end, ix.clone(), 100000, 50, 1.0)?, 150);
+        Ok(())
     }
 }
