@@ -14,6 +14,9 @@ pub const MAX_NAME_SIZE_B: usize = 64;
 pub const STRM_FEE_DEFAULT_PERCENT: f32 = 0.25;
 pub const ESCROW_SEED_PREFIX: &[u8] = b"strm";
 
+pub const CREATEPARAMS_PADDING: usize = 140;
+pub const METADATA_PADDING: usize = 440;
+
 /// The struct containing instructions for initializing a stream
 #[derive(BorshDeserialize, BorshSerialize, Clone, Debug)]
 #[repr(C)]
@@ -43,8 +46,12 @@ pub struct CreateParams {
     /// Whether topup is enabled
     pub can_topup: bool,
     /// The name of this stream
-    pub stream_name: [u8; 64],
     //can't use const MAX_NAME_SIZE_B bcs of javascript generator.
+    pub stream_name: [u8; 64],
+    /* Witndraw frequency
+     * pub withdraw_frequency: u64,
+     * Stream is closed
+     * pub closed: bool, */
 }
 
 impl Default for CreateParams {
@@ -64,6 +71,8 @@ impl Default for CreateParams {
             transferable_by_recipient: true,
             can_topup: false,
             stream_name: ["t".as_bytes()[0]; 64],
+            /*withdraw_frequency: 0,
+             *closed: false, */
         }
     }
 }
@@ -142,6 +151,8 @@ pub struct Contract {
     pub partner_fee_percent: f32,
     /// The stream instruction
     pub ix: CreateParams,
+    /// Padding for `ix: CreateParams` to allow for future upgrades.
+    pub ix_padding: Vec<u8>,
 }
 
 impl Contract {
@@ -180,6 +191,7 @@ impl Contract {
             partner_fee_withdrawn: 0,
             partner_fee_percent,
             ix,
+            ix_padding: vec![0; CREATEPARAMS_PADDING],
         })
     }
 

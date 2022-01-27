@@ -20,7 +20,7 @@ use crate::{
     error::SfError,
     state::{
         find_escrow_account, save_account_info, Contract, CreateParams, ESCROW_SEED_PREFIX,
-        PROGRAM_VERSION, STRM_FEE_DEFAULT_PERCENT, STRM_TREASURY,
+        METADATA_PADDING, PROGRAM_VERSION, STRM_FEE_DEFAULT_PERCENT, STRM_TREASURY,
     },
     try_math::TryAdd,
     utils::{
@@ -207,8 +207,7 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
 
     let metadata_bytes = metadata.try_to_vec()?;
     // We pad % 8 for size , since that's what has to be allocated, and add a bit for the future.
-    let pad = 680;
-    let mut metadata_struct_size = metadata_bytes.len() + pad;
+    let mut metadata_struct_size = metadata_bytes.len() + METADATA_PADDING;
     while metadata_struct_size % 8 > 0 {
         metadata_struct_size += 1;
     }
