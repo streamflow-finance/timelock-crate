@@ -30,6 +30,7 @@ pub fn process_instruction(pid: &Pubkey, acc: &[AccountInfo], ix: &[u8]) -> Prog
                 escrow_tokens: next_account_info(ai)?.clone(),
                 streamflow_treasury: next_account_info(ai)?.clone(),
                 streamflow_treasury_tokens: next_account_info(ai)?.clone(),
+                withdrawor: next_account_info(ai)?.clone(),
                 partner: next_account_info(ai)?.clone(),
                 partner_tokens: next_account_info(ai)?.clone(),
                 mint: next_account_info(ai)?.clone(),
@@ -97,10 +98,12 @@ pub fn process_instruction(pid: &Pubkey, acc: &[AccountInfo], ix: &[u8]) -> Prog
                 escrow_tokens: next_account_info(ai)?.clone(),
                 streamflow_treasury: next_account_info(ai)?.clone(),
                 streamflow_treasury_tokens: next_account_info(ai)?.clone(),
+                withdrawor: next_account_info(ai)?.clone(),
                 partner: next_account_info(ai)?.clone(),
                 partner_tokens: next_account_info(ai)?.clone(),
                 mint: next_account_info(ai)?.clone(),
                 token_program: next_account_info(ai)?.clone(),
+                system_program: next_account_info(ai)?.clone(),
             };
             return topup(pid, ia, amount)
         }

@@ -87,8 +87,16 @@ impl CreateParams {
         Ok(start.try_add(seconds_left)?)
     }
 
+    pub fn unlock_start(&self) -> u64 {
+        if self.cliff > 0 {
+            self.cliff
+        } else {
+            self.start_time
+        }
+    }
+
     pub fn stream_available(&self, now: u64) -> Result<u64, ProgramError> {
-        let start = if self.cliff > 0 { self.cliff } else { self.start_time };
+        let start = self.unlock_start();
         let periods_passed = (now.try_sub(start)?).try_div(self.period)?;
         periods_passed.try_mul(self.amount_per_period)
     }

@@ -7,6 +7,8 @@ use crate::try_math::*;
 
 use crate::{error::SfError, state::CreateParams};
 
+pub const TX_FEE_LAMPORTS: u64 = 5000;
+
 /// Do a sanity check with given Unix timestamps.
 pub fn duration_sanity(now: u64, start: u64, cliff: u64) -> ProgramResult {
     let cliff_cond = if cliff == 0 { true } else { start <= cliff };
@@ -89,6 +91,19 @@ pub fn calculate_fee_from_amount(amount: u64, percentage: f32) -> u64 {
     let factor = (percentage / 100.0 * precision_factor) as u128; //largest it can get is 10^4
     (amount as u128 * factor / precision_factor as u128) as u64 // this does not fit if amount
                                                                 // itself cannot fit into u64
+}
+// todo add unit tests
+pub fn calculate_withdraw_fees(
+    start: u64,
+    end: u64,
+    withdraw_frequency: u64,
+) -> Result<u64, ProgramError> {
+    if withdraw_frequency == 0 || end == 0 || start > end {
+        return Ok(0)
+    }
+    let no_withdrawals = end.try_sub(start)?.try_ceil_div(withdraw_frequency)?;
+    let withdraw_fee = TX_FEE_LAMPORTS.try_mul(no_withdrawals)?;
+    Ok(withdraw_fee)
 }
 
 pub enum Invoker {
@@ -217,6 +232,18 @@ mod tests {
         assert_eq!(calculate_available(start + 10, end, ix.clone(), 100000, 0, 100.0)?, 0);
         assert_eq!(calculate_available(start + 30, end, ix.clone(), 100000, 5000, 100.0)?, 15000);
         assert_eq!(calculate_available(start + 30, end, ix.clone(), 100000, 50, 1.0)?, 150);
+        Ok(())
+    }
+
+    #[test]
+    fn test_calculate_withdraw_fees() -> Result<(), ProgramError> {
+        // now, start, end, cliff
+        assert_eq!(calculate_withdraw_fees(0, 100, 20)?, 5 * TX_FEE_LAMPORTS);
+        assert_eq!(calculate_withdraw_fees(0, 110, 20)?, 6 * TX_FEE_LAMPORTS);
+        assert_eq!(calculate_withdraw_fees(0, 0, 20)?, 0 * TX_FEE_LAMPORTS);
+        assert_eq!(calculate_withdraw_fees(20, 100, 0)?, 0 * TX_FEE_LAMPORTS);
+        assert_eq!(calculate_withdraw_fees(120, 100, 0)?, 0 * TX_FEE_LAMPORTS);
+        assert_eq!(calculate_withdraw_fees(20, 100, 90000)?, 1 * TX_FEE_LAMPORTS);
         Ok(())
     }
 }

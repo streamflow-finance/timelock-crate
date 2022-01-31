@@ -24,7 +24,8 @@ use crate::{
     },
     try_math::TryAdd,
     utils::{
-        calculate_fee_from_amount, duration_sanity, unpack_mint_account, unpack_token_account,
+        calculate_fee_from_amount, calculate_withdraw_fees, duration_sanity, unpack_mint_account,
+        unpack_token_account,
     },
 };
 
@@ -49,6 +50,8 @@ pub struct CreateAccounts<'a> {
     pub streamflow_treasury: AccountInfo<'a>, // []
     /// Streamflow treasury's associated token account
     pub streamflow_treasury_tokens: AccountInfo<'a>, // [writable]
+    /// Delegate account for automatically withdrawing stream
+    pub withdrawor: AccountInfo<'a>, // [writable]
     /// Partner treasury account
     pub partner: AccountInfo<'a>, // []
     /// Partner's associated token account
@@ -103,6 +106,7 @@ fn account_sanity_check(_pid: &Pubkey, a: CreateAccounts) -> ProgramResult {
     {
         return Err(SfError::InvalidTreasury.into())
     }
+    // todo add checks for withdrawor account
 
     if a.sender_tokens.key != &sender_tokens ||
         a.recipient_tokens.key != &recipient_tokens ||
@@ -220,9 +224,25 @@ pub fn create(pid: &Pubkey, acc: CreateAccounts, ix: CreateParams) -> ProgramRes
         tokens_rent.try_add_assign(cluster_rent.minimum_balance(tokens_struct_size))?;
     }
 
-    if acc.sender.lamports() < metadata_rent.try_add(tokens_rent)? {
+    let withdraw_fees = if ix.automatic_withdrawal {
+        calculate_withdraw_fees(
+            metadata.ix.unlock_start(),
+            metadata.end_time,
+            metadata.ix.withdraw_frequency,
+        )?
+    } else {
+        0
+    };
+
+    if acc.sender.lamports() < metadata_rent.try_add(tokens_rent)?.try_add(withdraw_fees)? {
         msg!("Error: Insufficient funds in {}", acc.sender.key);
         return Err(ProgramError::InsufficientFunds)
+    }
+    if withdraw_fees > 0 {
+        invoke(
+            &system_instruction::transfer(acc.sender.key, acc.withdrawor.key, withdraw_fees),
+            &[acc.sender.clone(), acc.withdrawor.clone(), acc.system_program.clone()],
+        )?;
     }
 
     msg!("Creating stream metadata account");

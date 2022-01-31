@@ -6,6 +6,7 @@ use solana_program::{
     program::invoke,
     program_error::ProgramError,
     pubkey::Pubkey,
+    system_instruction, system_program,
     sysvar::{clock::Clock, Sysvar},
 };
 
@@ -15,7 +16,10 @@ use crate::{
     error::SfError,
     state::{find_escrow_account, save_account_info, Contract},
     try_math::TryAdd,
-    utils::{calculate_fee_from_amount, unpack_mint_account, unpack_token_account},
+    utils::{
+        calculate_fee_from_amount, calculate_withdraw_fees, unpack_mint_account,
+        unpack_token_account,
+    },
 };
 
 #[derive(Clone, Debug)]
@@ -26,10 +30,12 @@ pub struct TopupAccounts<'a> {
     pub escrow_tokens: AccountInfo<'a>,              // [writable]
     pub streamflow_treasury: AccountInfo<'a>,        // []
     pub streamflow_treasury_tokens: AccountInfo<'a>, // [writable]
+    pub withdrawor: AccountInfo<'a>,                 // [writable]
     pub partner: AccountInfo<'a>,                    // []
     pub partner_tokens: AccountInfo<'a>,             // [writable]
     pub mint: AccountInfo<'a>,                       // []
     pub token_program: AccountInfo<'a>,              // []
+    pub system_program: AccountInfo<'a>,             // []
 }
 
 pub fn topup(pid: &Pubkey, acc: TopupAccounts, amount: u64) -> ProgramResult {
@@ -40,8 +46,10 @@ pub fn topup(pid: &Pubkey, acc: TopupAccounts, amount: u64) -> ProgramResult {
     if !acc.sender.is_signer {
         return Err(ProgramError::MissingRequiredSignature)
     }
+    // todo add checks for withdrawor account
 
-    if acc.token_program.key != &spl_token::id() {
+    if acc.token_program.key != &spl_token::id() || acc.system_program.key != &system_program::id()
+    {
         return Err(ProgramError::InvalidAccountData)
     }
 
@@ -95,8 +103,24 @@ pub fn topup(pid: &Pubkey, acc: TopupAccounts, amount: u64) -> ProgramResult {
             acc.token_program.clone(),
         ],
     )?;
-
+    let old_end = metadata.end_time;
     metadata.deposit_net(amount)?;
+    let new_end = metadata.end_time;
+
+    let withdraw_fees = calculate_withdraw_fees(old_end, new_end, metadata.ix.withdraw_frequency)?;
+
+    if acc.sender.lamports() < withdraw_fees {
+        msg!("Error: Insufficient funds in {}", acc.sender.key);
+        return Err(ProgramError::InsufficientFunds)
+    }
+
+    if withdraw_fees > 0 {
+        invoke(
+            &system_instruction::transfer(acc.sender.key, acc.withdrawor.key, withdraw_fees),
+            &[acc.sender.clone(), acc.withdrawor.clone(), acc.system_program.clone()],
+        )?;
+    }
+
     save_account_info(&metadata, data)?;
 
     let mint_info = unpack_mint_account(&acc.mint)?;
