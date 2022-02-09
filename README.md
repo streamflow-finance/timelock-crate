@@ -1,5 +1,10 @@
-streamflow-timelock
-===================
+Streamflow
+---
+_Disclaimer: This is a Community (free and open-source) version of a [Streamflow protocol](https://github.com/streamflow-finance/js-sdk). It has limited set of features and is provided as is, without support._
+
+_Reference Anchor implementation that uses this protocol (as crate) is available [here](https://github.com/streamflow-finance/js-sdk/tree/community), also free and open-source. That program is deployed on Solana mainnet with the id: `8e72pYCDaxu3GqMfeQ5r8wFgoZSYk6oua1Qo9XpsZjX`_
+
+---
 **Security audit passed. [Report here.](https://github.com/StreamFlow-Finance/timelock-crate/blob/master/TIMELOCK_COMMUNITY_REPORT_FINAL.pdf) ✅**
 
 This Rust crate provides SPL timelock functionalities that can be used "out of the box" and integrated in other Solana programs.
