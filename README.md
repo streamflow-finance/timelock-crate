@@ -22,14 +22,6 @@ High level overview
 ![Overview](/misc/overview.jpeg)
 
 Check the [docs](https://docs.rs/streamflow-timelock/) to get familiar with the crate.
-Or check the [Timelock program implementation](https://github.com/streamflow-finance/timelock) where this crate is used.
+Or check the [reference program implementation](https://github.com/streamflow-finance/js-sdk/tree/community) where this crate is used.
 
 Run `python3 misc/make_idl.py > OUTPUT_FILE.js` to generate JS IDL to be used for easy (de)serialization of the program account data structs.
-
-License
--------
-`timelock-crate` is licensed under [Business Source License](LICENSE).
-The [Business Source License](LICENSE) is not a Free and Open-source license. However, the Licensed Work will eventually be made available
-under an Open Source License, as stated in this License.
-
-For the community (free and open-source) version, please see [this release](https://github.com/StreamFlow-Finance/timelock-crate/releases/tag/v0.3.0).
